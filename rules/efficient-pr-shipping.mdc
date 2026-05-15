@@ -1,0 +1,227 @@
+---
+description: "Ship PRs fast — parallel worktrees, one PR per worktree, single concern per PR, agent-only PR creation, never auto-PR. Loaded by a coding agent; covers `commit-push`, branch naming, comprehensive PR descriptions, and worktree setup conventions."
+alwaysApply: false
+---
+
+# Efficient PR shipping
+
+Sedea's workflow for shipping multi-PR plans fast.
+
+## Squad Leader on the main branch vs. agent sessions on worktree
+
+There are two kinds of agent sessions:
+
+- **Squad Leader is the main session** — stays on `main`, handles lightweight tasks that do not need a branch because they do not alter code:
+  - Planning and plan updates
+  - Coordinating and spawning agent sessions
+- **Agent sessions** — each uses a dedicated worktree to make changes on the code:
+  - Planned implementation PRs
+  - PR reviews and PR comment fixes
+
+When the Squad Leader receives an implementation request, PR review, or cross-repo task, hand off to a new agent session via the **`coding-session` protocol branch** ([`coding-session/SKILL.md`](.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/coding-session/SKILL.md) — same mission as `pr-review` / `create-pr`; add this file in the center repo when wiring the protocol). Create the worktree with `git worktree add` (see **Worktree setup in plans**), then in Mission Control chat call the MCP tool **`sedea_add_worktree_folder`** with **`path`** set to the **absolute** filesystem path of the new worktree root (optional **`name`** for the explorer folder label) so that folder is added to the Sedea workbench workspace before emitting the two-phase session prompt, and stop.
+
+## Plan for independence
+
+When creating a multi-PR plan, **maximize the number of PRs that can be worked on in parallel**:
+
+- Prefer slicing by vertical feature or module so PRs don't touch the same files.
+- Explicitly mark each PR as **independent** or list its dependency (e.g. "depends on PR 2").
+- Independent PRs all branch from `main`; a dependent PR branches from `main` only after its prerequisite merges.
+
+## One PR per worktree, many worktrees in parallel
+
+We work with **git worktrees** (one per PR) so we can have several PRs in flight in parallel via Mission Control and **coding-session** agent work (one session per worktree).
+
+- Inside any single worktree, implement **at most one PR** at a time.
+- Do **not** put commits for separate planned PRs on the same branch.
+- Do **not** stack branches or PRs unless the developer explicitly asks for it.
+- When a PR is done, open it for review; the next independent PR is already being worked on in another worktree.
+
+## Review before commit
+
+After implementing changes, **stop**. Do not `git add`, `git commit`, or `git push` until the developer explicitly confirms that we are ready to move on to the next development stage.
+
+- Present a summary of what changed and ask for next steps using `AskQuestion`. 
+- This applies to **all** workflows: feature PRs, PR comment fixes, and any other code changes.
+- The exceptions are creating branches and worktrees (fine without confirmation), and `pre-pr-review` confirmation (which is itself an explicit commit-confirmation — it commits pending changes as a review cut point before emitting the seed; see `pre-pr-review` protocol branch § *Emitter Step 2*).
+
+## Never open PRs yourself — use **a PR-creating agent**
+
+Developers always open pull requests themselves. You must **never** call `gh pr create` (or any equivalent GitHub API/MCP call that creates, drafts, or reopens a PR), and must never instruct a subagent to do so.
+
+This holds even when a task description explicitly says "open a PR", "push and open a PR", or "create a pull request". Interpret those as: prepare the branch and produce a **PR prompt** via the `create-pr` protocol branch — do not open the PR yourself.
+
+This prohibition covers **chat output**, not just tool calls. After `git push`, do **not** surface or paraphrase GitHub's remote hint (the `Create a pull request for '<branch>' on GitHub by visiting: https://github.com/<org>/<repo>/pull/new/<branch>` line) in the response. That URL links directly to the GitHub UI PR-creation form and nudges toward the wrong handoff. The only PR-creation artifact the assistant ever presents is **a PR-creating agent** prompt from the `create-pr` protocol branch.
+
+The correct handoff after a pushed branch is:
+
+1. Use the `create-pr` protocol branch to generate a prompt for **a PR-creating agent**.
+2. Spin **a PR-creating agent**, pass the generated prompt, and stop.
+3. **A PR-creating agent** opens the PR on the developer's behalf.
+
+## Worktree setup in plans
+
+Every multi-PR plan must end with a **Worktree setup** section containing copy-pasteable commands. Use the repo's directory name as a prefix for sibling worktree directories.
+
+Canonical form for creating a worktree on a fresh branch:
+
+```bash
+git fetch origin main
+git worktree add <path> -b <branch> origin/main
+```
+
+**Attach the worktree in Sedea.** In Mission Control chat, invoke the MCP tool **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` and, if you want a custom explorer label, an optional `"name"` field. Use an **absolute** `path` (resolve with `git worktree list`, or `cd` into the worktree and expand to a full path); relative paths are unreliable. Mission Control mirrors the tool into the workbench so the folder appears as a workspace root.
+
+**Detach merged worktrees from the workbench.** After a PR merges and you retire a worktree, invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree.
+
+Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetch origin main:main`) fails with `fatal: refusing to fetch into branch 'refs/heads/main'` when `main` is already checked out in the current worktree.
+
+- For each **independent** PR, emit a `git worktree add … -b <branch> origin/main` command. These can be created and worked on immediately.
+- For each **dependent** PR, emit the command but comment that it should be created only after the predecessor merges.
+- Include cleanup for after PRs merge: for each retired worktree, **`sedea_remove_worktree_folder`** with that worktree's **absolute** path (Mission Control first), then **`git worktree remove`** and **`git worktree prune`**.
+- In the **Worktree setup** narrative, after each `git worktree add`, tell the Squad Leader to invoke **`sedea_add_worktree_folder`** with that worktree's **absolute** path before spawning the **coding-session** agent.
+
+## commit, push, optional PR comment reconciliation, link PR to plan, and (on first push) a PR-creating agent prompt
+
+How to perform `commit-push`:
+
+**Hosting repo cwd for scripts.** The `node …/plan-state.mjs` and `python3 …/pr-review.py` invocations use paths relative to the **hosting repository root** (the checkout whose root contains `.sedea/`). A sibling git worktree often does **not** contain `.sedea/`; run these commands after `cd` to the hosting root, or pass an absolute path to the script.
+
+1. `commit-push`. **Skip this step if `git status --short` is empty** — typical right after `pre-pr-review`, which commits any pending changes as a review cut point (see `pre-pr-review` protocol branch § *Emitter Step 2*). Do not amend the previous commit and do not pass `--allow-empty`; just proceed to step 2.
+2. Push to remote.
+3. **PR comment reconciliation (`pr-review` → `commit-push`).** When this coding session already ran [`pr-review`](.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/pr-review/SKILL.md) Steps 1–4 (per-comment dispositions in the Step 4 report) and **GitHub** reply / resolve / minimize / summary from **Step 5** has **not** run yet, **`commit-push` is incomplete** until Step 5 runs — **same agent turn**, immediately after the push succeeds (so the summary can cite `git rev-parse --short HEAD`). Load `pr-review` **Step 5 — GitHub only** and execute it via `python3 .sedea/centers/sedea-centers--development/missions/plan-and-deliver/scripts/pr-review.py` (two-step `PR_REVIEW_INPUT` per that skill). If thread IDs or PR identity are missing from context, re-run that skill’s **Step 1** script array for the same PR, then Step 5. If there was no `pr-review` triage in this chat, skip this step entirely.
+4. **Link the PR to its plan sidecar.** After push (and after step 3 when applicable), attempt to upsert the PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. Run:
+
+   ```bash
+   # Which plan owns this worktree? (exit 2 = none; skip silently)
+   node .sedea/centers/sedea-centers--development/missions/plan-and-deliver/scripts/plan-state.mjs resolve --cwd "$PWD"
+   # → prints "<slug>\t<planPath>" on exit 0.
+
+   # Does an open PR already exist for this branch?
+   gh pr list --head "$(git branch --show-current)" --json number --jq '.[0].number // empty'
+   # → prints a number on stdout, or nothing (first push, a PR-creating agent not yet invoked).
+
+   # If both resolved: upsert into sidecar prs[] (idempotent).
+   node .sedea/centers/sedea-centers--development/missions/plan-and-deliver/scripts/plan-state.mjs upsert-pr \
+     --slug <slug-from-resolve> \
+     --repo "$(basename "$(git rev-parse --show-toplevel)")" \
+     --number <number-from-gh>
+   ```
+
+   Skip silently when `resolve` exits non-zero (session with no plan) or `gh pr list` returns empty (first push — the PR will appear after a PR-creating agent opens it; the **next** `commit-push` picks it up). Never block `commit-push` on a helper failure — log and continue with the remaining `commit-push` steps. **Exit code 3** from `upsert-pr` means the resolved plan is not a PR plan (the helper refuses to link PRs onto Master / Phase / top-level topic / stub plans, since sidecar `prs[]` is reconcile-tracked); surface the helper's stderr message verbatim so the user can fix the worktree → plan linkage, then continue with the remaining `commit-push` steps.
+
+   The [`pr-review` protocol branch](.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/pr-review/SKILL.md) runs the same `upsert-pr` call at its Step 0 (after the PR is resolved) as a belt-and-braces linker for cases where no follow-up `commit-push` ever happens — `pr-review` triage that ends with all comments skipped (no commit, no push), quiet PRs with zero reviewer rounds, or single-commit PRs merged straight from GitHub. `commit-push` and `pr-review` upserts are idempotent against each other.
+5. Check if this is the **first push** for the branch (e.g. `git push` output contains `[new branch]`, or `gh pr list` in step 4 returned empty). If so, also generate **a PR-creating agent PR prompt** via the `create-pr` protocol branch — this is mandatory, not prompted by a separate `create-pr` option from the user. The PR-creating agent prompt **replaces** any GitHub create-PR URL. The prompt’s description starter must satisfy **Comprehensive PR descriptions** (including slice boundaries and plan lineage when applicable). On subsequent pushes, only commit/push/reconcile/upsert — skip the PR-creating agent prompt.
+
+Example:
+
+```
+## Worktree setup
+
+From the hosting repo root (directory containing `.sedea/`):
+
+git fetch origin main
+
+# Independent — start immediately
+git worktree add ../push-feat-token-auth -b feat/token-auth origin/main
+# Then in Mission Control: sedea_add_worktree_folder with the resolved absolute path to this worktree (optional name).
+
+git worktree add ../push-improve-logger -b improve/logger origin/main
+# Then sedea_add_worktree_folder with the resolved absolute path to this worktree (optional name).
+
+# Depends on PR 1 — create after feat/token-auth merges
+# git worktree add ../push-feat-session-refresh -b feat/session-refresh origin/main
+# When unblocked: sedea_add_worktree_folder with the resolved absolute path to this worktree (optional name).
+
+Cleanup after merge:
+# sedea_remove_worktree_folder with absolute path to ../push-feat-token-auth, then:
+git worktree remove ../push-feat-token-auth
+# sedea_remove_worktree_folder with absolute path to ../push-improve-logger, then:
+git worktree remove ../push-improve-logger
+git worktree prune
+```
+
+## New branch from `main`
+
+```bash
+git checkout main && git pull origin main && git checkout -b <branch-name>
+```
+
+If a PR depends on an unmerged predecessor, **wait** for that predecessor to merge into `main` before starting the dependent branch (unless the developer explicitly requests stacking).
+
+## Keep PRs small and focused
+
+Minimize **two dimensions** independently:
+
+1. **Number of concerns** — a PR should address **one concern** (or as few as possible). A "concern" is a single logical change: one new feature, one improvement, one bug fix. A rename of a single construct touching 500 files is still one concern. Mixing a rename with a behavior change is two concerns and should be two PRs.
+2. **Test-case count** — count the **test cases** the PR introduces or meaningfully changes (unit tests, integration / snapshot cases, exploratory recordings — each enumerated case counts once):
+   - **≤ 10** — simple PR.
+   - **11–20** — mid-sized PR.
+   - **21+** — heavy PR; investigate splitting, but do **not** split if the result is a half-shipped feature (Strategy #4 trumps size — see `.sedea/centers/sedea-centers--development/docs/development-process.md`).
+
+When in doubt, **fewer concerns wins** over smaller test-case count.
+
+### What a "kind of change" is (and why line count is not a size signal)
+
+Raw changed-line count is **not** a size signal in this process. The intuition behind the test-case metric is *kinds of changes*, not lines or files:
+
+- Threading the same prompt fragment into 8 generators is **one kind of change** with 8 instances. A reviewer-agent reads the kind once and glances the other 7 to confirm they're identical — review burden stays at "one kind", not "8×".
+- A 2000-line mechanical rename of one construct is one kind of change.
+- A 50-line PR that mixes two concerns is still a split candidate (Dimension 1 above).
+
+When estimating PR size for breakdown decisions, count **kinds** first, then enumerate test cases per kind to bucket the PR. If a candidate PR has many instances of the same kind, do **not** split it just to reduce instance count — that produces redundant review work and a half-shipped feature, not a lighter PR.
+
+### Recursive breakdown to PR leaves
+
+Break work down recursively until each piece is a **PR leaf**: one reviewable **concern**, one clear merge base (`origin/main` unless stacking is explicitly requested), not "one line" by default. Prefer **smallest meaningful** slices: each leaf should have a clear behavioral or structural outcome (what changed, how to see it, what tests cover) so reviews are substantive, not noise.
+
+- **Plan tree vs. git worktree** — The **plan** is a tree of intent: **master-plan** roots and nested `.plan.md` files (e.g. `parent:` links), with YAML **todos** in each file for **agents** (the Plan Board sidebar lists **plan files only**, not todo rows). **Git worktrees** are execution: at most one active PR per worktree ([One PR per worktree](#one-pr-per-worktree-many-worktrees-in-parallel)). **Each parallel PR** should map to **one leaf plan file** (and honest todos inside that file for the agent) so status stays honest.
+- **Child plans** — If one `.plan.md` gets too deep or cross-repo, add a **linked child plan**. The parent keeps a short **Plan map** (bullets or Mermaid) listing child slugs and roles.
+- **Contract drift** — If a leaf PR invalidates the breakdown, **update the parent plan** (diagram + todos) before spawning more worktrees so the tree stays the source of truth.
+- **Splitting an existing pile** — When splitting after the fact: get explicit approval before branch, commit, or push; save a recoverable snapshot (`git stash create` + `git update-ref refs/backup/pre-split-<timestamp> …`); stage named paths or hunks only (no `git add .` / `git add -A`); use Mermaid when multiple slices. After push, use the **`create-pr`** protocol branch for **a PR-creating agent** handoff — never open a PR from the assistant session (see **Never open PRs yourself** above).
+
+### Planning and validation (diagrams)
+
+For **multi-step or multi-PR** plans, include **at least one Mermaid diagram** (dependency order, data/control flow, or PR slice boundaries). A single trivial PR in one obvious place may omit a diagram. Sequence-heavy work can add a **numbered list** or **PR ↔ module** table alongside Mermaid; prefer Mermaid for **structure** because it renders in GitHub and in-editor.
+
+After each decomposition step, make validation easy for the human: **(a)** diagram, **(b)** ordered leaves marked **independent** vs **depends on …** (see [Plan for independence](#plan-for-independence)), **(c)** explicit **out of scope**. Prefer validation before implementation worktrees spin up.
+
+### Situation awareness and Plan Board
+
+Do not rely on chat alone for where work stands.
+
+- **Filesystem** — Intent lives in `.sedea/operations/**/plans/*.plan.md`: body, overview, frontmatter **todos**. Runtime state for the **Plan Board** extension lives in optional sidecars `.sedea/operations/**/plans/<slug>.state.yaml` (e.g. `worktrees`, `prs`, `session.focusPath`); contract and roadmap live in `.sedea/operations/**/plans/plan_board_extension_mvp_a0939d76.plan.md`.
+- **Agent habits** — Keep todo `status` accurate (`not_started` / `started` / `completed` / `canceled`). Track **postponed** work with a **Postponed / Deferred** subsection or explicit todos so "done" plans do not hide scope. Link related work: a **Related plans** section (slug + one line) in the parent body is enough unless you maintain optional `parent:` / `children:` frontmatter.
+- **Dashboard** — Use the Plan Board sidebar to see the **plan-file hierarchy** (master-plans, plan nesting, **Unlinked**), **status** icons, **worktrees**, and (when wired) PRs; keep plans and sidecars consistent with what the board displays.
+
+### Parallelism vs. batching
+
+Many small PRs mean **many CI runs and many review contexts**. Parallelize when slices are **independent** and touch disjoint areas ([Plan for independence](#plan-for-independence)); **batch** when slices are tightly sequential or would thrash the same hot files. Ordering is not always "smallest first" — sometimes a **foundation or contract** slice unlocks parallel follow-ups.
+
+## Comprehensive PR descriptions
+
+PRs are reviewed by AI agents who compare the description against the code and tests. The description must be the single source of truth for what the PR does:
+
+- State **what** changed and **why**.
+- List every behavioral change, new API, schema change, or config change.
+- If there are intentional non-changes (things that look like they should change but deliberately don't), call them out.
+- Do **not** include a separate test plan section — tests are in the code. The description should be detailed enough that a reviewer can verify tests cover the stated behavior.
+
+### A PR-creating agent prompt and proportional context
+
+The **`create-pr` protocol branch** (`.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/create-pr/SKILL.md`) produces the text **a PR-creating agent** uses to open the PR. That block must give reviewer agents enough **reasoning**, not only diff facts — otherwise comments are often unactionable. **Scale length to PR size**: a small PR gets a **shorter** write-up, but it must still be **complete for one concern**.
+
+Every description starter (including on first `commit-push`) should cover, in whatever brevity fits the PR:
+
+- **Why this slice** — motivation and how it fits the larger goal (enough to judge intent vs. mistake, especially for improvement slices, guards, or "looks redundant" code).
+- **Not in this PR** — deferrals, follow-ups, or parent-epic scope left out on purpose.
+- **Plan lineage (when applicable)** — one line with plan slug or path (e.g. `.sedea/operations/**/plans/<slug>.plan.md`) and, if useful, "see Mermaid in plan" so intent is not trapped in chat.
+- **Verification pointer** — how to confirm behavior (which tests or observable behavior); still no separate "test plan" essay.
+
+## Branch naming
+
+Descriptive kebab-case reflecting scope:
+
+- `feat/<short-description>` — new features
+- `improve/<short-description>` — improvements (or a more specific verb prefix like `simplify/`, `harden/`, `speedup/`; see `.sedea/centers/sedea-centers--development/rules/10_plan-naming-convention.mdc`)
+- `fix/<short-description>` — bug fixes

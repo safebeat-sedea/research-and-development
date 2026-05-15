@@ -1,0 +1,31 @@
+---
+description: "When and how to update .cursor/rules/*.mdc — capture findings during codebase exploration, update relevant rules when introducing or altering architecture / conventions / call patterns / module boundaries, plan-anchored rule deltas (PR plan § 5 Repo rules impact). Loaded by the plan, impl, and cursor use-case manifests."
+alwaysApply: false
+---
+
+# Maintain cursor rules
+
+## When exploring the codebase
+
+If you spend time reading multiple files or running searches to learn how something works (call topology, data flow, conventions, module boundaries), capture the finding as a new or updated rule in `.cursor/rules/` so future sessions start with that knowledge.
+
+## When making changes
+
+If your change introduces or alters architecture, conventions, call patterns, or module boundaries, update the relevant rule (or create one) before finishing the task.
+
+Per-PR plans in `~/.cursor/plans/` carry **`## 5. Repo rules impact`** (Vinko's New Feature Development Process) — list which **`.cursor/rules/*.mdc`** files in the product repo need a delta for that PR; keep it in sync when you touch rules outside that flow.
+
+### Plan-anchored PRs (before `cp`)
+
+When the work is driven by a **per-PR plan** linked from the Plan Board (or otherwise in scope for the branch):
+
+1. Read that plan's **`## 5. Repo rules impact`** (or **`## N. Repo rules impact`** if the plan uses the legacy 7-section numbering).
+2. For every bullet that names a path under **`.cursor/rules/*.mdc`** in the **product repo** (`push` multi-deployment repo, `payments-web`, etc.) and calls for an **update** / **extend** / **add**, implement that **`.mdc` change in the same PR branch** before review / `cp`, unless the bullet explicitly defers it — then **edit the plan's §5** so the deferral is honest.
+3. Bullets that say **no file edit**, **verify only**, or **skip unless …** mean: confirm the code follows the existing rule; no `.mdc` diff required unless you discover drift.
+4. **`~/.cursor/plans/`** itself is not the product repo — rule edits belong in the repo that ships the code.
+
+See **`~/.cursor/docs/development-process.md`** § *Per-PR plan template* item **5** — *Align product-repo rules before `cp`* — for the full contract.
+
+## Format
+
+Follow the `.mdc` frontmatter format documented in existing rules. Keep rules concise (under 50 lines when practical), one concern per file, with concrete examples where helpful.

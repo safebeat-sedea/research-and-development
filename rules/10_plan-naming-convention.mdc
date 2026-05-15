@@ -1,0 +1,67 @@
+---
+description: "Naming conventions for plans, branches, PRs, chat titles, and commits — forbid the r-word, always name the benefit"
+alwaysApply: true
+---
+
+# Plan & PR naming
+
+Applies to **plan filenames and headings**, **branch names**, **PR titles and descriptions**, **chat titles**, and **commit messages** across all repos.
+
+## Forbidden word: r-e-f-a-c-t-o-r (and its forms)
+
+Do not emit this word or any inflection of it (noun, verb, gerund, participle) in any artifact generated for this repo. It reads as busy-work with no stated value — every such change leaves the code, system, or process in a **better shape**, so name that outcome instead.
+
+- Use a specific verb: **improve**, **simplify**, **consolidate**, **harden**, **speed up**, **de-duplicate**, **decouple**, **rename-for-clarity**.
+- Branch prefix: `improve/<desc>` (or a more specific prefix — `simplify/<desc>`, `harden/<desc>`, `speedup/<desc>`, `decouple/<desc>`). Never the forbidden prefix.
+- If a tool or template forces the forbidden word, rename the artifact before creating it rather than propagating the word downstream.
+
+## Always state what, how, **and benefit**
+
+Every plan title, PR title, and PR description must communicate the **benefit** alongside the what and how. If you can't articulate the benefit, the change isn't ready to ship.
+
+- **Plan / PR title**: lead with the outcome/benefit when practical.
+- **PR description**: explicitly answer three questions:
+  1. **What** changed.
+  2. **How** it was done (approach, key decisions).
+  3. **Benefit** — why the code/system/process is better after this change (e.g. fewer allocations, faster cold start, fewer modules to reason about, removes a foot-gun, unblocks feature X).
+
+### Examples
+
+```
+# BAD — no benefit, uses the forbidden word
+<forbidden>: extract device evaluator
+
+# GOOD — benefit named, specific verb
+improve: isolate device evaluator so campaign worker can scale independently
+simplify: collapse three overlapping campaign config loaders into one
+harden: remove silent catch in webhook handler so Sentry sees failures
+speedup: batch DB writes in candidate collector (p95 15s → 2s)
+decouple: lift shopify client out of push-shared so ai-campaign-orchestrator can move independently
+```
+
+```
+# BAD branch name
+<forbidden>/logger
+
+# GOOD branch names
+improve/logger-structured-fields
+simplify/logger
+```
+
+### PR description shape
+
+```
+## What
+<bulleted list of behavioural/structural changes>
+
+## How
+<approach, notable decisions, trade-offs>
+
+## Benefit
+<concrete improvement: perf numbers, lines removed, modules collapsed,
+foot-guns eliminated, future work unblocked>
+```
+
+## When tempted to reach for the forbidden word
+
+Stop and ask: *what is actually better after this change?* That answer is the title.

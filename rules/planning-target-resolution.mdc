@@ -1,0 +1,88 @@
+---
+description: >-
+  How to resolve the target `.plan.md` when running plan-and-deliver protocol branches
+  (new-plan, phase-plan, pr-plan, delivery-phases, pr-breakdown, plan-reconcile). Resolution
+  is from session and chat context — not from IDE focused-file list. Covers resolution order,
+  snapshot emission, and "Where we are now in the plan tree" table format for AskQuestion /
+  numbered choices (no developer-typed workflow shortcuts).
+alwaysApply: false
+---
+
+# Planning target resolution
+
+Planning protocol branches act on a specific `.plan.md` under the **`.sedea/operations/`** union. The target is resolved from **session input, chat context, and structured choices** — not from the IDE focused-file list alone (IDE state can drift from planning intent).
+
+## Standard flow
+
+1. Developer signals a planning-tree lane change — explicitly (*"where are we?"*, *"what's next?"*) or implicitly (*"back to plan"*, *"let's move on to …"*).
+2. Agent emits a **"Where we are now in the plan tree"** snapshot (§ *Snapshot format*).
+3. Agent lists **numbered next-move options** in the same reply, each naming the **protocol branch + target plan** (e.g. *Option 2: sub-plan index 3 under `<slug>` → **new-plan** spawns child*). Use **`AskQuestion`** or a numbered bullet list; the developer picks a number or option — they do **not** type legacy shortcut tokens to select the move.
+4. Agent resolves the target from the chosen option and invokes the relevant skill with the target pre-resolved.
+
+Mid-flow, when chat already unambiguously names the current lane (e.g. sub-plan expansion just wrote child `3_xxx_<hex>.plan.md` and the next step is clearly **phase-plan** on that file), the agent may continue without a new snapshot — see § *Resolution order* bullet 4.
+
+## Resolution order
+
+Highest confidence first. Stop at the first match.
+
+1. **Explicit in session or message.** Slug, relative path under `plans/`, or absolute `.sedea/operations/.../*.plan.md` — use verbatim.
+2. **Most recent agent recommendation.** The last turn proposed an option that named a concrete target; the user’s **`AskQuestion`** / numbered pick locks that target in.
+3. **Snapshot pinpoint.** The latest snapshot lists exactly one option matching the branch the user chose — use that target.
+4. **Mid-flow continuation.** Chat names the current lane unambiguously (e.g. child file just written; next skill is **phase-plan** on that path). Valid while snapshot freshness holds (§ *Snapshot freshness*).
+5. **Stop and emit fresh snapshot.** If still ambiguous, emit a new snapshot and ask again via **AskQuestion** / numbered list.
+
+Do **not** use `<open_and_recently_viewed_files>` as the primary resolver for planning targets.
+
+## Snapshot freshness
+
+Assume plan files under `.sedea/operations/**/plans/` are single-writer for this session. A **plan-tree state change** invalidates mid-flow assumptions when:
+
+- A planning skill run wrote or rewrote a `.plan.md` or `.state.yaml`.
+- The agent ran `StrReplace` / `Write` on plan or sidecar files.
+- The user reported PR open/merge/close linked to a plan.
+
+Q&A, code edits in repos, and reads do **not** invalidate the snapshot by themselves.
+
+## Snapshot format
+
+Markdown table for each in-flight plan (typically one Master Plan subtree):
+
+| Column | Content |
+| --- | --- |
+| **Plan** | Slug + display name. |
+| **Stage** | Mode #1 Master Plan, #2 Phase, #3 PR plan, roadmap topic. |
+| **Status** | Drafted sections, `_TBD_`, PR linked, archived. |
+| **Next viable moves** | **Numbered** options naming **protocol branch + target** (e.g. *1. **new-plan** — sub-plan index 2 under `<parent-slug>`*; *2. **phase-plan** — populate child `<path>`*). |
+
+Below the table, repeat the same options as **`AskQuestion`** choices or a **numbered bullet list** the developer can answer with a digit — aligned with [sedea-plan-and-deliver.mdc](../../../../.cursor/rules/sedea-plan-and-deliver.mdc).
+
+**Snapshot-scoped hooks** (e.g. *"Reply **fill PR plan** to continue"*) are allowed **only** inside that snapshot; do not rely on global typed shortcuts.
+
+### PR-plan completeness before coding-session
+
+Snapshots should respect the **coding-session** completeness gate when a PR plan would anchor a worktree session:
+
+1. For each in-scope **PR plan** row, detect `_TBD_` outside fenced code in §§5–8 / deploy where applicable, or run (from hosting repo):  
+   `node .sedea/centers/sedea-centers--development/missions/plan-and-deliver/scripts/plan-ws-completeness.mjs --file "<absolute path>"`  
+   Exit **1** means incomplete for worktree handoff.
+
+2. **Anchor plan** for **coding-session** matches **`plan-state.mjs resolve`**: `node .sedea/centers/sedea-centers--development/missions/plan-and-deliver/scripts/plan-state.mjs resolve --cwd "$PWD"` when in a linked worktree, else the PR plan explicitly in play.
+
+3. If incomplete **and** that plan is the default **coding-session** anchor, the **first** numbered option must be finishing the PR plan sections; list **coding-session** only after completeness or with an explicit override label consistent with the **coding-session** skill.
+
+When every in-scope PR plan passes completeness, normal ordering resumes.
+
+## Lane-change triggers
+
+Emit a fresh snapshot when:
+
+- Explicit: *where are we?*, *what's next?*, *plan tree?*
+- Implicit: *back to plan*, *next phase*, *continue with the plan*, etc.
+- Ambiguous branch selection after **AskQuestion** / list.
+- Stale: user picks a move after a plan-tree state change since the last snapshot.
+
+## Skills consume the resolved target
+
+Each planning skill (**new-plan**, **phase-plan**, **pr-plan**, **delivery-phases**, **pr-breakdown**) receives the target path as **pre-resolved structured input**. When loading a skill, the agent states the target up front (one line).
+
+Skills still run their own **template / stage verification** on disk. If a skill loads without a resolved target, **stop** and resolve via this rule before proceeding.
