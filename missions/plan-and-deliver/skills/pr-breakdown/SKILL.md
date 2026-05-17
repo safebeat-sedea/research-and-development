@@ -46,6 +46,10 @@ inputs:
     type: string
     description: Optional upstream-selected route. When set to pr-breakdown, do not route back to delivery-phases unless the assessment creates a blocking conflict.
     required: false
+  prBreakdownShape:
+    type: string
+    description: Optional upstream route detail for PR breakdown, single or multi.
+    required: false
 ---
 
 # PR breakdown — mode #3 decomposition

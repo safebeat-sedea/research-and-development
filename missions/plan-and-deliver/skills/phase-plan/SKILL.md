@@ -38,13 +38,22 @@ inputs:
     type: string
     description: Ledger parent slug/path copied from the upstream agent.
     required: false
+  upstreamSkill:
+    type: string
+    description: Skill that requested this phase population, usually new-plan.
+    required: false
+  autoContinue:
+    type: boolean
+    description: When true, spawn the next decomposition branch after population if parent hint and assessment agree.
+    required: false
+    default: true
 ---
 
 # Phase plan: §§ 1–4 from the parent plan
 
 This skill drives the **second-tier** planning move under Sedea's New Feature Development Process: take a freshly-spawned phase plan stub (indexed child from the parent's `Delivery phases` list, typically right after the **`new-plan`** protocol branch) and populate its body with sections 1 through 4 of the **Phase plan template** — Background, Scope, Code design, Changes — plus **`### Decomposition assessment`** (sizing and routing recommendation) **immediately before** the dual-title `## 5. Delivery phases | PR breakdown` section. The dual-title **list** body and § 6 (Caveats) stay `_TBD_` until follow-up turns.
 
-The agent has enough context after step 3 to draft §§ 1–4 and the assessment — inferable from the parent plan's architectural design + change list + this phase's row in the parent's `Delivery phases` numbered list. The assessment supplies **kinds of change**, **PR count band**, **sequencing / coupling**, a **routing recommendation**, and **confidence** so the **developer** can choose the next **`delivery-phases`** / **`pr-breakdown`** path without guessing. Filling the dual-title **numbered list** is owned by those protocol branches; § 6 (Caveats) often only emerges once § 5 reveals constraints.
+The agent has enough context after step 3 to draft §§ 1–4 and the assessment — inferable from the parent plan's architectural design + change list + this phase's row in the parent's `Delivery phases` numbered list. The assessment supplies **kinds of change**, **PR count band**, **sequencing / coupling**, a **routing recommendation**, and **confidence** so the next **`delivery-phases`** / **`pr-breakdown`** path can be selected without guessing. Filling the dual-title **numbered list** is owned by those protocol branches; § 6 (Caveats) often only emerges once § 5 reveals constraints.
 
 The procedure below is a hard contract — do **not** skip steps, re-order them, or start drafting before the target plan is verified as a phase plan stub. Skipping a step is the difference between a clean phase plan and one that drifts from the documented process.
 
@@ -61,6 +70,8 @@ The **developer** picks the next move via **AskQuestion** or a **numbered** list
 ## Step 1 — Identify the target plan and verify it's a phase plan stub
 
 The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`planning-target-resolution.mdc`](../../../rules/planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts (e.g. *Target plan: `<slug>` (from prior structured choice).*). Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative.
+
+When spawned by `new-plan`, `targetPlanPath`, `targetPlanSlug`, `parentPlanPath`, `parentPlanSlug`, and `parentIndex` are already locked. Treat missing or conflicting values as a spawn-contract failure: stop with `failure` or `partial` and report the missing field. Do not fall back to IDE focus or free-form target discovery in spawned mode.
 
 If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot; let the developer pick the lane via **AskQuestion** or numbered options, then continue.
 
@@ -97,6 +108,8 @@ Read the target plan's sidecar `<slug>.state.yaml` for `parent:`. Apply:
 
 Acknowledge: *"Parent: `<parent-slug>` (mode #2 `Delivery phases`); proceeding."*
 
+If `parentPlanPath` / `parentPlanSlug` inputs were supplied, they must match the resolved sidecar parent and the parent file read here. If they conflict, stop with `failure`; the child was spawned against the wrong parent context.
+
 ## Step 2 — Load the development-process doc
 
 Read `.sedea/centers/sedea-centers--development/docs/development-process.md` with the Read tool, **no offset, no limit**. Acknowledge in one sentence: *"Loaded development-process.md; will follow § 2 Phase plan template + § 6/§ 5 contents rule."*
@@ -109,13 +122,13 @@ Read the parent plan in full (`Read` tool, no offset, no limit). Locate the pare
 
 ### 3a — Match the target plan to a numbered item
 
-Find the numbered item whose **bolded title** matches the target plan's `name:` from frontmatter. Match strategy, in order:
+Find the numbered item whose **bolded title** matches the target plan's `name:` from frontmatter. If spawned input includes `parentIndex`, inspect that exact item first and require it to match the target plan link or title; do not silently pick a different row. Match strategy, in order:
 
 1. Exact match between the target plan's `name:` and the bolded title text.
 2. Slug-normalised match: lowercase + replace spaces with `_` and `-` interchangeably (e.g. target plan `name: Replace polling with pubsub` matches bolded title `**Replace polling with pubsub**` *or* `**replace_polling_with_pubsub**` *or* `**replace-polling-with-pubsub**`).
 3. Substring match: the bolded title is a substring of the target plan's `name:` (or vice versa) — only when 1 and 2 fail and the match is unambiguous.
 
-If no item matches, or multiple items match equally well, **stop** and offer **AskQuestion** (or a numbered list) mapping each parent list row to an option so the developer picks the matching **N**; or ask them to fix the parent's list / target `name:` and re-run.
+If no item matches, or multiple items match equally well, **stop**. In standalone mode, offer **AskQuestion** mapping each parent list row to an option so the developer picks the matching **N**. In spawned mode, return `partial` with `remainingTasks` naming the row/link mismatch; do not ask the developer from this child lane unless the upstream agent explicitly delegated that choice.
 
 Once matched, capture **N** (the item's index) and the item's three sub-bullets:
 
@@ -296,15 +309,49 @@ If you simplified the parent's diagram in § 2c (per § 4c) or noticed parent-Ch
 
 Leave the dual-title **numbered list** under § 5 as `_TBD_` until the **`delivery-phases`** or **`pr-breakdown`** protocol branch fills it. Keep **`### Decomposition assessment`** immediately above § 5 — that block **is** in scope here. § 6 Caveats usually waits until § 5 exists so constraints are concrete.
 
-## Step 5 — Hand back with next-move options
+## Step 5 — Resolve next decomposition route
 
 You know the state: §§ 1–4 and **`### Decomposition assessment`** are drafted; dual-title § 5 list body and § 6 stay `_TBD_`.
+
+### 5a — Determine route signal
+
+Compare two signals:
+
+1. **Parent hint** — the `Decomposition decision` sub-bullet from the parent's `Delivery phases` item N.
+2. **Phase assessment** — the `Routing recommendation` line you just wrote under `### Decomposition assessment`.
+
+Normalize the signals to one of:
+
+- `delivery-phases`
+- `pr-breakdown-single`
+- `pr-breakdown-multi`
+- `unknown`
+
+Apply:
+
+- If both signals agree on `delivery-phases`, next route is `delivery-phases`.
+- If both signals agree on PR breakdown, next route is `pr-breakdown`; preserve single vs multi as `prBreakdownShape`.
+- If parent hint is `Delivery phases` but assessment says PR breakdown, or the reverse, do not auto-spawn. Surface the conflict as an open decision.
+- If either signal is missing or low-confidence, do not auto-spawn. Surface the uncertainty as an open decision.
+
+### 5b — Spawn next branch when clear
+
+When this skill is running as a spawned child and `autoContinue` is not `false`, spawn the next decomposition branch **only** when route signal is clear:
+
+- `delivery-phases` → spawn `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/delivery-phases/SKILL.md`
+- `pr-breakdown` → spawn `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/pr-breakdown/SKILL.md`
+
+Inputs must include `targetPlanPath`, `targetPlanSlug`, `parentAgentRole: "phase-plan-agent"`, `ledgerParent`, `decompositionAssessment`, and `routeLock` (`"delivery-phases"` or `"pr-breakdown"`). For `pr-breakdown`, also include `prBreakdownShape` (`"single"` or `"multi"`) when known.
+
+After emitting the child-spawn request, announce that the **Phase plan agent** is waiting for the downstream decomposition result and stop. Do not return terminal success upstream while the downstream lane is active.
+
+### 5c — Hand back when route is not clear or standalone
 
 End with:
 
 1. A **file link** — absolute `file://` path to the target `.plan.md` under `.sedea/operations/.../plans/...`.
 2. The parent's indicative decomposition line for this phase: **`<Delivery phases | PR breakdown>`** (from step 3a).
-3. **Numbered options** (or **AskQuestion**) — the developer picks one; do **not** treat legacy chat tokens as the control surface.
+3. **Structured route options** (use **AskQuestion** when waiting for the developer) — the developer picks one; do **not** treat legacy chat tokens as the control surface.
 
 Suggested options (adapt labels to context):
 
@@ -313,13 +360,25 @@ Suggested options (adapt labels to context):
 3. **Revise a section** — the developer names § N and feedback; you apply one focused `StrReplace` and echo. For assessment-only edits, anchor on `## 4. Changes` … `### Decomposition assessment`.
 4. **Commit plans** — remind the developer to commit when the body reads cleanly; this skill does **not** run git.
 
-**Stop** after presenting options — wait for the developer's reply. Do **not** chain **`delivery-phases`** or **`pr-breakdown`** inside this turn unless mission dispatch explicitly continues the session.
+**Stop** after presenting options — wait for the developer's reply. Do **not** chain **`delivery-phases`** or **`pr-breakdown`** inside this turn unless mission dispatch explicitly continues the session and route signal is clear.
 
-## Step 5a — Follow-up turns
+## Step 5d — Follow-up turns
 
 When the developer asks to revise § N, re-read that section and apply edits via `StrReplace`; echo the result; offer the same numbered menu.
 
-When they choose decomposition (options 1 or 2), emit one child-spawn request for the chosen **protocol branch** with inputs `targetPlanPath`, `targetPlanSlug`, `parentPlanPath`, `parentPlanSlug`, `ledgerParent`, and the current `### Decomposition assessment`. Do **not** impersonate the other skill's full procedure in the same turn; announce that this agent is waiting if the result is needed to keep the mission ledger current.
+When they choose decomposition (options 1 or 2), emit one child-spawn request for the chosen **protocol branch** with inputs `targetPlanPath`, `targetPlanSlug`, `parentAgentRole: "phase-plan-agent"`, `ledgerParent`, the current `### Decomposition assessment`, and `routeLock`. Do **not** impersonate the other skill's full procedure in the same turn; announce that this agent is waiting if the result is needed to keep the mission ledger current.
+
+## Step 5e — Aggregate downstream result
+
+When Mission Control delivers a child result from the spawned **`delivery-phases`** or **`pr-breakdown`** lane:
+
+1. Match it by correlation id first, then by `outputs.targetPlanPath` / `outputs.targetPlanSlug`.
+2. Copy downstream `spawnedPlans`, `activeLanes`, `openLedgerEntries`, and `remainingTasks` into this skill's result.
+3. If downstream status is `success` and `continuationStatus: "terminal"`, this phase-plan lane may return `terminal`.
+4. If downstream status is `success` or `partial` with active lanes or remaining tasks, return `active`.
+5. If downstream status is `failure`, `aborted`, or `abandoned`, return the same status upstream and include downstream errors.
+
+Silence or missing downstream metadata is not completion; return `partial` and keep the phase row open.
 
 ## One choice per turn — surface observations
 
@@ -327,16 +386,14 @@ Match the discipline in **`master-plan`**: perform exactly what was chosen; do n
 
 ## Scope guard
 
-## Scope guard
-
 This skill writes the **body** of the target phase plan — replacing the **`new-plan`** stub (or filling `_TBD_` placeholders) with the Phase plan template through §§ 1–4 plus **`### Decomposition assessment`**.
 
 **Owns:** in-file §§ 1–4 + assessment; echo to chat for review.
 
-**Out of scope here:** target plan frontmatter (left as **`new-plan`** set it); any edit to the parent plan body (including parent `Plan:` placeholders — **`plan-reconcile`**); dual-title § 5 **numbered list** and § 6 Caveats (**`delivery-phases`** / **`pr-breakdown`** and later turns); spawning further child plans (**`new-plan`** after § 5 exists); git / commit automation.
+**Out of scope here:** target plan frontmatter (left as **`new-plan`** set it); any edit to the parent plan body (including parent `Plan:` placeholders — **`plan-reconcile`**); drafting the dual-title § 5 **numbered list** inline and § 6 Caveats (**`delivery-phases`** / **`pr-breakdown`** and later turns own those); spawning grandchildren directly (**`new-plan`** after § 5 exists is owned by the spawned decomposition skill); git / commit automation.
 
 Wrong template stops live in step 1a — use **`master-plan`** or **`pr-plan`** protocol branches when the file is a Master Plan or PR plan.
 
-Stop after the handoff block in step 5.
+Stop after the handoff block in step 5, or after spawning the next decomposition branch and announcing the wait state.
 
-When spawned, end with a child result containing `outputs.targetPlanPath`, `outputs.targetPlanSlug`, `outputs.parentPlanPath`, `outputs.parentPlanSlug`, `outputs.parentIndex`, `outputs.decompositionAssessment`, `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`, `outputs.continuationOwner: "phase-plan-agent"`, and `outputs.continuationStatus` (`active` while downstream decomposition remains, `terminal` when the phase plan has no remaining planning work).
+When spawned, end with a child result containing `outputs.targetPlanPath`, `outputs.targetPlanSlug`, `outputs.parentPlanPath`, `outputs.parentPlanSlug`, `outputs.parentIndex`, `outputs.decompositionAssessment`, `outputs.routeDecision` (`delivery-phases` | `pr-breakdown` | `needs-user-decision`), `outputs.prBreakdownShape` (`single` | `multi` | `unknown`), `outputs.spawnedPlans`, `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`, `outputs.continuationOwner: "phase-plan-agent"`, and `outputs.continuationStatus` (`active` while downstream decomposition remains or route choice is unresolved, `terminal` when the phase plan has no remaining planning work).
