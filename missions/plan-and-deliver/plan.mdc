@@ -9,35 +9,54 @@ alwaysApply: false
 
 ```mermaid
 flowchart TB
-  subgraph plan["Planning branches"]
-    NP[new-plan]
-    MP[master-plan]
-    DP[delivery-phases]
-    PB[pr-breakdown]
-    PP[phase-plan]
-    PRP[pr-plan]
-    NP --> MP
-    MP --> DP
-    MP --> PB
-    DP --> PP
-    PB --> PRP
-    DP --> NP
-    PB --> NP
+  classDef skill fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+  classDef approval fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px
+  classDef terminal fill:#dcfce7,stroke:#16a34a,color:#14532d
+
+  START[PRD source] --> LINK[Linked PRD]
+  START --> AH[ad-hoc-prd]
+  AH:::skill --> A1{{Approve PRD}}
+  A1:::approval --> MP[master-plan]
+  LINK --> MP
+
+  subgraph planning["Planning + decomposition"]
+    MP:::skill --> A2{{Approve route}}
+    A2:::approval --> DP[delivery-phases]
+    A2 --> PB[pr-breakdown]
+    DP:::skill --> A3{{Approve list}}
+    PB:::skill --> A4{{Approve list}}
+    A3:::approval --> NP1[new-plan phase child]
+    A4:::approval --> NP2[new-plan PR child]
+    NP1:::skill --> A5{{Approve populate}}
+    NP2:::skill --> A6{{Approve populate}}
+    A5:::approval --> PP[phase-plan]
+    A6:::approval --> PRP[pr-plan]
+    PP:::skill --> A7{{Approve next route}}
+    A7:::approval --> DP
+    A7 --> PB
   end
-  subgraph ship["Delivery branches"]
-    CS[coding-session]
-    CPR[create-pr]
-    REV[pr-review]
-    DW[deploy-walk]
-    PRP --> CS
-    CS --> CPR
-    CPR --> REV
-    REV --> DW
+
+  subgraph delivery["Implementation + PR"]
+    PRP:::skill --> A8{{Approve implementation}}
+    A8:::approval --> CS[coding-session]
+    CS:::skill --> A9{{Approve cut point}}
+    A9:::approval --> PPR[pre-pr-review]
+    PPR:::skill --> A10{{Approve fixes or PR creation}}
+    A10:::approval --> CS
+    A10 --> CPR[create-pr]
+    CPR:::skill --> REV[pr-review inline]
+    REV:::skill --> A11{{Approve PR feedback actions}}
+    A11:::approval --> CS
   end
-  subgraph cadence["Cadence"]
-    REC[plan-reconcile]
-    DW --> REC
-    CPR --> REC
+
+  subgraph ship["Merge + deploy + reconcile"]
+    CPR --> A12{{Approve deploy verification}}
+    A12:::approval --> DW[deploy-walk]
+    DW:::skill --> A13{{Approve deploy state changes}}
+    A13:::approval --> REC_PRE[plan-reconcile preview]
+    REC_PRE:::skill --> A14{{Approve archive mutations}}
+    A14:::approval --> REC[plan-reconcile complete]
+    class REC terminal
   end
 ```
 
@@ -63,26 +82,75 @@ Session command phrases are declared in `mission.yaml`. This section defines rou
 
 ```mermaid
 flowchart TD
+  classDef skill fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+  classDef approval fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px
+  classDef wait fill:#f1f5f9,stroke:#64748b,color:#0f172a
+  classDef terminal fill:#dcfce7,stroke:#16a34a,color:#14532d
+
   CMD[Match create new plan] --> ASK[AskQuestion: PRD source]
-  ASK --> O1[PRD link or file]
-  ASK --> O2[Ad-hoc task description]
-  O1 --> LINK["§2 Validate linked PRD"]
-  LINK --> SEED["§4 Collect planning seed"]
-  O2 --> AH["§3 Spawn Ad-Hoc PRD agent"]
-  AH --> WAIT[Wait for agent result]
-  WAIT --> PRD[Ad-Hoc PRD link]
-  PRD --> SEED
-  SEED --> MP["§5 Spawn Master Plan agent"]
-  MP --> WAIT2[Wait for plan result]
-  WAIT2 --> PLAN[Master Plan path]
-  PLAN --> ACK["§6 Acknowledge Master Plan status"]
-  ACK --> LEDGER["§7 Maintain closure ledger"]
-  LEDGER --> WAIT3[Wait for downstream notifications]
+  ASK:::approval --> LINK["§2 Validate linked PRD"]
+  ASK --> AH["§3 ad-hoc-prd"]
+  AH:::skill --> AH_APPROVE{{Developer approves Ad-Hoc PRD?}}
+  AH_APPROVE:::approval --> SEED["§4 Collect planning seed"]
+  LINK --> SEED
+
+  SEED --> MP["§5 master-plan"]
+  MP:::skill --> MP_WAIT[Wait for master-plan result]
+  MP_WAIT:::wait --> MP_REVIEW{{Developer reviews §§1-5 and route choice}}
+  MP_REVIEW:::approval --> ROUTE{§6 route}
+
+  ROUTE --> DP["delivery-phases"]
+  ROUTE --> PB["pr-breakdown"]
+  ROUTE --> CAVEATS["master-plan drafts §7 Caveats"]
+  DP:::skill --> DP_APPROVE{{Approve phase list?}}
+  PB:::skill --> PB_APPROVE{{Approve PR breakdown?}}
+  DP_APPROVE:::approval --> NP_PHASE["new-plan indexed child phase"]
+  PB_APPROVE:::approval --> NP_PR["new-plan indexed child PR"]
+
+  NP_PHASE:::skill --> NP_PHASE_APPROVE{{Approve child stub and populate?}}
+  NP_PR:::skill --> NP_PR_APPROVE{{Approve child stub and populate?}}
+  NP_PHASE_APPROVE:::approval --> PHASE["phase-plan"]
+  NP_PR_APPROVE:::approval --> PRPLAN["pr-plan"]
+
+  PHASE:::skill --> PHASE_ROUTE{{Approve phase plan and next route?}}
+  PHASE_ROUTE:::approval --> ROUTE
+  PRPLAN:::skill --> IMPL_APPROVE{{Approve PR plan for implementation?}}
+
+  IMPL_APPROVE:::approval --> CS_START{{Approve start implementation?}}
+  CS_START:::approval --> CS["coding-session"]
+  CS:::skill --> WORKTREE[Worktree, sidecar session, workbench attach, coding prompt]
+  WORKTREE --> CUTPOINT{{Developer approves committed cut point?}}
+  CUTPOINT:::approval --> PPR["pre-pr-review"]
+  PPR:::skill --> PPR_RESULT{review result}
+  PPR_RESULT -->|no-go| FIX_APPROVE{{Approve fix scope?}}
+  FIX_APPROVE:::approval --> CS
+  PPR_RESULT -->|go| PR_APPROVE{{Approve follow-ups and PR creation?}}
+  PR_APPROVE:::approval --> CPR["create-pr"]
+
+  CPR:::skill --> PR_OPEN[PR URL and lifecycle tracking]
+  PR_OPEN --> PRR["pr-review inline in coding-session"]
+  PRR:::skill --> PRR_APPROVE{{Approve PR comment fixes or follow-ups?}}
+  PRR_APPROVE:::approval --> CS
+  PR_OPEN --> MERGE_WAIT[Wait/check PR approval and merge]
+  MERGE_WAIT:::wait --> DEPLOY_APPROVE{{Approve deploy verification?}}
+  DEPLOY_APPROVE:::approval --> DW["deploy-walk"]
+
+  DW:::skill --> DEP_BEFORE{{Approve deployed with unchecked before-deploy steps?}}
+  DEP_BEFORE:::approval --> DW
+  DW --> DEP_CLOSE{{Approve deploy checklist closure?}}
+  DEP_CLOSE:::approval --> DEP_DONE[Deploy status done and capstone todo done]
+  DEP_DONE:::terminal --> REC_APPROVE{{Approve plan-reconcile?}}
+  REC_APPROVE:::approval --> REC_PREVIEW["plan-reconcile dry-run preview"]
+  REC_PREVIEW:::skill --> REC_MUTATE{{Approve reconcile/archive mutations?}}
+  REC_MUTATE:::approval --> REC_DONE[Archive, follow-ups triage, ledger terminal]
+  REC_DONE:::terminal --> LEDGER["§7 Squad Leader closure ledger"]
+  LEDGER --> RESOLVE[Propose dispatch resolution]
 ```
 
 - **§1 live** — PRD source gate
-- **§TBD nodes** — expand as protocol steps are authored
-- **Sub-plans** — separate session command (not shown)
+- **Yellow diamonds** — developer approval gates; no state transition past the gate without approval
+- **Blue nodes** — skill execution points; child agents report ledger-shaped outputs upstream
+- **Gray nodes** — wait states where the owning lane must not infer completion from silence
 
 ### 1. Establish PRD source
 
