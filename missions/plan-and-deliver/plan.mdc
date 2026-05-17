@@ -1,0 +1,223 @@
+---
+description: Plan and deliver — PRD through ship via the Sedea plan tree; protocol in progress.
+alwaysApply: false
+---
+
+# Mission plan
+
+## Objectives
+
+```mermaid
+flowchart TB
+  subgraph plan["Planning branches"]
+    NP[new-plan]
+    MP[master-plan]
+    DP[delivery-phases]
+    PB[pr-breakdown]
+    PP[phase-plan]
+    PRP[pr-plan]
+    NP --> MP
+    MP --> DP
+    MP --> PB
+    DP --> PP
+    PB --> PRP
+    DP --> NP
+    PB --> NP
+  end
+  subgraph ship["Delivery branches"]
+    CS[coding-session]
+    CPR[create-pr]
+    REV[pr-review]
+    DW[deploy-walk]
+    PRP --> CS
+    CS --> CPR
+    CPR --> REV
+    REV --> DW
+  end
+  subgraph cadence["Cadence"]
+    REC[plan-reconcile]
+    DW --> REC
+    CPR --> REC
+  end
+```
+
+1. **Feature planning contracts** — From PRD or scope, produce reviewable Master / Phase / PR plan bodies per Sedea development-process templates (`master-plan`, `phase-plan`, `pr-plan`).
+
+2. **Ad-hoc plan and delivery** — For smaller, well-bounded requests: shorter ad-hoc PRD (`ad-hoc-prd`), plans under `.sedea/operations/`, expedited Master Plan → one or more PR plans when the phase layer is not needed. All checks and verifications remain mandatory.
+
+3. **Scope breakdown** — Keep deliverable complexity under control: break work into delivery phases or PRs with explicit lists and assessments (`delivery-phases`, `pr-breakdown`, `new-plan` indexed spawn).
+
+4. **Implementation** — Plan-anchored coding sessions: completeness gate, worktrees, sidecar state, Sedea workbench attach, copy-safe agent prompts (`coding-session`).
+
+5. **PR and review closure** — Open PRs with reviewer-complete context (`create-pr`); triage and resolve review threads (`pr-review`, pre-pr-review skills).
+
+6. **Deploy verification** — Walk deploy-test plan checklists; record status and capstone todos in the plan file (`deploy-walk`).
+
+7. **Post-ship plan hygiene** — Merge-driven reconcile, archive candidates, follow-ups triage (`plan-reconcile`).
+
+8. **Plan tree integrity** — Scaffold and link `.plan.md` + `.state.yaml` under `.sedea/operations/` (`new-plan`, `plan-reconcile`); valid parents, slugs, Mission Control metadata (`mission.yaml` when listed).
+
+## Protocol
+
+Session command phrases are declared in `mission.yaml`. This section defines routing and execution for each phrase.
+
+```mermaid
+flowchart TD
+  CMD[Match create new plan] --> ASK[AskQuestion: PRD source]
+  ASK --> O1[PRD link or file]
+  ASK --> O2[Ad-hoc task description]
+  O1 --> LINK["§2 Validate linked PRD"]
+  LINK --> SEED["§4 Collect planning seed"]
+  O2 --> AH["§3 Spawn Ad-Hoc PRD agent"]
+  AH --> WAIT[Wait for agent result]
+  WAIT --> PRD[Ad-Hoc PRD link]
+  PRD --> SEED
+  SEED --> MP["§5 Spawn Master Plan agent"]
+  MP --> WAIT2[Wait for plan result]
+  WAIT2 --> PLAN[Master Plan path]
+  PLAN --> ACK["§6 Acknowledge Master Plan status"]
+  ACK --> WAIT3[Wait for downstream notifications]
+```
+
+- **§1 live** — PRD source gate
+- **§TBD nodes** — expand as protocol steps are authored
+- **Sub-plans** — separate session command (not shown)
+
+### 1. Establish PRD source
+
+- **Type:** Branching logic
+- **Intent:** Capture requirements input before any planning artifacts (per **Setup** in `.sedea/centers/sedea-centers--development/docs/development-process.md`: PRD is upstream to the Master Plan).
+- **Inputs:** Opening message matching `create new plan` (case-insensitive); optional remainder is context only.
+- **Expected output:** A PRD link or `@path`, or a short ad-hoc task description for ad-hoc PRD authoring.
+- **Next-step resolution:**
+  - Option **1** (PRD link or file) → continue to §2 to collect and validate the PRD artifact.
+  - Option **2** (ad-hoc task description) → collect the description → **`ad-hoc-prd`** → expedited **`master-plan`** → PR path with all checks and verifications mandatory (later protocol steps).
+
+**Procedure**
+
+1. Match `create new plan` on the opening message (case-insensitive).
+2. Use **AskQuestion** (per Sedea conduct — includes the standard *More details for option _* escape hatch) to ask where the PRD will come from:
+   1. **PRD link or file** — Confluence, Google Docs, or `@path` in the workspace.
+   2. **Ad-hoc task description** — Short blurb the agent uses to draft an ad-hoc PRD via **`ad-hoc-prd`** (see development-process **PRD** bullet and protocol branches table).
+3. Apply the branch for the confirmed choice (see **Next-step resolution** above). Do not engage downstream protocol branches from partial or ambiguous answers.
+
+**Out of scope for this step:** Indexed child / sub-plan spawns — those use a **dedicated protocol branch** and separate session command (not `create new plan`).
+
+**Referenced assets:** `.sedea/centers/sedea-centers--development/docs/development-process.md`; `skills/ad-hoc-prd/SKILL.md`; `skills/master-plan/SKILL.md`.
+
+### 2. Validate linked PRD
+
+- **Type:** Branching logic
+- **Intent:** Resolve the developer-provided PRD link or file into a readable PRD artifact before the mission engages **`master-plan`**.
+- **Inputs:** Confirmed §1 option **1**; PRD URL, absolute path, or workspace `@path`; optional title or related-document hints from the opening message.
+- **Expected output:** A readable PRD body plus the original PRD reference to pass into the **`master-plan`** seed.
+- **Next-step resolution:**
+  - Local file / `@path` read successfully → continue to the planning seed step for **`master-plan`**.
+  - URL fetched successfully → continue to the planning seed step for **`master-plan`**.
+  - URL is unavailable or auth-blocked → stop and ask the developer to provide a readable `@path`, paste the PRD body, or switch to the ad-hoc branch.
+  - PRD reference is missing or unreadable → stop and ask for a valid PRD link or file.
+
+**Procedure**
+
+1. Collect the PRD reference if §1 did not already capture it.
+2. Resolve source type:
+   - **Local file / `@path`** — read the full file.
+   - **Confluence, Google Docs, or web URL** — fetch the document body.
+3. If the source is auth-blocked or unreadable, stop without engaging downstream skills.
+4. Acknowledge the loaded PRD in one line, including title when available and source reference.
+5. Preserve the original PRD reference for the **`master-plan`** seed.
+
+### 3. Create ad-hoc PRD via agent
+
+- **Type:** Agent engagement and handover
+- **Intent:** Delegate ad-hoc PRD creation to a focused **Ad-Hoc PRD agent** so the **Squad Leader** can keep ownership of the main `create new plan` protocol.
+- **Inputs:** Confirmed ad-hoc task description from §1; optional title if already provided; Sedea always-apply rules; this mission plan; `.sedea/centers/sedea-centers--development/docs/development-process.md`; assigned skill `skills/ad-hoc-prd/SKILL.md`.
+- **Target agent role:** Ad-Hoc PRD agent
+- **Assigned skill:** `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md`
+- **Required rule context:** Sedea center always-apply rules, this mission plan, `development-process.md`, and the `ad-hoc-prd` skill.
+- **Expected output:** Child agent result with `status: success` or `partial` and `outputs.adHocPrdPath` / `outputs.adHocPrdLink` pointing to the created `.ad-hoc-prd.md` document.
+- **Next-step resolution:**
+  - Child result `success` with PRD link/path → continue to the planning seed step for **`master-plan`**.
+  - Child result `partial` with usable PRD link/path → surface remaining gaps to the developer, then continue only when those gaps do not block **`master-plan`**.
+  - Child result `failure`, `aborted`, `abandoned`, or no PRD link/path → stop and ask the developer whether to retry, switch to linked PRD, or abandon this branch.
+
+**Procedure**
+
+1. Compile child inputs from §1: `createIntent: true`, `title` when known, `details` from the ad-hoc task description, and any optional roadmap or related hints.
+2. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Ad-Hoc PRD agent** using the `ad-hoc-prd` skill path and compiled inputs.
+3. Announce that the **Squad Leader** is waiting for the child result because **`master-plan`** requires a PRD artifact.
+4. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId`.
+5. Validate that the returned output includes a readable Ad-Hoc PRD document link/path before continuing.
+
+### 4. Collect planning seed
+
+- **Type:** Simple skill execution
+- **Intent:** Compile the required seed block for **`master-plan`** after a readable PRD artifact exists.
+- **Inputs:** PRD reference and loaded/created PRD body from §2 or §3; optional title, parent, and related-document hints from the opening message or prior developer answers.
+- **Expected output:** A complete **`master-plan`** seed containing `Feature planning`, `PRD`, `Parent`, and optional `Related` entries.
+- **Next-step resolution:**
+  - Required seed fields complete → continue to §5 to engage **`master-plan`**.
+  - Title missing → ask the developer for the feature title, then resume this step.
+  - Parent missing or unresolved → use **AskQuestion** to collect parent slug/path or `null` for a new roadmap/root plan, then resume this step.
+  - Related documents absent → record none and continue; related documents are optional.
+
+**Procedure**
+
+1. Derive `Feature planning` title from the PRD heading or provided title.
+2. Set `PRD` to the original readable link/path, or the Ad-Hoc PRD document returned by the child agent.
+3. Resolve `Parent` as slug, `@path`, absolute plan path, or `null`.
+4. Collect optional `Related` entries only when the developer provides them.
+5. Echo the compiled seed block for review.
+6. Preserve the seed for §5 **`master-plan`** handoff.
+
+**Seed shape**
+
+```text
+Feature planning: "<title>"
+PRD: <link or @path>
+Parent: <slug | @path | null>
+Related (optional):
+- <role>: <link or @path>
+```
+
+### 5. Create Master Plan via agent
+
+- **Type:** Agent engagement and handover
+- **Intent:** Delegate Master Plan creation and §§1–5 drafting to a focused **Master Plan agent** while the **Squad Leader** keeps ownership of the overall `create new plan` protocol.
+- **Inputs:** Complete seed from §4 (`Feature planning`, `PRD`, `Parent`, optional `Related`); Sedea always-apply rules; this mission plan; `development-process.md`; assigned skill `skills/master-plan/SKILL.md`.
+- **Target agent role:** Master Plan agent
+- **Assigned skill:** `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/master-plan/SKILL.md`
+- **Required rule context:** Sedea center always-apply rules, this mission plan, `development-process.md`, planning target resolution rule, and the `master-plan` skill.
+- **Expected output:** Child agent result with `status: success` or `partial`, `outputs.masterPlanPath`, `outputs.masterPlanSlug`, `outputs.complexityBand`, `outputs.complexityScore`, and any recommended next action.
+- **Next-step resolution:**
+  - Child result `success` with Master Plan path and low/medium complexity → continue to the next protocol step for post-master routing.
+  - Child result `success` with high complexity → stop foregrounding decomposition; route to scope narrowing / split decision in the next protocol step.
+  - Child result `partial` with usable Master Plan path → surface gaps and continue only if they do not block routing.
+  - Child result `failure`, `aborted`, `abandoned`, or no plan path → stop and ask whether to retry, revise seed, or abandon.
+
+**Procedure**
+
+1. Compile the **Master Plan agent** input from the §4 seed.
+2. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Master Plan agent** using the `master-plan` skill path and compiled seed.
+3. Announce that the **Squad Leader** is waiting because later protocol steps need the produced plan path and complexity result.
+4. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId`.
+5. Validate that returned outputs include a readable Master Plan path and complexity band before continuing.
+
+### 6. Acknowledge Master Plan status
+
+- **Type:** Finish/stop logic
+- **Intent:** Avoid duplicate continuation prompts by pausing the **Squad Leader** while the **Master Plan agent** owns the planning lane.
+- **Inputs:** Master Plan agent result: plan path, slug, complexity band, complexity score, child status, continuation owner/status, and any downstream notification requirement.
+- **Expected output:** One status acknowledgement from the **Squad Leader**; no route menu.
+- **Next-step resolution:**
+  - Master Plan agent reports active continuation ownership → acknowledge status and enter a resumable wait state.
+  - Master Plan agent reports terminal success and no remaining tasks → the **Squad Leader** may propose dispatch resolution.
+  - Master Plan agent reports failure or no usable plan path → stop and ask whether to retry, revise seed, switch PRD source, or abandon.
+  - Downstream agent result arrives → resume only when the result requires mission-level action.
+
+**Procedure**
+
+1. Read the Master Plan agent result.
+2. If the result includes a usable plan path and indicates the **Master Plan agent** owns continuation, acknowledge status only.
+3. Do not ask the developer to choose Delivery phases, PR breakdown, or Caveats from the **Squad Leader** lane.
+4. Pause the **Squad Leader** in a resumable wait state for downstream notifications.

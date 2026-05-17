@@ -11,6 +11,31 @@ description: >-
   and section 7 (Caveats) stay as TBD stubs for follow-up turns. Use when the user
   opens a fresh planning chat from the "feature plan: design + changes"
   plan-board prompt, or says "master-plan" / "draft a master plan".
+timeoutMs: 1800000
+warmUpRules:
+  - ".sedea/centers/sedea-centers--development/rules/planning-target-resolution.mdc"
+inputs:
+  seedBlock:
+    type: string
+    description: Complete master-plan seed block containing Feature planning, PRD, Parent, and optional Related entries.
+    required: true
+  featurePlanningTitle:
+    type: string
+    description: Human-readable feature title copied into the Master Plan name and H1.
+    required: true
+  prdRef:
+    type: string
+    description: Readable PRD URL, workspace @path, or absolute path.
+    required: true
+  parent:
+    type: string
+    description: Parent plan slug/path, or null when creating a new top-level plan.
+    required: true
+  related:
+    type: array
+    description: Optional related document entries with role and link/path.
+    required: false
+    default: []
 ---
 
 # Master plan: §§ 1–5 from the PRD
@@ -420,6 +445,8 @@ You know the state of the plan: §§ 1–5 are drafted (including **`### Complex
 
 § 6 is owned by `delivery-phases` / `pr-breakdown`; § 7 is drafted inline here. The handoff menu reflects that split — **`6` is a routing shortcut** (it prompts for `dp` vs `pb` and stops), **`7` is a draft shortcut** (this skill drafts § 7 in a follow-up turn).
 
+**Continuation ownership.** When this skill runs as a spawned **Master Plan agent** under the `create new plan` mission, this lane owns post-master planning continuation. The **Squad Leader** only acknowledges status and waits for downstream notifications; it must not present a duplicate route menu for Delivery phases, PR breakdown, or Caveats. Include `continuationOwner: "master-plan-agent"` and `continuationStatus: "active"` in the terminal result while any follow-up choice remains on this lane.
+
 **Branch on the Step 6c band** (read from the `### Complexity score` subsection you just wrote):
 
 ### Step 7a — When complexity is **low** or **medium** (C ≤ 20)
@@ -515,4 +542,13 @@ This skill writes the Master Plan file (`<slug>.plan.md` + `<slug>.state.yaml`) 
 - Draft section 6 (`Delivery phases | PR breakdown`) — that section is owned by `delivery-phases` (`dp`) and `pr-breakdown` (`pb`); the `6` shortcut in the handoff menu routes there rather than drafting inline.
 - Load `delivery-phases` / `pr-breakdown` from inside this skill. The `6` shortcut prompts the user to type `dp` or `pb` in the next turn; the chat-shortcuts dispatcher routes from there.
 
-Stop after the handoff line.
+When running as a spawned child, end with `AGENT_RESULT_RESPONSE_V1` containing at least:
+
+- `outputs.masterPlanPath`
+- `outputs.masterPlanSlug`
+- `outputs.complexityBand`
+- `outputs.complexityScore`
+- `outputs.continuationOwner` (`master-plan-agent` while this lane owns follow-up)
+- `outputs.continuationStatus` (`active` while follow-up choices remain, `terminal` when no remaining tasks exist)
+
+Stop after the handoff line and terminal result.

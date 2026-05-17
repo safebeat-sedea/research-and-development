@@ -1,0 +1,7 @@
+name: plan and deliver
+description: >-
+  Plan and ship features through the Sedea plan tree — planning contracts,
+  scope breakdown, implementation, PR review, deploy verification, and plan hygiene.
+commands:
+  - phrase: create new plan
+    description: Scaffold a new plan under .sedea/operations/ and begin planning.
