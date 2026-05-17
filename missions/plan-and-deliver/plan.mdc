@@ -76,7 +76,8 @@ flowchart TD
   MP --> WAIT2[Wait for plan result]
   WAIT2 --> PLAN[Master Plan path]
   PLAN --> ACK["§6 Acknowledge Master Plan status"]
-  ACK --> WAIT3[Wait for downstream notifications]
+  ACK --> LEDGER["§7 Maintain closure ledger"]
+  LEDGER --> WAIT3[Wait for downstream notifications]
 ```
 
 - **§1 live** — PRD source gate
@@ -221,3 +222,32 @@ Related (optional):
 2. If the result includes a usable plan path and indicates the **Master Plan agent** owns continuation, acknowledge status only.
 3. Do not ask the developer to choose Delivery phases, PR breakdown, or Caveats from the **Squad Leader** lane.
 4. Pause the **Squad Leader** in a resumable wait state for downstream notifications.
+
+### 7. Maintain closure ledger
+
+- **Type:** Finish/stop logic
+- **Intent:** Track mission-level completion while downstream planning agents own the actual plan-building continuation.
+- **Inputs:** Master Plan agent result; every later downstream child result; plan path and child plan paths reported by downstream agents; continuation status; active lane identifiers; remaining task lists.
+- **Expected output:** Updated closure ledger, status acknowledgement, continued wait, or dispatch resolution proposal.
+- **Next-step resolution:**
+  - New phase or PR plan is spawned → add it to the closure ledger as open.
+  - Downstream child result reports active continuation → acknowledge status and keep that lane open.
+  - Downstream child result reports terminal completion for a registered phase or PR plan → mark that ledger entry closed.
+  - Any child result reports failure, aborted, or abandoned → mark the ledger blocked and ask the developer whether to retry, revise scope, accept partial resolution, or abandon.
+  - Ledger has no open or blocked entries, every active lane is terminal, and no remaining tasks are reported → propose dispatch resolution.
+
+**Closure ledger rules**
+
+- The **Squad Leader** owns mission-level closure accounting; downstream agents own planning choices and child spawning.
+- Every phase or PR plan spawned from the Master Plan tree must have an explicit ledger entry.
+- The **Squad Leader** must receive terminal closure for every open ledger entry before proposing resolved dispatch.
+- A plan entry may close as completed, deferred, abandoned, or out of scope, but the closing status must be explicit.
+- Silence, missing metadata, or an unreported lane is not completion.
+
+**Procedure**
+
+1. Initialize the ledger when the Master Plan agent reports a plan path and continuation ownership.
+2. Register each downstream phase plan, PR plan, or agent lane when a child reports it was spawned or made active.
+3. On each downstream result, update the matching ledger entry by correlation id, plan path, or reported slug.
+4. Acknowledge updates without presenting planning route choices from the **Squad Leader** lane.
+5. When the ledger is empty of open/blocked work and all reported lanes are terminal, propose dispatch resolution.
