@@ -194,10 +194,36 @@ Spawn `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skill
 
 When Mission Control delivers the **`pre-pr-review`** result:
 
-1. Copy `blockers`, `flags`, `followUpsAppended`, `remainingTasks`, `activeLanes`, and `openLedgerEntries` into the coding-session result.
-2. If recommendation is `go`, mark review handoff complete and surface **`create-pr`** as the next protocol branch.
-3. If recommendation is `no-go`, keep the implementation lane active and route back to coding-session fix work; do not proceed to PR creation.
+1. Copy `blockers`, `flags`, `followUpsAppended`, `codingAgentHandback`, `requiresDeveloperApproval`, `remainingTasks`, `activeLanes`, and `openLedgerEntries` into the coding-session result.
+2. If recommendation is `go`, **coding-session** spawns **`create-pr`** because it owns the implementation context, worktree path, branch, diff summary, PR plan path, and reviewer result. Do not make **`pre-pr-review`** spawn `create-pr`.
+3. If recommendation is `no-go`, keep the implementation lane active and route back to coding-session fix work **only after developer approval**; do not proceed to PR creation.
 4. If review failed, was aborted, or was abandoned, keep the ledger entry blocked until the developer retries, defers, or abandons the review.
+
+### Review feedback approval gate
+
+When **`pre-pr-review`** returns `recommendation: "no-go"` or any `blockers`:
+
+1. Present the review summary to the developer: blockers, `Must`, `Should`, `Defer`, and any follow-ups appended to the PR plan.
+2. Use **AskQuestion** before making any code or plan edits. Required options:
+   - **Apply Must fixes** — coding-session may edit only blocker / `Must` items.
+   - **Apply Must + Should fixes** — coding-session may edit blocker / `Must` and `Should` items.
+   - **Revise review scope** — clarify or challenge reviewer findings before code edits.
+   - **Defer / abandon review fixes** — keep ledger blocked or mark the PR plan deferred/abandoned per developer choice.
+   - **More details for option _**
+3. Do not interpret the reviewer handback itself as approval. No source edits, plan edits, commits, pushes, or new review spawn occur until the developer chooses an approval option.
+4. After approved fixes are implemented, require a new explicit committed cut point and spawn **`pre-pr-review`** again. The loop repeats until **`pre-pr-review`** returns `go` or the developer explicitly defers/abandons.
+5. Track each loop pass in outputs as `reviewLoopCount` and keep `continuationStatus: "active"` while approval, fixes, commit cut point, or re-review remains open.
+
+### Create-PR handoff after go
+
+When **`pre-pr-review`** returns `recommendation: "go"`:
+
+1. Verify the worktree branch is pushed or pushable per **efficient-pr-shipping**. Do not open the PR directly from coding-session.
+2. Emit exactly one child-spawn request for `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/create-pr/SKILL.md`.
+3. Inputs must include `targetPlanPath`, `targetPlanSlug`, `worktreePath`, `branchName`, `baseRef`, `repoUrl`, `diffSummary`, `prePrReviewRecommendation: "go"`, `prePrReviewFlags`, `followUpsAppended`, `ledgerParent`, and `upstreamSkill: "coding-session"`.
+4. Announce that **coding-session** is waiting for the PR-creating agent result and stop. Do not continue to `pr-review` or deploy until `create-pr` reports a PR URL/number or a blocking failure.
+
+When Mission Control delivers the **`create-pr`** result, copy `prUrl`, `prNumber`, `branchName`, `remainingTasks`, `activeLanes`, and `openLedgerEntries` into the coding-session result. If the PR was created, keep the mission lane active for `pr-review` and deploy verification.
 
 ## Implementation handoff result
 
@@ -213,6 +239,11 @@ When this skill runs as a spawned child, end with a child result containing at l
 - `outputs.prePrReviewStatus`
 - `outputs.prePrReviewRecommendation`
 - `outputs.reviewBlockers`
+- `outputs.reviewLoopCount`
+- `outputs.developerApprovalStatus`
+- `outputs.createPrStatus`
+- `outputs.prUrl`
+- `outputs.prNumber`
 - `outputs.activeLanes`
 - `outputs.openLedgerEntries`
 - `outputs.remainingTasks`
@@ -222,6 +253,8 @@ When this skill runs as a spawned child, end with a child result containing at l
 Set `outputs.continuationStatus` as follows:
 
 - `active` when worktrees are created and prompts emitted; implementation is now waiting on the coding agent lane.
+- `active` when pre-pr-review returns blockers and developer approval for fixes is pending.
+- `active` when approved review fixes, a new committed cut point, or re-review remains.
 - `active` when worktrees exist but Mission Control attach or prompt emission still needs repair.
 - `terminal` only when this branch is explicitly scoped to worktree/prompt setup and those setup tasks are complete with no active coding lane tracked by this dispatch.
 - `partial` status with `continuationStatus: "active"` when readiness, repo selection, dirty tree, base branch, sidecar write, or MCP attach blocks setup.

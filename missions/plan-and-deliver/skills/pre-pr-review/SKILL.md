@@ -154,6 +154,8 @@ Report:
 4. Recommendation: `go` only when there are no `FAIL` rows.
 5. Coding-agent handback: what to fix next, with `Must`, `Should`, and `Defer` groups.
 
+The handback is advisory until the developer approves the fix pass. Do not frame reviewer feedback as automatic authorization for **`coding-session`** to edit code. The coding agent must present the review result to the developer and wait for an explicit approval choice before applying `Must`, `Should`, or `Defer` items.
+
 End with a child result containing:
 
 - `outputs.anchorType`
@@ -166,6 +168,8 @@ End with a child result containing:
 - `outputs.blockers`
 - `outputs.flags`
 - `outputs.followUpsAppended`
+- `outputs.codingAgentHandback`
+- `outputs.requiresDeveloperApproval`
 - `outputs.activeLanes`
 - `outputs.openLedgerEntries`
 - `outputs.remainingTasks`
@@ -175,7 +179,7 @@ End with a child result containing:
 Set `continuationStatus`:
 
 - `terminal` when recommendation is `go` and no blocking review work remains.
-- `active` when blockers require a coding-session fix loop.
+- `active` when blockers require a coding-session fix loop and developer approval is pending.
 - `partial` status with `continuationStatus: "active"` when the review ran but missing rules, dirty uncommitted edits, or incomplete anchors make the result degraded.
 
 Stop after the report and terminal child result. Do not run `git`, `gh`, source edits, commits, pushes, or PR creation.
