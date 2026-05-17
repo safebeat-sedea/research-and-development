@@ -180,7 +180,7 @@ When running as a spawned downstream agent under `master-plan`, mission dispatch
 
 1. After drafting the phase list, count the numbered rows as **K**.
 2. Emit one child-spawn request per phase row for `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/new-plan/SKILL.md`.
-3. Each request's inputs must include `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "phase-plan"`, `requestedPopulatorSkill: "phase-plan"`, `ledgerParent`, `upstreamSkill: "delivery-phases"`, and `decompositionKind: "delivery-phases"`.
+3. Each request's inputs must include `mode: "indexed-child"`, `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "phase-plan"`, `requestedPopulatorSkill: "phase-plan"`, `ledgerParent`, `upstreamSkill: "delivery-phases"`, and `decompositionKind: "delivery-phases"`.
 4. Record each spawned child as an open ledger entry keyed by correlation id plus `(parentPlanSlug, index)` with status `active`.
 5. Announce that this agent is waiting for **K** indexed child results and stop. Do not return terminal success upstream until every spawned `new-plan` lane has returned terminal status or the developer explicitly defers/abandons the remaining rows.
 

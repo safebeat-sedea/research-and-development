@@ -237,7 +237,7 @@ When running as a spawned downstream agent under `master-plan`, mission dispatch
 
 1. After drafting the PR list, count the numbered rows under `### PR list` as **K**. `K = 1` is valid only for the single-PR path.
 2. Emit one child-spawn request per PR row for `.sedea/centers/sedea-centers--development/missions/plan-and-deliver/skills/new-plan/SKILL.md`.
-3. Each request's inputs must include `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "pr-plan"`, `requestedPopulatorSkill: "pr-plan"`, `ledgerParent`, `upstreamSkill: "pr-breakdown"`, and `decompositionKind: "pr-breakdown"`.
+3. Each request's inputs must include `mode: "indexed-child"`, `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "pr-plan"`, `requestedPopulatorSkill: "pr-plan"`, `ledgerParent`, `upstreamSkill: "pr-breakdown"`, and `decompositionKind: "pr-breakdown"`.
 4. Record each spawned child as an open ledger entry keyed by correlation id plus `(parentPlanSlug, index)` with status `active`.
 5. Announce that this agent is waiting for **K** indexed child results and stop. Do not return terminal success upstream until every spawned `new-plan` lane has returned terminal status or the developer explicitly defers/abandons the remaining rows.
 
