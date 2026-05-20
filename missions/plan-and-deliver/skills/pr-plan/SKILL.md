@@ -305,7 +305,7 @@ End with:
 3. **Numbered options** (adapt labels):
 
    1. **Revise § *N*** — The **developer** names the section and feedback; one focused `StrReplace`; echo.
-   2. **Pre-fill § 5 / § 6 / § 7 / § 8 (sketch)** — Draft a *starting* sketch from parent + § 3 context; label it speculative; § 7 must use numbered GFM **`1. [ ]`** lists and **`**Status:** drafted`** opener; apply **development-process.md** § 7 *What NOT to include* and the italic fallback when empty; for § 7 exclusions use the baseline path **`.sedea/centers/development/docs/baseline-verify-after-changes.md`** where the doc points. After accepting a § 7 sketch, run **4a-bis** if the capstone todo is still missing.
+   2. **Pre-fill § 5 / § 6 / § 7 / § 8 (sketch)** — Draft a *starting* sketch from parent + § 3 context; label it speculative; § 7 must use numbered GFM **`1. [ ]`** lists and **`**Status:** drafted`** opener; apply **`.sedea/centers/research-and-development/docs/development-process.md`** § 7 *What NOT to include* and the italic fallback when empty. After accepting a § 7 sketch, run **4a-bis** if the capstone todo is still missing.
    3. **Commit when ready** — Remind the **developer** to commit; this skill does **not** run `git`.
    4. **Approve for implementation and continue in `coding-session`** — This is the developer approval gate for implementation handoff. Implementation fills §§ 5–7 before merge cadence per **`development-process.md`**; **`deploy-walk`** drives § 7 checkbox lifecycle.
 
