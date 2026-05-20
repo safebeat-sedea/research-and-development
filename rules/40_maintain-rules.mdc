@@ -1,9 +1,19 @@
 ---
-description: "When and how to update .cursor/rules/*.mdc — capture findings during codebase exploration, update relevant rules when introducing or altering architecture / conventions / call patterns / module boundaries, plan-anchored rule deltas (PR plan § 5 Repo rules impact). Loaded by the plan, impl, and cursor use-case manifests."
+description: >-
+  Maintain .cursor/rules/*.mdc in the hosting or product code checkout — domain navigation
+  and codebase conventions for agents. Not Sedea center governance under .sedea/centers/.
 alwaysApply: true
 ---
 
-# Maintain cursor rules
+# Maintain repo cursor rules (`.cursor/rules/`)
+
+## Scope
+
+This rule applies to **domain-specific Cursor rules** under **`.cursor/rules/*.mdc`** in the **repository checkout where code changes land** — for example the Sedea **hosting repo** (`sedea-ai/app`) or a **product repo** worktree (`push`, `payments-web`, and similar). Those files help agents **navigate and understand that codebase**: architecture, conventions, call patterns, module boundaries, and repo-specific tooling — not Sedea platform governance.
+
+**Out of scope — Sedea centers.** Do **not** use this rule to author or maintain assets under **`.sedea/centers/<centerSlug>/`** (`rules/`, `missions/`, `skills/`, `center.yaml`). Center governance lives in center repositories and separate maintenance flows. When **center** process or rules need to change, use the **sedea** center mission **`improve center rules`** (`.sedea/centers/sedea/missions/center-maintenance/`) — not edits driven by per-PR **`## 5. Repo rules impact`**.
+
+Per-PR plan section **`## 5. Repo rules impact`** (see **development-process.md**) lists **only** **`.cursor/rules/*.mdc`** deltas for the **product/hosting repo** that receives the PR.
 
 ## When exploring the codebase
 
