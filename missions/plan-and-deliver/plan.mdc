@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## Objectives
 
-The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `create new plan` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; branch names are catalogued in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** table).
+The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `plan and deliver` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; branch names are catalogued in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** table).
 
 ### Cadence reference (all branches — not Squad Leader protocol steps)
 
@@ -46,7 +46,7 @@ Approval gates and developer choices happen inside each skill; this line is the 
 
 8. **Plan tree integrity** — Scaffold and link `.plan.md` + `.state.yaml` under `.sedea/operations/` (`new-plan`, `plan-reconcile`); valid parents, slugs, Mission Control metadata (`mission.yaml` when listed).
 
-## Squad operations (`create new plan` dispatch)
+## Squad operations (`plan and deliver` dispatch)
 
 This diagram is the **dispatch ownership map**. It answers: which agent on this mission spawns whom, who waits, and what is **not** started from the Squad Leader lane. Written protocol steps **§§1–7** below cover **only** the yellow **Squad Leader** subgraph.
 
@@ -55,7 +55,7 @@ This diagram is the **dispatch ownership map**. It answers: which agent on this 
 | Role | Lane | Spawns | Does not |
 |------|------|--------|----------|
 | **Squad Leader** | Mission dispatch leader | `ad-hoc-prd` (§3), `master-plan` (§5) | Route menu for §6 decomposition; `delivery-phases`, `coding-session`, etc. |
-| **Master Plan agent** | Child lane after §5 | `delivery-phases`, `pr-breakdown` (shortcut `6`); drafts §7 Caveats inline | Replace Squad Leader ledger; resolve dispatch |
+| **Master Plan agent** | Child lane after §5 | `delivery-phases`, `pr-breakdown` via **AskQuestion** + `AGENT_RUN_REQUEST_V1`; drafts §7 inline | Replace Squad Leader ledger; resolve dispatch |
 | **Downstream skill agents** | Further child lanes | Per skill: e.g. `new-plan` → `phase-plan` / `pr-plan`; `coding-session` → `pre-pr-review` | `MC_DISPATCH_RESOLVED_V1` |
 | **Detached branches** | Often separate session / phrase | Invoked via `development-process.md` branch names | Automatic Squad Leader spawn from §§1–5 |
 
@@ -69,7 +69,7 @@ flowchart TB
   classDef detached fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
 
   subgraph sl["Squad Leader — mission protocol §§1–7"]
-    CMD(["create new plan"]):::leader
+    CMD(["plan and deliver"]):::leader
     CMD --> S1["§1 PRD source"]:::leader
     S1 --> S2["§2 Validate PRD"]:::leader
     S1 --> S3["§3 spawn ad-hoc-prd"]:::leader
@@ -85,8 +85,8 @@ flowchart TB
 
   subgraph mpLane["Child lane — Master Plan agent"]
     MP["master-plan skill"]:::child
-    MP --> M6["user 6 → spawn dp or pb"]:::child
-    MP --> M7["user 7 → Caveats inline"]:::child
+    MP --> M6["AskQuestion → spawn dp or pb"]:::child
+    MP --> M7["AskQuestion → Caveats inline"]:::child
   end
 
   S5 -.->|spawn| MP
@@ -130,7 +130,7 @@ flowchart TB
 
 ## Protocol
 
-Session command phrases are declared in `mission.yaml`. **§§1–7** define Squad Leader routing for **`create new plan`** only. Post–Master Plan planning and all implementation/ship work follow **Squad operations** and skill contracts — not additional numbered protocol subsections here.
+Session command phrases are declared in `mission.yaml`. **§§1–7** define Squad Leader routing for **`plan and deliver`** only. Post–Master Plan planning and all implementation/ship work follow **Squad operations** and skill contracts — not additional numbered protocol subsections here.
 
 ```mermaid
 flowchart TD
@@ -138,7 +138,7 @@ flowchart TD
   classDef wait fill:#f1f5f9,stroke:#64748b,color:#0f172a
   classDef spawn fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
 
-  CMD["Match create new plan"]:::leader
+  CMD["Match plan and deliver"]:::leader
   CMD --> ASK["§1 AskQuestion PRD source"]:::leader
   ASK --> LINK["§2 Validate linked PRD"]:::leader
   ASK --> AH["§3 spawn ad-hoc-prd"]:::spawn
@@ -155,14 +155,14 @@ flowchart TD
 
 - **§§1–7** — only steps the **Squad Leader** executes on the leader lane (see prose subsections below).
 - **Spawn nodes** — emit `AGENT_RUN_REQUEST_V1`; stop until `AGENT_RESULT_RESPONSE_V1`.
-- **§6** — **not** decomposition routing (that lives on the **Master Plan agent** lane — shortcut `6` in `master-plan/SKILL.md`).
+- **§6** — **not** decomposition routing (that lives on the **Master Plan agent** lane — **AskQuestion** + spawn in `master-plan/SKILL.md` Step 7).
 - **§7** — register downstream lanes/plans from child `outputs`; do not infer completion from silence.
 
 ### 1. Establish PRD source
 
 - **Type:** Branching logic
 - **Intent:** Capture requirements input before any planning artifacts (per **Setup** in `.sedea/centers/research-and-development/docs/development-process.md`: PRD is upstream to the Master Plan).
-- **Inputs:** Opening message matching `create new plan` (case-insensitive); optional remainder is context only.
+- **Inputs:** Opening message matching `plan and deliver` (case-insensitive); optional remainder is context only.
 - **Expected output:** A PRD link or `@path`, or a short ad-hoc task description for ad-hoc PRD authoring.
 - **Next-step resolution:**
   - Option **1** (PRD link or file) → continue to §2 to collect and validate the PRD artifact.
@@ -170,13 +170,13 @@ flowchart TD
 
 **Procedure**
 
-1. Match `create new plan` on the opening message (case-insensitive).
+1. Match `plan and deliver` on the opening message (case-insensitive).
 2. Use **AskQuestion** (per Sedea conduct — includes the standard *More details for option _* escape hatch) to ask where the PRD will come from:
    1. **PRD link or file** — Confluence, Google Docs, or `@path` in the workspace.
    2. **Ad-hoc task description** — Short blurb the agent uses to draft an ad-hoc PRD via **`ad-hoc-prd`** (see development-process **PRD** bullet and protocol branches table).
 3. Apply the branch for the confirmed choice (see **Next-step resolution** above). Do not engage downstream protocol branches from partial or ambiguous answers.
 
-**Out of scope for this step:** Indexed child / sub-plan spawns — those use a **dedicated protocol branch** and separate session command (not `create new plan`).
+**Out of scope for this step:** Indexed child / sub-plan spawns — those use a **dedicated protocol branch** and separate session command (not `plan and deliver`).
 
 **Referenced assets:** `.sedea/centers/research-and-development/docs/development-process.md`; `skills/ad-hoc-prd/SKILL.md`; `skills/master-plan/SKILL.md`.
 
@@ -205,7 +205,7 @@ flowchart TD
 ### 3. Create ad-hoc PRD via agent
 
 - **Type:** Agent engagement and handover
-- **Intent:** Delegate ad-hoc PRD creation to a focused **Ad-Hoc PRD agent** so the **Squad Leader** can keep ownership of the main `create new plan` protocol.
+- **Intent:** Delegate ad-hoc PRD creation to a focused **Ad-Hoc PRD agent** so the **Squad Leader** can keep ownership of the main `plan and deliver` protocol.
 - **Inputs:** Confirmed ad-hoc task description from §1; optional title if already provided; Sedea always-apply rules; this mission plan; `.sedea/centers/research-and-development/docs/development-process.md`; assigned skill `skills/ad-hoc-prd/SKILL.md`.
 - **Target agent role:** Ad-Hoc PRD agent
 - **Assigned skill:** `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md`
@@ -266,7 +266,7 @@ Related (optional):
 ### 5. Create Master Plan via agent
 
 - **Type:** Agent engagement and handover
-- **Intent:** Delegate Master Plan creation and §§1–5 drafting to a focused **Master Plan agent** while the **Squad Leader** keeps ownership of the overall `create new plan` protocol.
+- **Intent:** Delegate Master Plan creation and §§1–5 drafting to a focused **Master Plan agent** while the **Squad Leader** keeps ownership of the overall `plan and deliver` protocol.
 - **Inputs:** Complete seed from §4 (`Feature planning`, `PRD`, `Parent`, optional `Related`); Sedea always-apply rules; this mission plan; `development-process.md`; assigned skill `skills/master-plan/SKILL.md`.
 - **Target agent role:** Master Plan agent
 - **Assigned skill:** `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/master-plan/SKILL.md`

@@ -4,7 +4,7 @@ description: >-
   (new-plan, phase-plan, pr-plan, delivery-phases, pr-breakdown, plan-reconcile). Resolution
   is from session and chat context — not from IDE focused-file list. Covers resolution order,
   snapshot emission, and "Where we are now in the plan tree" table format for AskQuestion /
-  numbered choices (no developer-typed workflow shortcuts).
+  numbered choices (no developer-typed workflow shortcuts). **`master-plan`** handoff uses the same contract (Step 7 — AskQuestion + AGENT_RUN_REQUEST_V1).
 alwaysApply: true
 ---
 
