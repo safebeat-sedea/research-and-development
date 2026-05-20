@@ -18,7 +18,7 @@ There are two kinds of agent sessions:
   - Planned implementation PRs
   - PR reviews and PR comment fixes
 
-When the Squad Leader receives an implementation request, PR review, or cross-repo task, hand off to a new agent session via the **`coding-session` protocol branch** ([`coding-session/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md) — same mission as `pr-review` / `create-pr`; add this file in the center repo when wiring the protocol). Create the worktree with `git worktree add` (see **Worktree setup in plans**), then in Mission Control chat call the MCP tool **`sedea_add_worktree_folder`** with **`path`** set to the **absolute** filesystem path of the new worktree root (optional **`name`** for the explorer folder label) so that folder is added to the Sedea workbench workspace before emitting the two-phase session prompt, and stop.
+When the Squad Leader receives an implementation request, PR review, or cross-repo task, hand off to a new agent session via the **`coding-session` protocol branch** ([`coding-session/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md) — same mission as `pr-review` / `create-pr`). Create the worktree with `git worktree add` (see **Worktree setup in plans**), then in Mission Control chat call the MCP tool **`sedea_add_worktree_folder`** with **`path`** set to the **absolute** filesystem path of the new worktree root (optional **`name`** for the explorer folder label) so that folder is added to the Sedea workbench workspace before emitting the two-phase session prompt, and stop.
 
 ## Plan for independence
 
@@ -220,7 +220,7 @@ Every description starter (including on first `commit-push`) should cover, in wh
 
 ## Branch naming
 
-Descriptive kebab-case reflecting scope:
+Descriptive kebab-case reflecting scope on the **implementation repository** (the worktree root that receives the code change):
 
 - `feat/<short-description>` — new features
 - `improve/<short-description>` — improvements (or a more specific verb prefix like `simplify/`, `harden/`, `speedup/`; see `.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`)

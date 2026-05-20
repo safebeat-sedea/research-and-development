@@ -141,7 +141,7 @@ Run only **after** the [Plan completeness gate](#plan-completeness-gate-before-a
    ```
    - Prefix sibling paths with the repo directory basename (see **Worktree setup** in `.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`).
    - Always branch from **`origin/main`**, not **`main`** (same failure mode as in **efficient-pr-shipping**).
-   - Branch naming: follow **stacked-pr-branch-prefix** for this monorepo (`feat/NN-…`) and **efficient-pr-shipping** otherwise.
+   - Branch naming: if the **implementation repo** worktree contains **`.cursor/rules/stacked-pr-branch-prefix.mdc`**, follow that product-repo rule for branch names (e.g. `feat/01-…` stacked slices). Otherwise follow **`20_efficient-pr-shipping.mdc`** § *Branch naming* (`feat/`, `improve/`, `fix/`, …). Do not assume the hosting **sedea-ai/app** checkout's rules apply inside another repo's worktree.
    - Refuse dirty primary checkouts before creating a worktree: run `git status --porcelain` in each repo and stop on any output. Do not stash, commit, discard, or clean the user's WIP.
    - If `baseBranch` input is supplied, it must be a remote branch ref such as `origin/main`; do not accept a local-only branch for spawned implementation.
 
