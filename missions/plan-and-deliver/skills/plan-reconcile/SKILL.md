@@ -76,7 +76,7 @@ All **`plan-state.mjs`** invocations run from the **hosting repo root** (the tre
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs <subcommand> …
 ```
 
-Plans and sidecars live only under the **`.sedea/operations/`** union — **`.sedea/operations/joint/plans/`** and **`.sedea/operations/<operations-user-id>/plans/`** (literal **`joint`**). Do **not** use **`~/.cursor/plans/`** for Sedea product plans.
+Plans and sidecars live only under the **`.sedea/operations/`** union — **`.sedea/operations/joint/plans/`** and **`.sedea/operations/<operationsUserId>/plans/`** (literal **`joint`**). Do **not** use **`~/.cursor/plans/`** for Sedea product plans.
 
 ## Flow
 

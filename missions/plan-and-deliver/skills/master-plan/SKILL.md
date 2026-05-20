@@ -1,7 +1,7 @@
 ---
 name: master-plan
 description: >-
-  Take a PRD and scaffold a Master Plan file under `.sedea/operations/<user-uuid>/plans/`,
+  Take a PRD and scaffold a Master Plan file under `.sedea/operations/<operationsUserId>/plans/`,
   pre-populated with sections 1 through 5 (Background, Benefits, Related
   features, Architectural design, Changes — including `### Decomposition
   assessment` and `### Complexity score (plan-scope signal)` under § 5) per

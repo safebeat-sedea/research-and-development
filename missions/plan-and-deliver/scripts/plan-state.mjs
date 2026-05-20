@@ -627,7 +627,7 @@ function pathTargeted(candidate, target) {
 // ---------- subcommand: reconcile ----------
 
 // `reconcile [--dry-run] [--prune-worktrees]` — iterate every active plan
-// (Sedea `.sedea/operations/{joint|<operations-user-id>}/plans/` and roadmap subdirs),
+// (Sedea `.sedea/operations/{joint|<operationsUserId>}/plans/` and roadmap subdirs),
 // query `gh pr view` for every PR listed in the sidecar, and:
 //   all MERGED   → set frontmatter `archived: true` on <slug>.plan.md,
 //                  and append a bullet under `## Child plans` in the parent plan body.

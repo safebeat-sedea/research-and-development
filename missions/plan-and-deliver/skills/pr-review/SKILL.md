@@ -78,7 +78,7 @@ Always confirm which PR is being reviewed (print URL and title) before proceedin
 
 Before Step 1, attempt to upsert the resolved PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. This is the same `upsert-pr` call documented in `commit-push` step 3 of [`20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc) — running it here as well closes the gap when `pr` triage ends with all comments skipped (no follow-up `cp`, so `cp`'s upsert never fires) or when the PR is otherwise quiet enough that no second `cp` ever happens. The helper is idempotent, so running it on every `pr` invocation is harmless.
 
-**`plan-state.mjs`** lives in the center tree: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs`. It discovers plans only under the **union** of `.sedea/operations/joint/...` (literal `joint`) and `.sedea/operations/<operations-user-id>/...` on the **hosting repo** (parent directory of `.sedea/`). Pass the per-user scope when needed:
+**`plan-state.mjs`** lives in the center tree: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs`. It discovers plans only under the **union** of `.sedea/operations/joint/...` (literal `joint`) and `.sedea/operations/<operationsUserId>/...` on the **hosting repo** (parent directory of `.sedea/`). Pass the per-user scope when needed:
 
 - **`--operations-user-id <id>`** before the subcommand (from Mission Control **`operationsUserId`** in agent runs, or explicit CLI).
 
@@ -163,7 +163,7 @@ Per [`development-process.md`](../../../../docs/development-process.md) § *Cade
 
 **Skip this step entirely** when Step 0's sub-step returned no slug (`resolve` exited non-zero, or no PR plan is linked yet). Acknowledge once: *"No plan linked to this PR; skipping follow-ups capture. Out-of-scope flags surface in the Step 4 report only — copy anything actionable into a new plan or follow-up issue if needed."*
 
-Otherwise, for every comment marked **Skipped → follow-up** in Step 3, prepare a one-sentence bullet for the linked PR plan file **`planPath`** from Step 0 (`…/.sedea/operations/joint/plans/<slug>.plan.md` or `…/.sedea/operations/<operations-user-id>/plans/<slug>.plan.md`). Do **not** append yet. The Step 3b developer approval gate must approve follow-up capture before any plan mutation. Each proposed bullet:
+Otherwise, for every comment marked **Skipped → follow-up** in Step 3, prepare a one-sentence bullet for the linked PR plan file **`planPath`** from Step 0 (`…/.sedea/operations/joint/plans/<slug>.plan.md` or `…/.sedea/operations/<operationsUserId>/plans/<slug>.plan.md`). Do **not** append yet. The Step 3b developer approval gate must approve follow-up capture before any plan mutation. Each proposed bullet:
 
 - Paraphrases the comment's substantive concern in one sentence — do **not** quote the GitHub body verbatim (the comment thread already preserves it).
 - Carries an optional `(target: <hint>)` suffix when routing is obvious — `Master Plan`, `current phase plan`, `sibling plan`, `new plan`, `drop`.

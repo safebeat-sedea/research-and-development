@@ -3,7 +3,7 @@ name: ad-hoc-prd
 description: >-
   Scaffold a minimal Ad-Hoc PRD (bugs / small improvements) as
   `ad_hoc_<slug>_<hex>.ad-hoc-prd.md` under **personal operations docs only:**
-  `.sedea/operations/<operations-user-id>/docs/` (never `joint/docs/`).
+  `.sedea/operations/<operationsUserId>/docs/` (never `joint/docs/`).
   Ad-Hoc PRD is upstream root input for **`master-plan`**; no existing `.plan.md`
   link is required. For **Ad-Hoc PRD creator** agent sessions — explicit
   mission dispatch or upstream agent only. Does not edit
@@ -73,22 +73,22 @@ Ad-hoc means **shorter PRD input**, not lower delivery scrutiny. Do not use this
 
 New Ad-Hoc PRDs are written **only** to:
 
-**`.sedea/operations/<operations-user-id>/docs/`**
+**`.sedea/operations/<operationsUserId>/docs/`**
 
-Use the **Mission Control supplied** `operationsUserId` from the skill inputs / session warm-up. If it is missing, stop with `partial` and report `outputs.missingFields: ["operationsUserId"]`. Do **not** ask the developer to configure `.sedea/local/operations-user-id` or git config in Mission Control runs, and do **not** write under **`joint/docs/`** as a fallback.
+Use the **Mission Control supplied** `operationsUserId` from skill inputs / session warm-up (refresh with `sedea_get_current_user` when needed). If it is missing, stop with `partial` and report `outputs.missingFields: ["operationsUserId"]`. Do **not** write under **`joint/docs/`** as a fallback.
 
 Create **`docs/`** under that segment if missing.
 
 **Joint:** This skill **never** creates files under **`.sedea/operations/joint/docs/`**. If the work should become shared, **the developer** moves the file into **`joint/docs/`** (or another agreed location) outside this skill — e.g. git move / editor.
 
-**Lookup:** When checking for an existing file by basename, search **only** **`.sedea/operations/<operations-user-id>/docs/`** for this protocol.
+**Lookup:** When checking for an existing file by basename, search **only** **`.sedea/operations/<operationsUserId>/docs/`** for this protocol.
 
 ## Steps
 
 1. **Validate inputs** — `createIntent === true`, non-empty `title`, non-empty `details`, and non-empty `operationsUserId`.
 2. **Use** **§ Ad-Hoc PRD file shape (template)** below — no external template file.
 3. **Filename:** `ad_hoc_<slugified-title>_<8-hex>.ad-hoc-prd.md` — slugify title (lowercase, non-alphanumerics → `_`, collapse repeats, max ~48 chars) + `_<random 8 hex>` (`crypto.randomBytes(4).toString('hex')` or equivalent).
-4. **Write** under **`.sedea/operations/<operations-user-id>/docs/`**:
+4. **Write** under **`.sedea/operations/<operationsUserId>/docs/`**:
    - `# <Title>` — handoff title (not the filename).
    - **`Master Plan:`** line — `_TBD_` plus one sentence that **`master-plan`** will create the `.plan.md` from this Ad-Hoc PRD and the developer should paste or link that path here when it exists (do **not** invent a plan path).
    - **`## 1–3`** sections filled from handoff details; `_TBD_` where unavoidable + say what is missing.

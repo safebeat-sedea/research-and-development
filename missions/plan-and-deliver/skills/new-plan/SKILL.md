@@ -2,7 +2,7 @@
 name: new-plan
 description: >-
   Scaffold a new `.plan.md` plus `.state.yaml` sidecar under the `.sedea/operations/`
-  plan union (joint or per-operations-user-id `plans/`), with required frontmatter
+  plan union (joint or per-user `operationsUserId` `plans/`), with required frontmatter
   (name, overview, todos, isProject) and `parent` only in the sidecar. Resolves
   parent per planning-target-resolution; confirms parent before write except on
   indexed child spawn when parent + index N are already locked by session context.
@@ -55,7 +55,7 @@ warmUpRules:
 
 # New plan
 
-Scaffold a standalone `.plan.md` and `.state.yaml` under the **`.sedea/operations/`** plan union (`joint/.../plans/` or `<operations-user-id>/.../plans/` — see **Slug and filename**). On first write, frontmatter must be valid YAML and match the shape Sedea tooling expects (see **Write the plan template** and naming guidance in `.sedea/centers/research-and-development/docs/development-process.md` plus `.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`).
+Scaffold a standalone `.plan.md` and `.state.yaml` under the **`.sedea/operations/`** plan union (`joint/.../plans/` or `<operationsUserId>/.../plans/` — see **Slug and filename**). On first write, frontmatter must be valid YAML and match the shape Sedea tooling expects (see **Write the plan template** and naming guidance in `.sedea/centers/research-and-development/docs/development-process.md` plus `.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`).
 
 **Resolution contract:** read `.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc` and follow it for target selection and snapshots. Resolve parents using **§ Parent derivation** below (explicit session/message → `plan-state resolve` → recent chat references).
 
@@ -101,7 +101,7 @@ The regular parent-confirmation gate below is **skipped** when that pre-resoluti
 
 **`N` alone with no name:** fall through to prompting for a name inline; parent stays as pre-resolved.
 
-**Placement:** child files live in the same **flat** `plans/` directory as their siblings (the resolved `joint/.../plans/` or `<operations-user-id>/.../plans/` tree). Indexed children and every other plan file use that single folder — no extra plan subfolders for now.
+**Placement:** child files live in the same **flat** `plans/` directory as their siblings (the resolved `joint/.../plans/` or `<operationsUserId>/.../plans/` tree). Indexed children and every other plan file use that single folder — no extra plan subfolders for now.
 
 Everything else (slug shape, frontmatter, sidecar, after-write steps, scope guard) matches the non-indexed path below.
 
@@ -135,9 +135,9 @@ If two candidates conflict, present both and ask.
 - **Title prefix (indexed spawn):** prepend `<N>. ` to **display title** in `name:` and H1; item 10 uses filename `A_...` but title prefix `10. `. Apply this prefix only for indexed digit-only **N**; omit for other spawns.
 - **Slug base (indexed):** from raw bolded title only (normalized). **Slug base (non-indexed):** from user name, lowercased, spaces → `_` or `-`, match sibling conventions.
 - **Suffix:** append 8 hex chars (e.g. `crypto.randomBytes(4).toString('hex')`) for uniqueness.
-- **Paths:** under `.sedea/operations/joint/plans/` or `.sedea/operations/<operations-user-id>/plans/` (same directory for `.plan.md` and `.state.yaml`). Indexed: `<C>_<slugBase>_<hex>.plan.md` / `.state.yaml`; otherwise `<slugBase>_<hex>.plan.md` / `.state.yaml`.
+- **Paths:** under `.sedea/operations/joint/plans/` or `.sedea/operations/<operationsUserId>/plans/` (same directory for `.plan.md` and `.state.yaml`). Indexed: `<C>_<slugBase>_<hex>.plan.md` / `.state.yaml`; otherwise `<slugBase>_<hex>.plan.md` / `.state.yaml`.
 
-All new plans are sibling files in the flat `.../plans/` directory for the resolved operations tree (`joint` or `<operations-user-id>`). **Top-level topic** names a top-level plan with `parent: null` in the sidecar — same flat `.../plans/` path as any other plan file.
+All new plans are sibling files in the flat `.../plans/` directory for the resolved operations tree (`joint` or `<operationsUserId>`). **Top-level topic** names a top-level plan with `parent: null` in the sidecar — same flat `.../plans/` path as any other plan file.
 
 ### Handling 10–35 children
 
