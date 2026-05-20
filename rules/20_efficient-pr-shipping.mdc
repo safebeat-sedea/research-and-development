@@ -1,6 +1,6 @@
 ---
 description: "Ship PRs fast — parallel worktrees, one PR per worktree, single concern per PR, agent-only PR creation, never auto-PR. Loaded by a coding agent; covers `commit-push`, branch naming, comprehensive PR descriptions, and worktree setup conventions."
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Efficient PR shipping

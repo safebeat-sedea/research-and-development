@@ -1,6 +1,6 @@
 ---
 description: "When and how to update .cursor/rules/*.mdc — capture findings during codebase exploration, update relevant rules when introducing or altering architecture / conventions / call patterns / module boundaries, plan-anchored rule deltas (PR plan § 5 Repo rules impact). Loaded by the plan, impl, and cursor use-case manifests."
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Maintain cursor rules

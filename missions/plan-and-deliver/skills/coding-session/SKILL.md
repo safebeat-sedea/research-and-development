@@ -4,14 +4,11 @@ description: >-
   **Coding session** protocol branch: create a git worktree + branch from origin/main,
   record worktrees and session focus in the plan sidecar via plan-state.mjs, attach the
   worktree in the same Sedea workbench (Mission Control sedea_add_worktree_folder per
-  efficient-pr-shipping.mdc), emit a copy/paste-safe two-phase session prompt for
+  20_efficient-pr-shipping.mdc), emit a copy/paste-safe two-phase session prompt for
   **a coding agent**, and after the implementation cut point spawn **pre-pr-review**.
   Plan-anchored runs validate per-PR plans with plan-ws-completeness.mjs (_TBD_ in body
   requires completion or explicit override incomplete plan). Use under mission dispatch,
   natural language, or after planning when handing off implementation.
-warmUpRules:
-  - ".sedea/centers/research-and-development/rules/planning-target-resolution.mdc"
-  - ".sedea/centers/research-and-development/rules/efficient-pr-shipping.mdc"
 inputs:
   targetPlanPath:
     type: string
@@ -94,7 +91,7 @@ If repo targets are missing, stop and ask the developer with **AskQuestion** to 
 
 When this run anchors Phase 2 to a Plan Board **`.plan.md`** under the **`.sedea/operations/`** union (absolute path from the user message, an `@` path, or `node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs resolve --cwd "$PWD"` from the **hosting repo** when already linked), **validate the plan** before `git worktree add`, Mission Control attach, or emitting the session prompt.
 
-**Lane-change snapshots** (*back to plan*, *where are we?*, …) follow `.sedea/centers/research-and-development/rules/planning-target-resolution.mdc` § *PR-plan completeness before coding-session*: when a snapshot lists both an incomplete per-PR plan and **coding-session**, **finishing the plan** must be ordered **first**.
+**Lane-change snapshots** (*back to plan*, *where are we?*, …) follow `.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc` § *PR-plan completeness before coding-session*: when a snapshot lists both an incomplete per-PR plan and **coding-session**, **finishing the plan** must be ordered **first**.
 
 **Skip this gate** when there is **no** plan file anchor (handoff with no `*.plan.md` in the task body).
 
@@ -142,7 +139,7 @@ Run only **after** the [Plan completeness gate](#plan-completeness-gate-before-a
    git fetch origin main
    git worktree add <sibling-path> -b <branch> origin/main
    ```
-   - Prefix sibling paths with the repo directory basename (see **Worktree setup** in `.sedea/centers/research-and-development/rules/efficient-pr-shipping.mdc`).
+   - Prefix sibling paths with the repo directory basename (see **Worktree setup** in `.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`).
    - Always branch from **`origin/main`**, not **`main`** (same failure mode as in **efficient-pr-shipping**).
    - Branch naming: follow **stacked-pr-branch-prefix** for this monorepo (`feat/NN-…`) and **efficient-pr-shipping** otherwise.
    - Refuse dirty primary checkouts before creating a worktree: run `git status --porcelain` in each repo and stop on any output. Do not stash, commit, discard, or clean the user's WIP.
@@ -159,7 +156,7 @@ Run only **after** the [Plan completeness gate](#plan-completeness-gate-before-a
    ```
    Skip when the session has no plan anchor.
 
-3. **Attach the worktree in Sedea** (same workbench): in Mission Control, invoke MCP **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` (optional `"name"` for the explorer label). See **efficient-pr-shipping.mdc** — *Squad Leader on the main branch vs. agent sessions on worktree* and *Attach the worktree in Sedea*.
+3. **Attach the worktree in Sedea** (same workbench): in Mission Control, invoke MCP **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` (optional `"name"` for the explorer label). See **20_efficient-pr-shipping.mdc** — *Squad Leader on the main branch vs. agent sessions on worktree* and *Attach the worktree in Sedea*.
 
    This MCP attach is mandatory before emitting the coding-agent prompt. If the MCP call fails, stop with `partial`; report the worktree path and the attach error, and keep `continuationStatus: "active"` so the Squad Leader does not close the implementation lane.
 
@@ -366,7 +363,7 @@ Infer touched subtrees from the anchored plan and PR scope. List **absolute** pa
 
 ### Phase 1 — Warm-up (before the task)
 
-Workers may skip `alwaysApply: false` rules unless forced. Use a warm-up block so rule reads are explicit steps.
+R&D **center** rules (`10_`–`40_`, all `alwaysApply: true`) load on every dispatch via Mission Control. This warm-up block is for **product-repo** `.cursor/rules/*.mdc` paths under **Project rules** — list explicit `Read` steps for those only.
 
 **Four vs five steps:** If Phase 2 links a **`.plan.md`** (absolute path), use **five** steps and include **Plan file + sidecar** (step 5). Otherwise use **four** steps (omit step 5).
 
@@ -374,9 +371,9 @@ Phrase a hard gate, e.g. `Warm-up first — do not read the task body below --- 
 
 1. **Workspace readiness** — **Read** the worktree **`README`** and **`CONTRIBUTING`** when present. For **readiness or pre-task checks**, follow **only** what those files say, what the **plan** explicitly links for setup, and what **`.cursor/rules/*.mdc`** files prescribe **when they describe pre-work or environment gates** (do not invent extra checks). If nothing prescribes a check, one line **Readiness: no checks in README / CONTRIBUTING / cited rules** — continue. If a prescribed check fails, **stop** and ask the user.
 2. **Verify branch:** `git branch --show-current` matches the expected branch.
-3. **Process handback** — the **developer** continues via **AskQuestion** / **numbered** options or mission dispatch per **development-process**; do **not** rely on legacy typed shortcut tokens as the control surface. Name next moves with protocol branches (**`plan-reconcile`**, **`pre-pr-review`**, **`pr-review`**, commit cadence per **efficient-pr-shipping**).
+3. **Process handback** — the **developer** continues via **AskQuestion** / **numbered** options or mission dispatch per **development-process**; do **not** rely on legacy typed shortcut tokens as the control surface. Name next moves with protocol branches (**`plan-reconcile`**, **`pre-pr-review`**, **`pr-review`**, commit cadence per **20_efficient-pr-shipping**).
 4. **Load project rules:** `Read` every path under **Project rules**; acknowledge before continuing.
-5. **Plan file + sidecar** *(plan-anchored only)*: Plans live under **`.sedea/operations/.../plans/`**; runtime fields (`worktrees`, `prs`, `session`, `parent`, todos via scripts) follow the **`.sedea/operations/`** plan union and **`plan-state.mjs`** contracts — flip todo status only through **`plan-state.mjs`** subcommands (`set-todo-status`, `todo-start`, `todo-done`); do not hand-edit `.state.yaml` except to repair a bad state. After substantive progress on a scoped todo, update status so the Plan Board stays accurate. PR linkage after push follows **efficient-pr-shipping** and **`plan-state.mjs upsert-pr`**.
+5. **Plan file + sidecar** *(plan-anchored only)*: Plans live under **`.sedea/operations/.../plans/`**; runtime fields (`worktrees`, `prs`, `session`, `parent`, todos via scripts) follow the **`.sedea/operations/`** plan union and **`plan-state.mjs`** contracts — flip todo status only through **`plan-state.mjs`** subcommands (`set-todo-status`, `todo-start`, `todo-done`); do not hand-edit `.state.yaml` except to repair a bad state. After substantive progress on a scoped todo, update status so the Plan Board stays accurate. PR linkage after push follows **20_efficient-pr-shipping** and **`plan-state.mjs upsert-pr`**.
 
 ### Phase 2 — Task
 

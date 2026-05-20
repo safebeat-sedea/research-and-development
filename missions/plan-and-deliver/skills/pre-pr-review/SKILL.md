@@ -6,9 +6,6 @@ description: >-
   propose Code Review Follow-ups when plan-anchored, and report go/no-go before PR
   creation. Spawned by coding-session after the implementation cut point; coding-session
   obtains developer approval before any follow-up mutation.
-warmUpRules:
-  - ".sedea/centers/research-and-development/rules/planning-target-resolution.mdc"
-  - ".sedea/centers/research-and-development/rules/efficient-pr-shipping.mdc"
 inputs:
   anchorType:
     type: string

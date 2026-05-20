@@ -76,7 +76,7 @@ Always confirm which PR is being reviewed (print URL and title) before proceedin
 
 #### Link the PR to its plan sidecar (idempotent)
 
-Before Step 1, attempt to upsert the resolved PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. This is the same `upsert-pr` call documented in `commit-push` step 3 of [`efficient-pr-shipping.mdc`](../../../../rules/efficient-pr-shipping.mdc) — running it here as well closes the gap when `pr` triage ends with all comments skipped (no follow-up `cp`, so `cp`'s upsert never fires) or when the PR is otherwise quiet enough that no second `cp` ever happens. The helper is idempotent, so running it on every `pr` invocation is harmless.
+Before Step 1, attempt to upsert the resolved PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. This is the same `upsert-pr` call documented in `commit-push` step 3 of [`20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc) — running it here as well closes the gap when `pr` triage ends with all comments skipped (no follow-up `cp`, so `cp`'s upsert never fires) or when the PR is otherwise quiet enough that no second `cp` ever happens. The helper is idempotent, so running it on every `pr` invocation is harmless.
 
 **`plan-state.mjs`** lives in the center tree: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs`. It discovers plans only under the **union** of `.sedea/operations/joint/...` (literal `joint`) and `.sedea/operations/<operations-user-id>/...` on the **hosting repo** (parent directory of `.sedea/`). Pass the per-user scope when needed:
 
@@ -190,13 +190,13 @@ Do **not** reply to, resolve, or minimize any threads yet. Wait for the user to 
 
 If there are code changes to review, wait for the user before committing. If all comments were skipped (no code changes), proceed to Step 5 only after the developer approves the skipped dispositions and any proposed follow-ups.
 
-Tell the user explicitly: after local fixes look good, say **`cp`** — `efficient-pr-shipping.mdc` § *cp* step 3 requires **this skill’s Step 5 (GitHub only)** in the **same turn** as commit/push when a `pr` triage finished at Step 4 here, so threads close without a second **`pr`**.
+Tell the user explicitly: after local fixes look good, say **`cp`** — `20_efficient-pr-shipping.mdc` § *cp* step 3 requires **this skill’s Step 5 (GitHub only)** in the **same turn** as commit/push when a `pr` triage finished at Step 4 here, so threads close without a second **`pr`**.
 
 ### Step 5 — GitHub reconciliation (`cp` / skipped-only)
 
 **Entry points:**
 
-- **`cp` after `pr` (normal path)** — [`efficient-pr-shipping.mdc`](../../../../rules/efficient-pr-shipping.mdc) § *cp* runs **git commit + push** in steps 1–2 first. The agent handling **`cp` must then run § Step 5 — GitHub only** as **step 3** of `cp` (same user message / same agent turn), **before** plan upsert and Brin. Do **not** treat `cp` as finished at push if Step 4 ran in this chat and GitHub is still open.
+- **`cp` after `pr` (normal path)** — [`20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc) § *cp* runs **git commit + push** in steps 1–2 first. The agent handling **`cp` must then run § Step 5 — GitHub only** as **step 3** of `cp` (same user message / same agent turn), **before** plan upsert and Brin. Do **not** treat `cp` as finished at push if Step 4 ran in this chat and GitHub is still open.
 
 - **Skipped-only triage** — Step 3 marked every comment **Skipped (no follow-up)** with **no** code edits: run **GitHub only** immediately (no commit/push).
 

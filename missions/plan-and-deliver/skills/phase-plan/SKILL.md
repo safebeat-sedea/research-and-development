@@ -10,8 +10,6 @@ description: >-
   planning-target-resolution. Use under mission dispatch, **`phase-plan`** protocol
   branch, natural language, or after **`new-plan`** ignition on a `Delivery phases`
   child stub.
-warmUpRules:
-  - ".sedea/centers/research-and-development/rules/planning-target-resolution.mdc"
 inputs:
   targetPlanPath:
     type: string
@@ -68,7 +66,7 @@ The **developer** picks the next move via **AskQuestion** or a **numbered** list
 
 ## Step 1 — Identify the target plan and verify it's a phase plan stub
 
-The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`planning-target-resolution.mdc`](../../../rules/planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts (e.g. *Target plan: `<slug>` (from prior structured choice).*). Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative.
+The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`30_planning-target-resolution.mdc`](../../../rules/30_planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts (e.g. *Target plan: `<slug>` (from prior structured choice).*). Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative.
 
 When spawned by `new-plan`, `targetPlanPath`, `targetPlanSlug`, `parentPlanPath`, `parentPlanSlug`, and `parentIndex` are already locked. Treat missing or conflicting values as a spawn-contract failure: stop with `failure` or `partial` and report the missing field. Do not fall back to IDE focus or free-form target discovery in spawned mode.
 
@@ -290,7 +288,7 @@ Mandatory **in the same turn** as §§ 1–4 (or step 4g-only for legacy bodies 
 
 Include these bullets (labels may vary; content must cover each dimension):
 
-- **Kinds of change (count):** distinct *kinds* (not files, not lines) — see **`development-process.md`** mode #3 *PR sizing* and [**`efficient-pr-shipping.mdc`**](../../../rules/efficient-pr-shipping.mdc) § *Keep PRs small and focused*.
+- **Kinds of change (count):** distinct *kinds* (not files, not lines) — see **`development-process.md`** mode #3 *PR sizing* and [**`20_efficient-pr-shipping.mdc`**](../../../rules/20_efficient-pr-shipping.mdc) § *Keep PRs small and focused*.
 - **PR count band:** one of `single` | `few (2–5)` | `many (6+)`.
 - **Sequencing / coupling:** one line — migrations, feature flags, cross-repo, contract order, or `low` if none.
 - **Routing recommendation:** one of `Delivery phases` (needs sub-phases first) | `PR breakdown` multi-PR | `PR breakdown` single-PR — state **why** in the same bullet or the next short bullet.

@@ -18,8 +18,6 @@ description: >-
   command mappings use **AskQuestion** (not freeform guessing). Use when the user
   says `start dep <N>`, `dep <N> done [: <note>]`, `dep <N> skip: <reason>`,
   `dep <N> block: <reason>`, `dep deployed [: <note>]`, or `dep status`.
-warmUpRules:
-  - ".sedea/centers/research-and-development/rules/planning-target-resolution.mdc"
 inputs:
   targetPlanPath:
     type: string
@@ -96,7 +94,7 @@ The agent **never auto-advances**. After `dep <N> done`, the confirmation reply 
 
 ## Step 1 — Resolve the target plan
 
-The target is a `.plan.md` file under the **`.sedea/operations/`** plan union with a `## N. Deploy test plan` section. Resolve it from chat context per [`planning-target-resolution.mdc`](../../../../rules/planning-target-resolution.mdc) § *Resolution order*, with **one additional filter**: only consider plans whose body has `## N. Deploy test plan` *and* a `**Status:**` line.
+The target is a `.plan.md` file under the **`.sedea/operations/`** plan union with a `## N. Deploy test plan` section. Resolve it from chat context per [`30_planning-target-resolution.mdc`](../../../../rules/30_planning-target-resolution.mdc) § *Resolution order*, with **one additional filter**: only consider plans whose body has `## N. Deploy test plan` *and* a `**Status:**` line.
 
 Resolution order (highest confidence first):
 

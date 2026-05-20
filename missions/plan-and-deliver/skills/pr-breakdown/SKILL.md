@@ -10,8 +10,6 @@ description: >-
   §§ 1–4 follow **pr-plan**. Target resolved per
   planning-target-resolution. Use under mission dispatch, **pr-breakdown**
   protocol branch, or natural language (decompose into PRs, draft PR breakdown).
-warmUpRules:
-  - ".sedea/centers/research-and-development/rules/planning-target-resolution.mdc"
 inputs:
   targetPlanPath:
     type: string
@@ -67,7 +65,7 @@ The **developer** picks the next move via **AskQuestion** or a **numbered** list
 
 ## Step 1 — Identify the target plan and verify stage
 
-The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`planning-target-resolution.mdc`](../../../rules/planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts (e.g. *Target plan: `<slug>` (from prior structured choice).*). Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative. Do **not** infer the target from the IDE’s focused-file list alone.
+The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`30_planning-target-resolution.mdc`](../../../rules/30_planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts (e.g. *Target plan: `<slug>` (from prior structured choice).*). Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative. Do **not** infer the target from the IDE’s focused-file list alone.
 
 If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot; let the developer pick the lane via **AskQuestion** or numbered options, then continue.
 
@@ -165,7 +163,7 @@ Pick PR boundaries that respect Strategy #6 (single concern per deliverable) and
 - PRs are ordered when there is a real sequencing constraint (schema migration before consumers; feature flag before code that reads it; contract change before UI that consumes it). Otherwise they can run in parallel.
 - Aim for **2–5 PRs** in a typical multi-PR pass. **Exactly one PR** is a **first-class** outcome — use **step 5s** or **`pr_breakdown_single`**; do **not** treat it as an error. More than ~6 PRs usually means the plan should have stayed at **`Delivery phases`** first — **flag** when you proceed anyway.
 - Each PR must be **shippable on its own** (Strategy #4): merging it should leave the system in a working state. Flag non-obvious reliance on flags, additive schema, or compat layers per PR.
-- **Size each candidate PR by test-case count, not by lines.** For each PR under consideration, estimate **test cases** it introduces or meaningfully changes — unit + integration / snapshot + exploratory recordings, each enumerated case counted once. Buckets per [`efficient-pr-shipping.mdc`](../../../rules/efficient-pr-shipping.mdc) § *Keep PRs small and focused*: **≤ 10** simple, **11–20** mid-sized, **21+** heavy. Heavy is a signal to **investigate** splitting — not automatically wrong. Do not split within one **kind** of change (instance batching). Raw changed-line count is **not** a size signal.
+- **Size each candidate PR by test-case count, not by lines.** For each PR under consideration, estimate **test cases** it introduces or meaningfully changes — unit + integration / snapshot + exploratory recordings, each enumerated case counted once. Buckets per [`20_efficient-pr-shipping.mdc`](../../../rules/20_efficient-pr-shipping.mdc) § *Keep PRs small and focused*: **≤ 10** simple, **11–20** mid-sized, **21+** heavy. Heavy is a signal to **investigate** splitting — not automatically wrong. Do not split within one **kind** of change (instance batching). Raw changed-line count is **not** a size signal.
 - **Kinds-of-changes lens.** Count **distinct kinds** — N instances of the same shape across N files is one kind. **A reviewer agent** reads the first instance carefully and skims the rest. Split only when each half ships value on its own.
 
 ### 5b — Draft each sub-section per the doc’s § 3 set-level template

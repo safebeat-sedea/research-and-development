@@ -11,8 +11,6 @@ description: >-
   and section 7 (Caveats) stay as TBD stubs for follow-up turns. Use when the user
   opens a fresh planning chat from the "feature plan: design + changes"
   plan-board prompt, or says "master-plan" / "draft a master plan".
-warmUpRules:
-  - ".sedea/centers/research-and-development/rules/planning-target-resolution.mdc"
 inputs:
   seedBlock:
     type: string
