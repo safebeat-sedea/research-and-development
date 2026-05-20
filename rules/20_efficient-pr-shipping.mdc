@@ -47,9 +47,11 @@ After implementing changes, **stop**. Do not `git add`, `git commit`, or `git pu
 
 ## Never open PRs yourself — use **a PR-creating agent**
 
-Developers always open pull requests themselves. You must **never** call `gh pr create` (or any equivalent GitHub API/MCP call that creates, drafts, or reopens a PR), and must never instruct a subagent to do so.
+Developers always open pull requests themselves. On **coding, planning, review, and Squad Leader lanes**, you must **never** call `gh pr create` (or any equivalent GitHub API/MCP call that creates, drafts, or reopens a PR), and must never instruct a subagent to do so — **except** by spawning the dedicated **`create-pr`** protocol branch on a **PR-creating agent** child lane (see below).
 
-This holds even when a task description explicitly says "open a PR", "push and open a PR", or "create a pull request". Interpret those as: prepare the branch and produce a **PR prompt** via the `create-pr` protocol branch — do not open the PR yourself.
+**Who may run `gh pr create`:** only **a PR-creating agent** executing **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/create-pr/SKILL.md`** after **`pre-pr-review`** returns `go` and this skill's gates pass. That lane may create the PR on the developer's behalf. **Coding-session**, **pre-pr-review**, **pr-review**, **master-plan**, and other planning or implementation agents may **not** call `gh pr create` even when the user says "open a PR".
+
+This holds on non–PR-creating lanes even when a task description explicitly says "open a PR", "push and open a PR", or "create a pull request". Interpret those as: prepare the branch and hand off to **`create-pr`** (spawn **a PR-creating agent** or emit the skill's PR prompt) — do not open the PR from the current lane.
 
 This prohibition covers **chat output**, not just tool calls. After `git push`, do **not** surface or paraphrase GitHub's remote hint (the `Create a pull request for '<branch>' on GitHub by visiting: https://github.com/<org>/<repo>/pull/new/<branch>` line) in the response. That URL links directly to the GitHub UI PR-creation form and nudges toward the wrong handoff. The only PR-creation artifact the assistant ever presents is **a PR-creating agent** prompt from the `create-pr` protocol branch.
 

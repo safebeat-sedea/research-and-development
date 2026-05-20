@@ -65,6 +65,10 @@ inputs:
 
 This skill is run by **a PR-creating agent** spawned by **`coding-session`** after **`pre-pr-review`** returns `recommendation: "go"`.
 
+## Relationship to rule 20 (`gh pr create`)
+
+**`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** forbids **`gh pr create`** on coding, planning, and review lanes. **This skill is the exception:** **a PR-creating agent** on this lane **may** call `gh pr create` (or equivalent) when gates pass and push/creation is authorized. Other agents must spawn this skill instead of opening a PR themselves.
+
 ## Gate
 
 Before creating or preparing a PR:
@@ -75,7 +79,7 @@ Before creating or preparing a PR:
 4. Verify the committed diff exists: `git diff <baseRef>...HEAD` is non-empty.
 5. Verify the branch is pushed or push it only if the developer / upstream coding-session explicitly authorized push. If push is not authorized, emit a copy-pasteable PR-creating prompt and return `partial` with `remainingTasks`.
 
-Do not run `gh pr create` unless this skill's invocation context explicitly authorizes the PR-creating agent to create the PR. If not authorized, produce the prompt below and report `continuationStatus: "active"`.
+When authorized to create the PR on this lane, you **may** run `gh pr create`. If creation is not authorized, produce the PR prompt below (per rule 20) and report `continuationStatus: "active"` — do not call `gh pr create`.
 
 ## PR prompt fallback
 
