@@ -73,11 +73,12 @@ R&D delivery agents are governed by:
 | `phase-plan` or `sub-plan` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/phase-plan/SKILL.md` | Populate the body of a focused **phase plan** stub: drafts §§ 1–4 plus **`### Decomposition assessment`** (immediately before the dual-title § 5) per the Phase plan template, using the parent's `Delivery phases` item N as the scope anchor. |
 | `pr-plan` or `sub-plan` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md` | Populate the body of a focused **PR plan** stub: drafts §§ 1–4 (Single concern, Background, Change scope, Reasoning) per the per-PR template, using the parent's `### PR list` item N for § 1 and parent's `### Single-concern strategy` + `### Sequencing` to ground § 4 Reasoning. Sections 5 (Repo rules impact), 6 (Tests to write), 7 (Deploy test plan), and 8 (Caveats) stay `_TBD_` — **a coding agent** fills them in `coding-session` before `commit-push`. |
 | `new-plan` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md` | Scaffold a new `.plan.md` + sidecar; parent linkage; runs when the developer picks list index **N** (AskQuestion / numbered option) to expand a `Delivery phases` or `PR breakdown` child. |
-| `coding-session` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md` | Coding session: worktree + fresh agent + handoff to **a coding agent**; after the committed implementation cut point, spawns **`pre-pr-review`**. |
-| `plan-reconcile` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/plan-reconcile/SKILL.md` | Plan reconcile / archive, plus **follow-ups triage** at dispatch resolve time (see **Cadence** § *Plan Updates*). |
+| `coding-session` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md` | Coding session: worktree + fresh agent + handoff to **a coding agent**; after the committed implementation cut point, spawns **`pre-pr-review`**, then **`create-pr`** when pre-PR review is `go`. Coordinates **`pr-review`** and commit-push cadence per rule **20**. |
 | `pre-pr-review` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pre-pr-review/SKILL.md` | Fresh spawned pre-PR reviewer lane. Reviews committed implementation diff against a PR plan or free-form scope, checks per-PR template + repo rules + quality, appends **Code Review Follow-ups** to the PR plan's `## Follow-ups` when anchored to **`plan`**, and reports go/no-go. |
+| `create-pr` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/create-pr/SKILL.md` | Spawned **PR-creating agent** lane after **`pre-pr-review`** returns `go`. **Only** branch that may run **`gh pr create`** (per **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`**). Builds a reviewer-complete PR description from the PR plan, diff, and pre-PR review context; opens the GitHub PR when push/creation is authorized, or emits a copy-paste prompt for **a PR-creating agent** when not. **`coding-session`** spawns this skill — planning, coding, and review lanes must not open PRs themselves. May spawn **`deploy-walk`** after merge when configured. |
 | `pr-review` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-review/SKILL.md` | Triage PR review comments; feeds **Code review follow-ups** on the PR plan. |
 | `deploy-walk` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/deploy-walk/SKILL.md` | Walk a PR plan's `## N. Deploy test plan` section step by step. `start dep <N>` (or `start dep before/after <N>`) presents step N in detail (verbatim text + the *because* + expected outcome + commands + cross-references); `dep <N> done [: note]` / `skip: reason` / `block: reason` resolves; `dep deployed [: note]` flips Status `drafted → deployed` to unlock After-deploy; `dep status` summarises progress. Loose mode between `start` and resolution — the chat is normal collaboration. State lives in the plan file (**`**Status:**`** lifecycle line + GFM task list checkboxes `1. [ ]`), so walks survive multi-day gaps and session summarization. After-deploy fully checked auto-flips Status `deployed → done` **and** frontmatter todo `deploy-test-plan-verified` `pending` → `done`. Does **not** auto-run `plan-reconcile` (merge / archive is a separate cadence). |
+| `plan-reconcile` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/plan-reconcile/SKILL.md` | Plan reconcile / archive, plus **follow-ups triage** at dispatch resolve time (see **Cadence** § *Plan Updates*). |
 
 ### Diagram and feedback channels
 
@@ -312,7 +313,12 @@ flowchart TD
         G4[Customer Feedback]
       end
 
-      E --> S1 --> H[Collect Feedback]
+      E --> PPR[pre-pr-review]
+      PPR --> CPR[create-pr]
+      CPR --> PRV[pr-review]
+      PRV --> DW[deploy-walk]
+      DW --> REC[plan-reconcile]
+      REC --> S1 --> H[Collect Feedback]
       H --> I[Plan Updates]
     end
 
@@ -334,6 +340,7 @@ flowchart TD
     class C violet
     class D orange
     class E fuchsia
+    class PPR,CPR,PRV,DW,REC fuchsia
     class S1 green
     class H yellow
     class I rose
@@ -366,9 +373,17 @@ For a plan decided to be PR-ready (its dual-title section is titled `PR breakdow
 
 #### Coding Session
 
-Each PR is delivered in a newly spun-off agent driven by the **`coding-session`** protocol branch (see **Development tools** § *Protocol Branches*). The protocol branch spins up a worktree, starts a new **coding agent**, and hands it the per-PR plan. The session ends when the PR ships.
+Each PR is delivered in a newly spun-off agent driven by the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). The protocol branch spins up a worktree, starts a new **coding agent**, and hands it the per-PR plan.
 
-**Pre-PR reviewer agent** pass happens **after** implementation and **before** the change is treated as merge-ready: **a coding agent** opens a **new agent session** and re-reads the PR plan / diff / description as an unbiased reviewer — see **Development tools** § *Pre-PR reviewer agent*. Only then do **a reviewer agent** and the rest of the PR pipeline run on a level playing field.
+**Ship chain (per PR)** — after the committed implementation cut point, the happy path runs on spawned or detached lanes in this order (see the Cadence diagram and **`plan-and-deliver/plan.mdc`** cadence reference):
+
+1. **`pre-pr-review`** — fresh pre-PR reviewer session; go/no-go before the PR is treated as merge-ready.
+2. **`create-pr`** — **PR-creating agent** lane; the only branch that may run **`gh pr create`** per rule **20**.
+3. **`pr-review`** — triage open PR review comments (often inline in **`coding-session`**).
+4. **`deploy-walk`** — walk the PR plan's deploy-test checklist after merge when applicable.
+5. **`plan-reconcile`** — merge-driven archive and follow-ups triage (separate cadence; not auto-run from deploy-walk).
+
+**Pre-PR reviewer agent** pass happens **after** implementation and **before** **`create-pr`**: **a coding agent** opens a **new agent session** and re-reads the PR plan / diff / description as an unbiased reviewer — see **Development tools** § *Pre-PR reviewer agent*. Only then does **`create-pr`** open (or prepare) the GitHub PR so **a reviewer agent** and the rest of the PR pipeline run on a level playing field.
 
 This stage is *also* where in-loop feedback gets captured: **a coding agent** maintains a `## Follow-ups` section on the PR plan and appends to it whenever they notice an improvement opportunity, code-review item, or risk that would expand scope (Strategy #6 forbids the expansion; the follow-up is the safe escape valve). Follow-ups from **a reviewer agent** land in the same section during the `pr-review` protocol branch flow. Each bullet may carry an optional `(target: …)` hint — Master Plan, current phase plan, sibling plan, new plan, or `drop` — to feed the next-step triage. The capture itself is wired through the **`coding-session`** task prompt and the **`pr-review`** flow; § *Plan Updates* below describes how those bullets get drained.
 
