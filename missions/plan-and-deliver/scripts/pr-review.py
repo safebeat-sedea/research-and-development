@@ -27,9 +27,9 @@ Each object uses the same keys as before:
 
 Usage:
 
-  cd <repo-root> && PR_REVIEW_INPUT=/path/to/payload.json python3 .sedea/centers/development/missions/plan-and-deliver/scripts/pr-review.py
+  cd <repo-root> && PR_REVIEW_INPUT=/path/to/payload.json python3 .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py
 
-  cd <repo-root> && python3 .sedea/centers/development/missions/plan-and-deliver/scripts/pr-review.py  # uses cwd input files
+  cd <repo-root> && python3 .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py  # uses cwd input files
 """
 
 import json
@@ -89,25 +89,51 @@ def resolve_input_file() -> str:
     )
 
 
+def find_sedea_repo_root(start: Path | None = None) -> Path | None:
+    cur = (start or Path.cwd()).resolve()
+    for _ in range(32):
+        if (cur / ".sedea" / "centers" / "sedea").is_dir():
+            return cur
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+    return None
+
+
+def _token_from_mcp_json(mcp_path: Path) -> str:
+    if not mcp_path.is_file():
+        return ""
+    try:
+        cfg = json.loads(mcp_path.read_text())
+        return (
+            cfg.get("mcpServers", {})
+            .get("github", {})
+            .get("env", {})
+            .get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
+            or ""
+        )
+    except (json.JSONDecodeError, KeyError, OSError):
+        return ""
+
+
 def resolve_token() -> str:
     token = os.environ.get("GH_TOKEN", "")
     if token:
         return token
-    mcp_path = Path.home() / ".sedea" / "mcp.json"
-    if mcp_path.exists():
-        try:
-            cfg = json.loads(mcp_path.read_text())
-            token = (
-                cfg.get("mcpServers", {})
-                .get("github", {})
-                .get("env", {})
-                .get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
-            )
-        except (json.JSONDecodeError, KeyError):
-            pass
-    if not token:
-        die("GH_TOKEN not set and could not read from ~/.sedea/mcp.json")
-    return token
+    candidates: list[Path] = []
+    repo_root = find_sedea_repo_root()
+    if repo_root is not None:
+        candidates.append(repo_root / ".sedea" / "mcp.json")
+    candidates.append(Path.home() / ".sedea" / "mcp.json")
+    for mcp_path in candidates:
+        token = _token_from_mcp_json(mcp_path)
+        if token:
+            return token
+    die(
+        "GH_TOKEN not set and could not read GITHUB_PERSONAL_ACCESS_TOKEN from "
+        ".sedea/mcp.json (hosting repo or ~/.sedea/) — copy .sedea/mcp.json.example"
+    )
+    return token  # unreachable
 
 
 def api_request(

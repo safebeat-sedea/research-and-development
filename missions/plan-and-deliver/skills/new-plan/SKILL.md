@@ -113,7 +113,7 @@ A plan without a parent is a **top-level topic** (top-level plan: `parent: null`
    node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs resolve --cwd "$PWD"
    ```
 
-   Exit **0** means `$PWD` is inside a worktree listed in some plan’s sidecar; that plan is a strong passive parent candidate. Optional scope: **`--user-uuid <id>`** before the subcommand (CLI flag name is **historical**; value is the **operations user id**), else `.sedea/local/operations-user-uuid`, else `git config --local sedea.operationsUserUuid`; if none set, only `joint` plans are searched.
+   Exit **0** means `$PWD` is inside a worktree listed in some plan’s sidecar; that plan is a strong passive parent candidate. Optional scope: **`--operations-user-id <id>`** before the subcommand (Mission Control **`operationsUserId`** in agent runs); if omitted, only `joint` plans are searched.
 3. **Recent chat references** — last turns name a slug or absolute plan path.
 4. **Nothing resolved** — ask the developer for a parent slug, or the literal `null` for a **top-level topic** (top-level plan, `parent: null`).
 

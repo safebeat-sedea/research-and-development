@@ -94,25 +94,9 @@ function spawnGitOutput(cwd, args) {
   });
 }
 
-async function readOperationsUserIdFromFile(repoRoot) {
-  const p = path.join(repoRoot, '.sedea', 'local', 'operations-user-id');
-  if (!(await fileExists(p))) return null;
-  const line = (await fs.readFile(p, 'utf8')).split(/\r?\n/)[0]?.trim() || null;
-  return line && line.length > 0 ? line : null;
-}
-
-async function readOperationsUserIdFromGitConfig(repoRoot) {
-  const r = await spawnGitOutput(repoRoot, ['config', '--local', '--get', 'sedea.operationsUserId']);
-  if (!r.ok || !r.stdout) return null;
-  const v = r.stdout.trim();
-  return v.length > 0 ? v : null;
-}
-
-async function resolveEffectiveOperationsUserId(repoRoot, cliId) {
+async function resolveEffectiveOperationsUserId(_repoRoot, cliId) {
   if (cliId && cliId.length > 0) return cliId;
-  const fromFile = await readOperationsUserIdFromFile(repoRoot);
-  if (fromFile) return fromFile;
-  return readOperationsUserIdFromGitConfig(repoRoot);
+  return null;
 }
 
 async function buildPlanDirs(repoRoot, operationsUserId) {
@@ -129,7 +113,7 @@ async function buildPlanDirs(repoRoot, operationsUserId) {
   else if (!SEDEA_MISSING_OPERATIONS_USER_ID_WARNED) {
     SEDEA_MISSING_OPERATIONS_USER_ID_WARNED = true;
     process.stderr.write(
-      'plan-state: no --operations-user-id and no .sedea/local/operations-user-id or git config sedea.operationsUserId — only operations/joint plans are visible\n',
+      'plan-state: no --operations-user-id — only operations/joint plans are visible\n',
     );
   }
   await pushScope('joint');
@@ -1765,12 +1749,11 @@ Global:
   --operations-user-id <id>
                        Per-user plan tree: .sedea/operations/<id>/plans/
                        (<id> is an opaque operations user id.) Union with
-                       .sedea/operations/joint/plans/. Optional when
-                       .sedea/local/operations-user-id exists or git config
-                       --local sedea.operationsUserId is set. If omitted and
-                       unset, only joint plans are searched (stderr warns
-                       once). Same slug in user + joint: user tree wins
-                       (listed first).
+                       .sedea/operations/joint/plans/. Required for the
+                       per-user tree when not using Mission Control host
+                       context. If omitted, only joint plans are searched
+                       (stderr warns once). Same slug in user + joint: user
+                       tree wins (listed first).
 
 Subcommands:
   resolve --cwd <path>

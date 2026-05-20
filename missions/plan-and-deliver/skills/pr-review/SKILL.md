@@ -14,7 +14,7 @@ description: >-
 
 ## Helper script
 
-Script: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py` (reads PAT from `GH_TOKEN` or `~/.sedea/mcp.json` — the token source is config only; **do not invoke the GitHub MCP** during `pr`).
+Script: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py` (reads PAT from `GH_TOKEN`, then hosting-repo **`.sedea/mcp.json`**, then `~/.sedea/mcp.json` — config only; **do not invoke the GitHub MCP** during `pr`).
 
 The script reads input from (in order): **`PR_REVIEW_INPUT`** (absolute path to a JSON file — keeps payloads **outside** the repo).
 
@@ -80,11 +80,9 @@ Before Step 1, attempt to upsert the resolved PR number into the Plan Board side
 
 **`plan-state.mjs`** lives in the center tree: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs`. It discovers plans only under the **union** of `.sedea/operations/joint/...` (literal `joint`) and `.sedea/operations/<operations-user-id>/...` on the **hosting repo** (parent directory of `.sedea/`). Pass the per-user scope when needed:
 
-- **`--operations-user-id <id>`** before the subcommand (recommended in Shell logs), or
-- one line in **`.sedea/local/operations-user-id`** (gitignored; hosting repo root), or
-- **`git config --local sedea.operationsUserId <id>`** in the hosting repo.
+- **`--operations-user-id <id>`** before the subcommand (from Mission Control **`operationsUserId`** in agent runs, or explicit CLI).
 
-If the id is omitted and unset, only `joint` plans are visible (stderr warns once). **Slug collision:** the same slug in both trees → the **user** tree wins (listed first).
+If the id is omitted, only `joint` plans are visible (stderr warns once). **Slug collision:** the same slug in both trees → the **user** tree wins (listed first).
 
 ```bash
 ROOT="$(git rev-parse --show-toplevel)"
