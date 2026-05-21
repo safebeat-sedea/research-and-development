@@ -43,7 +43,7 @@ Create one root-level topic plan and its sidecar under the selected Sedea operat
    - `topicName` and `topicDescription` must be non-empty after trimming.
    - `storageScope` must be exactly `user` or `joint`.
    - `operationsUserId` must be non-empty when `storageScope` is `user`.
-2. Resolve output directory:
+2. Resolve output directory (operations checkout; **created on first topic write** when absent):
    - `user` -> `.sedea/operations/<operationsUserId>/plans/roadmap-topics/`
    - `joint` -> `.sedea/operations/joint/plans/roadmap-topics/`
 3. Derive the filename stem:
@@ -52,7 +52,7 @@ Create one root-level topic plan and its sidecar under the selected Sedea operat
    - Collapse repeated `_` characters.
    - Trim leading and trailing `_` characters.
    - Append `_` plus an 8-character lowercase hex suffix.
-4. Ensure the output directory exists.
+4. Create the output directory when absent (`mkdir -p` on the resolved path).
 5. Write `<stem>.plan.md`:
 
    ```markdown
