@@ -302,7 +302,7 @@ Set `readyForImplementation: false` when any of those checks fail. Add each miss
 | **Planning handoff** | This skill → `outputs.readyForImplementation` | §§ 1–4 drafted, capstone todo, parent link (§5a). §§ 5–8 may stay `_TBD_`. |
 | **Worktree gate** | **`coding-session`** § *Worktree-open gate* | Per-PR body has **no** `_TBD_` outside fenced code, unless the developer chooses **Start with incomplete plan (executive override)** or sends **`override incomplete plan`** in the message. |
 
-`readyForImplementation: true` does **not** bypass the script. Agents that report “ready” here may still hit **`INCOMPLETE`** at worktree open — that is expected; point the developer to finish §§ 5–8, pre-fill sketches (option 2), or the **`coding-session`** override path.
+`readyForImplementation: true` does **not** bypass **`plan-ws-completeness.mjs`** or authorize worktrees. The Squad Leader §8 ship ledger must keep `phase: not-started` until completeness passes or is overridden **and** **`coding-session`** reports `developerApprovedImplementation: true` (**`plan.mdc`** §7–§8). Agents that report “ready” here may still hit **`INCOMPLETE`** at worktree open — that is expected; point the developer to finish §§ 5–8, pre-fill sketches (option 2), or the **`coding-session`** override path.
 
 However:
 

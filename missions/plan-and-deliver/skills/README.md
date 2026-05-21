@@ -32,8 +32,8 @@ Field-level `outputs` and `continuationStatus` rules: each skill’s **`## Compl
 
 | Layer | Skill | Primary output |
 |-------|-------|----------------|
-| 1 — Planning handoff | `pr-plan` | `readyForImplementation`, `implementationHandoffStatus` |
-| 2 — Worktree open | `coding-session` | `developerApprovedImplementation` (one worktree-open **AskQuestion**; completeness override is an option there, not a second gate) |
+| 1 — Planning handoff | `pr-plan` | `readyForImplementation`, `implementationHandoffStatus` — does **not** advance §8 `phase` past `not-started` |
+| 2 — Worktree open | `coding-session` | `developerApprovedImplementation` after **`plan-ws-completeness.mjs`** passes or override in the worktree-open gate |
 
 ## Ship spawn (detached / coding-session chain)
 

@@ -78,7 +78,7 @@ Only **two** developer-consent layers apply before worktrees. Do not stack extra
 
 | Layer | Where decided | Output field | This skill |
 |-------|---------------|--------------|------------|
-| **1 — Planning handoff** | **`pr-plan`** step 5c (especially option 4) | `readyForImplementation` | Read as a hint only; **do not** re-ask. Echo in results when known. |
+| **1 — Planning handoff** | **`pr-plan`** step 5c (especially option 4) | `readyForImplementation` | Hint only; **do not** re-ask. Does **not** authorize worktrees or advance **`plan.mdc`** §8 `phase` past `not-started`. |
 | **2 — Worktree open** | [Worktree-open gate](#worktree-open-gate) below (one **AskQuestion**) | `developerApprovedImplementation` | Set `true` only after an authorizing choice in that gate. |
 
 **Not consent layers** (validation / setup only — no separate approval **AskQuestion**):
@@ -90,7 +90,7 @@ Only **two** developer-consent layers apply before worktrees. Do not stack extra
 
 ## Pre-worktree validation (plan completeness)
 
-**Worktree validation** (see **`pr-plan`** §5b and **development-process.md** § *Planning readiness vs worktree completeness*). Independent of layer 1 **`readyForImplementation`**.
+**Worktree validation** (see **`pr-plan`** §5b and **development-process.md** § *Planning readiness vs worktree completeness*). Independent of layer 1 **`readyForImplementation`**. **`readyForImplementation: true` does not skip this script** — run it unless validation is skipped or the user message already contains **`override incomplete plan`**.
 
 When this run anchors Phase 2 to a Plan Board **`.plan.md`** under **`.sedea/operations/`**, run validation **before** the [Worktree-open gate](#worktree-open-gate) — but **do not** use a separate completeness **AskQuestion**; record the script result and present override/stop choices in that single gate.
 
