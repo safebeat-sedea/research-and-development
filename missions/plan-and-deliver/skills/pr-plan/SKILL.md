@@ -377,6 +377,8 @@ Required `outputs` fields:
   - `active` when parent link repair, fill sketches, or implementation handoff decision remains
   - `terminal` with `readyForImplementation: false` only when upstream or developer marks the PR plan deferred, abandoned, or out of scope
 
+Stop after the terminal line. Do not spawn **`coding-session`** from this skill.
+
 ## Completion (inline)
 
 Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
