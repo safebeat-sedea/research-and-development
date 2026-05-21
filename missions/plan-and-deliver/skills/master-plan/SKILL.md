@@ -182,7 +182,7 @@ Don't write "from <related doc>" into the plan body — the plan reads as one co
 
 ## Step 5 — Scaffold the Master Plan file
 
-The plan file is created **before** drafting, so § 4 + § 5 land in a persistent artefact from turn one. Follow the local plan conventions under `.sedea/operations/<operationsUserId>/plans/` (frontmatter contract, slug pattern with 8-char hex suffix, sidecar with `parent:`, no auto-`ccp plans`) — but use the **Master Plan template body** from the dev-process doc, not the generic Overview/Phasing stub.
+The plan file is created **before** drafting, so § 4 + § 5 land in a persistent artefact from turn one. Follow the local plan conventions under `.sedea/operations/<operationsUserId>/plans/` (frontmatter contract, slug pattern with 8-char hex suffix, sidecar with `parent:`; child plans via **`new-plan`** after **delivery-phases** or **pr-breakdown**) — but use the **Master Plan template body** from the dev-process doc, not the generic Overview/Phasing stub.
 
 ### 5a — Resolve the parent
 
@@ -469,7 +469,7 @@ On the **next turn**, invoke **AskQuestion** / **`MC_ASKQUESTION_V1`**. Build op
 
 Always include **More details for option _** per conduct.
 
-**Stop** after emitting AskQuestion — do not execute the chosen action in the same turn. Do not run `ccp plans`.
+**Stop** after emitting AskQuestion — do not execute the chosen action in the same turn.
 
 ### Step 7c — One choice per turn
 
@@ -509,7 +509,7 @@ After handling flags, return to **Step 7b**.
 
 ### Follow-up turns
 
-After each completed action, re-read the plan file and run **Step 7b** again with updated options. Decomposition remains available via `route-6` when band allows. Child list index **N** for **`new-plan`** is chosen via **AskQuestion** / snapshot per **30_planning-target-resolution**, not `sp <N>` typing.
+After each completed action, re-read the plan file and run **Step 7b** again with updated options. Decomposition remains available via `route-6` when band allows. Child list index **N** for **`new-plan`** is chosen via **AskQuestion** or snapshot per **30_planning-target-resolution**.
 
 ## Scope guard
 
