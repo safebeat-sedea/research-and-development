@@ -54,8 +54,8 @@ flowchart TD
 - `type`: Simple skill execution.
 - `intent`: Write the root-level topic plan and sidecar.
 - `target agent role`: Topics skill agent.
-- `assigned skill`: `.sedea/centers/research-and-development/missions/topics/skills/create-topic-plan/SKILL.md`.
-- `required rule context`: Sedea mission rules plus `.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc` and `.sedea/centers/research-and-development/docs/development-process.md`.
+- `assigned skill`: [`skills/create-topic-plan/SKILL.md`](skills/create-topic-plan/SKILL.md).
+- `required rule context`: **Sedea center always-apply rules** (Mission Control session warm-up under `.sedea/centers/sedea/rules/`), [`10_plan-naming-convention.mdc`](../../rules/10_plan-naming-convention.mdc), and [`development-process.md`](../../docs/development-process.md). This mission has **no** `missions/topics/rules/*.mdc` pack — do not search for mission-scoped rule files.
 - `inputs`: `topicName`, `topicDescription`, optional `objectives`, `storageScope`, and `operationsUserId`.
 - `expected output`: A new `<slug>_<hex>.plan.md` file and matching `<slug>_<hex>.state.yaml` sidecar in the selected `roadmap-topics/` directory.
 - `next-step resolution`: Continue to step 4 after write verification.
