@@ -23,6 +23,10 @@ inputs:
     type: string
     description: Current Sedea operations user id for user-private topic plans.
     required: true
+warmUpRules:
+  - ".sedea/centers/research-and-development/missions/topics/plan.mdc"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc"
 ---
 
 # Create Topic Plan
