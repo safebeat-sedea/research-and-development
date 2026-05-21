@@ -238,7 +238,7 @@ If Step 1 payloads are **missing or stale** in context (new comments since fetch
 
 ## Leader §8 recap (via coding-session)
 
-Runs **inline** on the **`coding-session`** lane. When triage reaches a stable milestone, ask the developer to paste **Ship recap — plan and deliver** on the **plan and deliver** leader dispatch (**`../plan.mdc`** §8).
+Runs **inline** on the **`coding-session`** lane. When triage reaches a stable milestone, ask the developer to paste **Ship recap — plan and deliver** on the **plan and deliver** leader dispatch (**`../../plan.mdc`** §8).
 
 | Milestone | `shipPhase` | Copy into recap |
 |-----------|-------------|-----------------|

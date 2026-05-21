@@ -267,7 +267,7 @@ Extend spawned result outputs with:
 
 ## Squad Leader bubble-up (detached lanes)
 
-Runs on a **detached** PR-creator lane. After PR open (or a blocked handoff), nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch (**`../plan.mdc`** §8).
+Runs on a **detached** PR-creator lane. After PR open (or a blocked handoff), nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch (**`../../plan.mdc`** §8).
 
 | Outcome | `shipPhase` | Key `outputs` for recap |
 |---------|-------------|-------------------------|

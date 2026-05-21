@@ -406,7 +406,7 @@ Stop after each command's confirmation reply. Do not auto-advance, do not auto-i
 
 ## Squad Leader bubble-up (detached lanes)
 
-Runs on a **detached** deploy lane. When `deployStatus` and `deployTodoStatus` are **done** (or deploy is blocked), nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch (**`../plan.mdc`** §8).
+Runs on a **detached** deploy lane. When `deployStatus` and `deployTodoStatus` are **done** (or deploy is blocked), nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch (**`../../plan.mdc`** §8).
 
 | Outcome | `shipPhase` | Key `outputs` for recap |
 |---------|-------------|-------------------------|

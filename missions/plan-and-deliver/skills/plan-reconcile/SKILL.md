@@ -272,7 +272,7 @@ Set `continuationStatus`:
 
 ## Squad Leader bubble-up (detached lanes)
 
-Runs on a **detached** reconcile lane. When reconcile reaches terminal success for the target PR plan, nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch (**`../plan.mdc`** §8).
+Runs on a **detached** reconcile lane. When reconcile reaches terminal success for the target PR plan, nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch (**`../../plan.mdc`** §8).
 
 | Outcome | `shipPhase` | `rowStatus` | Key `outputs` for recap |
 |---------|-------------|-------------|-------------------------|

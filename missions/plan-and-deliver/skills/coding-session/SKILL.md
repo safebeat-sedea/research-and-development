@@ -376,7 +376,7 @@ Do not propose dispatch resolution from this skill; the Squad Leader closes the 
 
 ## Squad Leader bubble-up (detached lanes)
 
-This skill usually runs **off** the **plan and deliver** leader lane. The Squad Leader §8 ledger often does **not** receive your `AGENT_RESULT_RESPONSE_V1`. After each milestone below, nudge the developer to paste the **Ship recap — plan and deliver** block on the **leader dispatch** (template in **`../plan.mdc`** §8 *Leader-lane ship recap*).
+This skill usually runs **off** the **plan and deliver** leader lane. The Squad Leader §8 ledger often does **not** receive your `AGENT_RESULT_RESPONSE_V1`. After each milestone below, nudge the developer to paste the **Ship recap — plan and deliver** block on the **leader dispatch** (template in **`../../plan.mdc`** §8 *Leader-lane ship recap*).
 
 | Milestone in this skill | Suggested `shipPhase` | Copy from `outputs` |
 |-------------------------|----------------------|---------------------|
