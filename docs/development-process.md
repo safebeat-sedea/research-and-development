@@ -287,6 +287,37 @@ Sections 1, 2, 3, 4, 6, 7, and 8 (when present) flow into the PR description tha
 
 **Strategy**, **Development tools**, and **Planning Modes** describe the **artifacts** and tooling of feature development. **Cadence** describes the **operational loop** those artifacts live inside. Setup is one-shot per feature (PRD → **Master Plan**); from there, every feature runs the loop below until it is done shipping.
 
+### Canonical sources (do not conflate)
+
+| Question | Read first |
+|----------|------------|
+| Protocol branch names, templates, and the **product development loop** | This document — **Development tools** § *Protocol branches* and **Cadence** below |
+| Happy-path **skill order** (planning → ship) | **Cadence reference** diagram (matches **`plan-and-deliver/plan.mdc`** *Cadence reference*) |
+| **Mission Control `plan and deliver` dispatch** — who spawns whom, §§1–8 protocol, §8 ship ledger, `MC_DISPATCH_RESOLVED_V1` gates | **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** — *Squad operations* and §8 (not duplicated here) |
+
+The large loop diagram below includes planning, **ship chain**, feedback, and plan updates. It is **not** the Squad Leader spawn map. Detached ship lanes and leader-lane recap: **`plan.mdc`** §8 and § *Leader-lane ship recap* under **Loop stages** below.
+
+### Cadence reference (skill order — same as `plan.mdc`)
+
+Approval gates and developer choices happen inside each skill; this line is the **happy-path order** only.
+
+```mermaid
+flowchart LR
+  classDef branch fill:#f0fdf4,stroke:#16a34a,color:#14532d
+
+  PRD[PRD] --> MPB[master-plan]:::branch
+  MPB --> DEC[delivery-phases or pr-breakdown]:::branch
+  DEC --> CHILD[new-plan → phase-plan or pr-plan]:::branch
+  CHILD --> CSB[coding-session]:::branch
+  CSB --> PPRB[pre-pr-review]:::branch
+  PPRB --> CPRB[create-pr]:::branch
+  CPRB --> REVB[pr-review]:::branch
+  REVB --> DWB[deploy-walk]:::branch
+  DWB --> RECB[plan-reconcile]:::branch
+```
+
+### Product development loop (planning + ship + feedback)
+
 ```mermaid
 ---
 config:
@@ -303,7 +334,7 @@ flowchart TD
     subgraph Cycle["Product Development Loop"]
       direction TB
       C[Next Phase Decomposition] --> D[PRs Breakdown]
-      D --> E[Work Session]
+      D --> E[coding-session]
 
       subgraph S1["Feedback Collection"]
         direction TB
@@ -346,6 +377,8 @@ flowchart TD
     class I rose
 ```
 
+**Diagram legend.** **`coding-session`** covers worktree setup and the **coding agent** implementation pass. The nodes **`pre-pr-review`** → **`create-pr`** → **`pr-review`** → **`deploy-walk`** → **`plan-reconcile`** are the **ship chain** (same order as **Cadence reference** above and **`plan.mdc`**). Feedback and **Plan Updates** close the iteration; they are not substitutes for ship branches.
+
 **One-shot setup.** PRD → **Master Plan**. The agent that drafts the **Master Plan** from a PRD is the **`master-plan`** protocol branch (path in **Development tools** § *Protocol branches*); the artefact is mode #1's **Master Plan** template above.
 
 **Continuous loop.** Once the **Master Plan** exists, the loop runs per *delivery slice* — the next-phase-to-ship plus the PRs it decomposes into. Each iteration produces one or more PRs in production and a batch of feedback that triages back into the plan tree. Loops continue until the **Master Plan**'s last phase ships.
@@ -384,25 +417,45 @@ When **`readyForImplementation`** is true but §§5–8 still contain `_TBD_`, t
 
 #### Coding Session
 
-Each PR is delivered in a newly spun-off agent driven by the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). The protocol branch spins up a worktree, starts a new **coding agent**, and hands it the per-PR plan.
+Each PR is delivered through the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). This stage spins up a worktree, attaches the Sedea workbench when applicable, emits a copy-safe prompt for **a coding agent**, and coordinates the **ship chain** (§ *Ship chain* below) after an explicit committed implementation cut point.
 
-**Ship chain (per PR)** — after the committed implementation cut point, the happy path runs on spawned or detached lanes in this order (see the Cadence diagram and **`plan-and-deliver/plan.mdc`** cadence reference):
+**In-loop feedback** during implementation: **a coding agent** maintains **`## Follow-ups`** on the PR plan for scope-adjacent items (Strategy #6). **`pre-pr-review`** returns **proposed** follow-ups only; **`coding-session`** appends after developer approval. **`pr-review`** follow-ups follow the same approval pattern when required. § *Plan Updates* below drains routed bullets.
 
-1. **`pre-pr-review`** — fresh pre-PR reviewer session; go/no-go before the PR is treated as merge-ready; non-blockers as **`outputs.proposedFollowUps`** (plan **`## Follow-ups`** edits only on **`coding-session`** after developer approval).
-2. **`create-pr`** — **PR-creating agent** lane; the only branch that may run **`gh pr create`** per rule **20**.
-3. **`pr-review`** — triage open PR review comments (often inline in **`coding-session`**).
-4. **`deploy-walk`** — walk the PR plan's deploy-test checklist after merge when applicable.
-5. **`plan-reconcile`** — merge-driven archive and follow-ups triage (separate cadence; not auto-run from deploy-walk).
+#### Ship chain (per PR)
 
-#### Leader-lane ship recap (detached lanes)
+After **`pr-plan`** handoff and **`coding-session`** implementation, the happy path runs these **protocol branches** in order (see **Cadence reference** and the loop diagram). Branches usually run on **detached** lanes (developer phrase, snapshot, or nested spawn) — not from the **plan and deliver** Squad Leader protocol §§1–7. Skill paths: **Development tools** § *Protocol branches*.
 
-Ship protocol branches usually run **off** the **plan and deliver** Squad Leader lane. The leader §8 ship ledger still advances from **developer messages** on the leader dispatch (or bubbled child `outputs` when available). Canonical checklist, phase enum, and copy-paste template: **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §8 *Leader-lane ship recap*.
+| Order | Branch | Role (one line) |
+|------:|--------|-----------------|
+| 1 | **`pre-pr-review`** | Fresh reviewer lane; go/no-go before merge-ready |
+| 2 | **`create-pr`** | **Only** branch that may run **`gh pr create`** (rule **20**) |
+| 3 | **`pr-review`** | Triage open PR comments (often **inline** in **`coding-session`**) |
+| 4 | **`deploy-walk`** | Walk §7 deploy checklist after merge when applicable |
+| 5 | **`plan-reconcile`** | Merge-driven archive + follow-ups triage (not auto-run from deploy-walk) |
 
-After a detached milestone (worktree ready, pre-PR go, PR open, deploy walk done, reconcile done), the developer should post the minimal recap block on the **plan and deliver** leader dispatch so `phase` does not stall at `implementing` or `worktree`. Each ship skill § *Squad Leader bubble-up* lists which `outputs` fields map to which `shipPhase`.
+##### pre-pr-review
 
-**Pre-PR reviewer agent** pass happens **after** implementation and **before** **`create-pr`**: **a coding agent** opens a **new agent session** and re-reads the PR plan / diff / description as an unbiased reviewer — see **Development tools** § *Pre-PR reviewer agent*. Only then does **`create-pr`** open (or prepare) the GitHub PR so **a reviewer agent** and the rest of the PR pipeline run on a level playing field.
+Spawned from **`coding-session`** after a committed cut point. Reviews diff + PR plan + repo rules; returns **`recommendation: go`** or blockers. Non-blockers are **`outputs.proposedFollowUps`** — **`coding-session`** presents them; plan **`## Follow-ups`** edits only after developer approval. See **`missions/plan-and-deliver/skills/pre-pr-review/SKILL.md`**.
 
-This stage is *also* where in-loop feedback gets captured: **a coding agent** maintains a `## Follow-ups` section on the PR plan and appends to it whenever they notice an improvement opportunity, code-review item, or risk that would expand scope (Strategy #6 forbids the expansion; the follow-up is the safe escape valve). **`pre-pr-review`** returns **proposed** follow-ups only; **`coding-session`** appends after explicit developer approval. Follow-ups from **a reviewer agent** on the PR surface land in the same section during the **`pr-review`** protocol branch flow (again after developer approval when required). Each bullet may carry an optional `(target: …)` hint — Master Plan, current phase plan, sibling plan, new plan, or `drop` — to feed the next-step triage. Capture is wired through **`coding-session`**, **`pre-pr-review`** handback, and **`pr-review`**; § *Plan Updates* below describes how those bullets get drained.
+##### create-pr
+
+Spawned from **`coding-session`** when pre-PR review is **go**. Builds reviewer-complete PR description; opens GitHub PR when authorized. Planning and coding lanes must **not** run **`gh pr create`**. May chain **`deploy-walk`** after merge when configured. See **`missions/plan-and-deliver/skills/create-pr/SKILL.md`**.
+
+##### pr-review
+
+Runs **inline** on the active **`coding-session`** lane after a PR exists (not a separate spawn on **`plan and deliver`**). Triages review comments; commit/push gates per rule **20** and Sedea **6_git-commit-push-gate**. See **`missions/plan-and-deliver/skills/pr-review/SKILL.md`**.
+
+##### deploy-walk
+
+Step-by-step walk of the PR plan **`## 7. Deploy test plan`**; flips capstone todo **`deploy-test-plan-verified`** when done. Does **not** auto-run **`plan-reconcile`**. See **`missions/plan-and-deliver/skills/deploy-walk/SKILL.md`**.
+
+##### plan-reconcile
+
+Archive candidates, follow-ups triage, merge/deploy gates. Often developer-triggered after merge; separate from deploy-walk completion. See **`missions/plan-and-deliver/skills/plan-reconcile/SKILL.md`**.
+
+##### Leader-lane ship recap (detached lanes)
+
+On a **`plan and deliver`** Mission Control dispatch, the Squad Leader **§8** ship ledger may **not** receive child **`AGENT_RESULT_RESPONSE_V1`** from detached lanes. After each ship milestone, post the **Ship recap — plan and deliver** block on the **leader dispatch** (template and phase enum: **`plan.mdc`** §8 *Leader-lane ship recap*). Each ship skill § *Squad Leader bubble-up* maps **`outputs`** → **`shipPhase`**.
 
 #### Feedback Collection
 

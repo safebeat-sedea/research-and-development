@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## Objectives
 
-The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `plan and deliver` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; branch names are catalogued in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** table).
+The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `plan and deliver` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; branch names and the strategic product loop are in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** + **Cadence**). **This `plan.mdc`** remains canonical for dispatch protocol §§1–8, spawn ownership, and §8 ship ledger.
 
 ### Cadence reference (all branches — not Squad Leader protocol steps)
 
