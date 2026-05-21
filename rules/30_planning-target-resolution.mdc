@@ -12,6 +12,20 @@ alwaysApply: true
 
 Planning protocol branches act on a specific `.plan.md` under the **`.sedea/operations/`** union. The target is resolved from **session input, chat context, and structured choices** — not from the IDE focused-file list alone (IDE state can drift from planning intent).
 
+## Planning readiness vs ship (do not conflate)
+
+Three different signals appear in plan-and-deliver; advancing one does **not** advance the others.
+
+| Signal | Set by | Means | Does **not** mean |
+|--------|--------|-------|-------------------|
+| **`readyForImplementation`** | **`pr-plan`** child `outputs` | Planning §§ 1–4 are drafted; developer may open **`coding-session`** | Worktree may open; §§ 5–8 complete; Squad Leader §8 `phase` past `not-started` |
+| **`plan-ws-completeness.mjs` exit 0** | Script on PR plan path | PR plan §§ 5–8 lack blocking `_TBD_` for worktree handoff | **`coding-session`** already running; PR open |
+| **`developerApprovedImplementation`** | **`coding-session`** after worktree-open gate | Layer-2 consent to implement on a worktree | Dispatch ship ledger auto-updated (leader §8 still needs recap) |
+
+**`pr-plan` does not spawn `coding-session`.** After **`pr-plan`**, the developer starts **`coding-session`** on a **detached** lane (phrase, snapshot, or new session). Do not implement on the **`pr-plan`** lane because `readyForImplementation` is true.
+
+Squad Leader §8 ship rows advance from **`coding-session`** outputs or an explicit **Ship recap — plan and deliver** on the leader dispatch — see [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](../missions/plan-and-deliver/plan.mdc) §8 and rule **20** § *Leader §8 ship recap*.
+
 ## Planning vs ship cadence
 
 **Planning-tree** moves (§ *Standard flow* below): **`AskQuestion`**, numbered options, each naming **protocol branch + target plan**.
@@ -77,7 +91,7 @@ Snapshots should respect **coding-session** pre-worktree validation and the work
    `node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-ws-completeness.mjs --file "<absolute path>"`  
    Exit **1** (`INCOMPLETE`) means incomplete for worktree handoff even when the plan was marked planning-ready.
 
-2. **Anchor plan** for **coding-session** matches **`plan-state.mjs resolve`**: `node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs resolve --cwd "$PWD"` when in a linked worktree, else the PR plan explicitly in play.
+2. **Anchor plan** for **coding-session** matches **`plan-state.mjs resolve`**: `node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs --operations-user-id <operationsUserId> resolve --cwd "$PWD"` when in a linked worktree (from hosting repo root), else the PR plan explicitly in play.
 
 3. If incomplete **and** that plan is the default **coding-session** anchor, the **first** numbered option must be finishing the PR plan sections; list **coding-session** only after completeness or with an explicit override label consistent with the **coding-session** skill.
 

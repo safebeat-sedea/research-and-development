@@ -313,7 +313,7 @@ Sections 1, 2, 3, 4, 6, 7, and 8 (when present) flow into the PR description tha
 
 The large loop diagram below includes planning, **ship chain**, feedback, and plan updates. It is **not** the Squad Leader spawn map. Detached ship lanes and leader-lane recap: **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §8 and § *Leader-lane ship recap* under **Loop stages** below.
 
-### Cadence reference (skill order — same as plan-and-deliver `plan.mdc`)
+### Cadence reference (skill order — same as plan-and-deliver mission plan)
 
 Approval gates and developer choices happen inside each skill; this line is the **happy-path order** only.
 

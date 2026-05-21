@@ -11,7 +11,16 @@ alwaysApply: true
 
 This rule applies to **domain-specific Cursor rules** under **`.cursor/rules/*.mdc`** in the **repository checkout where code changes land** — for example the Sedea **hosting repo** (`sedea-ai/app`) or a **product repo** worktree (`push`, `payments-web`, and similar). Those files help agents **navigate and understand that codebase**: architecture, conventions, call patterns, module boundaries, and repo-specific tooling — not Sedea platform governance.
 
-**Out of scope — Sedea centers.** Do **not** use this rule to author or maintain assets under **`.sedea/centers/<centerSlug>/`** (`rules/`, `missions/`, `skills/`, `center.yaml`). Center governance lives in center repositories and separate maintenance flows. When **center** process or rules need to change, use the **sedea** center mission **`improve center rules`** (`.sedea/centers/sedea/missions/center-maintenance/`) — not edits driven by per-PR **`## 5. Repo rules impact`**.
+### Where to edit which governance (routing)
+
+| You need to change… | Edit here | Mission / phrase |
+|---------------------|---------|------------------|
+| Product or hosting **codebase navigation** (modules, APIs, conventions) | **`.cursor/rules/*.mdc`** in the repo that ships the code | Per-PR plan **`## 5. Repo rules impact`**; this rule |
+| **R&D center** delivery process (`plan and deliver`, PR shipping, planning targets) | **`.sedea/centers/research-and-development/rules/*.mdc`** and mission skills/plans | **`improve center rules`** on **research-and-development** (`center-maintenance`) |
+| **Sedea platform** rules (hosting layout, missions, Safeguard, git gate) | **`.sedea/centers/sedea/rules/*.mdc`** | **`improve center rules`** on **sedea** (`center-maintenance`) |
+| A **mission plan** or **skill** under R&D | `missions/<missionSlug>/` under this center | **`improve mission`** / **`fix mission`** on **sedea** `mission-maintenance` |
+
+**Out of scope — Sedea centers (for this rule).** Do **not** use this rule to author or maintain assets under **`.sedea/centers/<centerSlug>/`** (`rules/`, `missions/`, `skills/`, `center.yaml`). When **center** process or rules need to change, use **`improve center rules`** on the matching **`centerSlug`** — not edits driven by per-PR **`## 5. Repo rules impact`** alone.
 
 Per-PR plan section **`## 5. Repo rules impact`** (see **development-process.md**) lists **only** **`.cursor/rules/*.mdc`** deltas for the **product/hosting repo** that receives the PR.
 

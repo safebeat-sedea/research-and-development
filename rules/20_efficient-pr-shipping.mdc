@@ -91,6 +91,10 @@ Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetc
 
 How to run the full cadence:
 
+### `plan-state.mjs` and `operationsUserId`
+
+Run all **`plan-state.mjs`** invocations from the **hosting repository root** (see § *Hosting repo cwd for scripts* below). Pass **`--operations-user-id <id>` before the subcommand** — same value as Mission Control **`operationsUserId`** (see [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](31_operations-user-id.mdc)). Without the flag, only **`joint`** plans are visible.
+
 ### User input
 
 Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)** § *Planning vs ship cadence*:
@@ -105,11 +109,14 @@ Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)**
 1. **Commit** (step 1). **Skip this step if `git status --short` is empty** — typical after the committed cut point reviewed by `pre-pr-review`. Do not amend the previous commit and do not pass `--allow-empty`; just proceed to step 2.
 2. Push to remote.
 3. **PR comment reconciliation (`pr-review` → this cadence).** When this coding session already ran [`pr-review`](../missions/plan-and-deliver/skills/pr-review/SKILL.md) Steps 1–4 (per-comment dispositions in the Step 4 report) and **GitHub** reply / resolve / minimize / summary from **Step 5 — GitHub reconciliation** has **not** run yet, the **commit and push cadence is incomplete** until Step 5 runs — **same agent turn**, immediately after the push succeeds (so the summary can cite `git rev-parse --short HEAD`). Load `pr-review` **Step 5 — GitHub only** and execute it via `python3 .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py` (two-step `PR_REVIEW_INPUT` per that skill). If thread IDs or PR identity are missing from context, re-run that skill’s **Step 1** script array for the same PR, then Step 5. If there was no `pr-review` triage in this chat, skip this step entirely.
-4. **Link the PR to its plan sidecar.** After push (and after step 3 when applicable), attempt to upsert the PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. Run:
+4. **Link the PR to its plan sidecar.** After push (and after step 3 when applicable), attempt to upsert the PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. Run (from hosting repo root; **`--operations-user-id` before the subcommand**):
 
    ```bash
+   OPS_ID="<operationsUserId from Mission Control or sedea_get_current_user>"
+
    # Which plan owns this worktree? (exit 2 = none; skip silently)
-   node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs resolve --cwd "$PWD"
+   node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+     --operations-user-id "$OPS_ID" resolve --cwd "$PWD"
    # → prints "<slug>\t<planPath>" on exit 0.
 
    # Does an open PR already exist for this branch?
@@ -117,7 +124,8 @@ Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)**
    # → prints a number on stdout, or nothing (first push, a PR-creating agent not yet invoked).
 
    # If both resolved: upsert into sidecar prs[] (idempotent).
-   node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs upsert-pr \
+   node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+     --operations-user-id "$OPS_ID" upsert-pr \
      --slug <slug-from-resolve> \
      --repo "$(basename "$(git rev-parse --show-toplevel)")" \
      --number <number-from-gh>
@@ -135,6 +143,8 @@ Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)**
 
    After steps 1–5 finish successfully, **nudge the developer once** to paste **Ship recap — plan and deliver** on the **leader dispatch** (template: [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](../missions/plan-and-deliver/plan.mdc) §8 *Leader-lane ship recap*; narrative: [development-process.md](../docs/development-process.md) § *Leader-lane ship recap*). Do **not** block the lane on the recap — ship skills also nudge at terminal milestones per **`skills/README.md`** § *Leader-lane ship recap*.
 
+   **Silence on a detached lane is not ship complete.** If the **plan and deliver** dispatch stays active, missing recap means §8 rows stay stale — do not propose dispatch **`resolved`** from the leader lane until recap or explicit developer status (see **`plan.mdc`** §8 gates).
+
    Suggested `shipPhase` from this pass (when `resolve` returned a PR plan):
 
    | Cadence outcome | Suggest `shipPhase` |
@@ -145,7 +155,9 @@ Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)**
 
    Include `targetPlanPath` from **`resolve`**, `rowStatus: open` while work continues, and `remainingTasks` when known.
 
-Example:
+**Examples — pick the block that matches the implementation repo.** Do not mix patterns on one repo.
+
+Example A — **hosting checkout** (implementation repo root contains `.sedea/centers/sedea/`; stacked PRs on `main` per [`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)):
 
 ```
 ## Worktree setup
@@ -154,23 +166,33 @@ From the hosting repo root (directory containing `.sedea/`):
 
 git fetch origin main
 
-# Independent — start immediately
-git worktree add ../push-feat-token-auth -b feat/token-auth origin/main
-# Then in Mission Control: sedea_add_worktree_folder with the resolved absolute path to this worktree (optional name).
+# Independent — start immediately (stack index + slug; default prefix feat)
+git worktree add ../app-feat-01-token-auth -b feat/01-token-auth origin/main
+# Mission Control: sedea_add_worktree_folder — absolute path to this worktree
 
-git worktree add ../push-improve-logger -b improve/logger origin/main
-# Then sedea_add_worktree_folder with the resolved absolute path to this worktree (optional name).
+git worktree add ../app-improve-02-logger -b improve/02-logger origin/main
+# sedea_add_worktree_folder — absolute path
 
-# Depends on PR 1 — create after feat/token-auth merges
-# git worktree add ../push-feat-session-refresh -b feat/session-refresh origin/main
-# When unblocked: sedea_add_worktree_folder with the resolved absolute path to this worktree (optional name).
+# Depends on PR 1 — after feat/01-token-auth merges
+# git worktree add ../app-feat-03-session-refresh -b feat/03-session-refresh origin/main
 
 Cleanup after merge:
-# sedea_remove_worktree_folder with absolute path to ../push-feat-token-auth, then:
-git worktree remove ../push-feat-token-auth
-# sedea_remove_worktree_folder with absolute path to ../push-improve-logger, then:
-git worktree remove ../push-improve-logger
+# sedea_remove_worktree_folder (absolute path), then git worktree remove …
 git worktree prune
+```
+
+Example B — **product repo** (e.g. `push`; not the hosting checkout — no two-digit stack index unless that repo's rules require it):
+
+```
+## Worktree setup
+
+git fetch origin main
+
+git worktree add ../push-improve-logger -b improve/logger origin/main
+# sedea_add_worktree_folder — absolute path
+
+git worktree add ../push-feat-token-auth -b feat/token-auth origin/main
+# sedea_add_worktree_folder — absolute path
 ```
 
 ## New branch from `main`
@@ -256,11 +278,17 @@ Every description starter (including on the first push in this cadence) should c
 
 ## Branch naming
 
-Names apply to the **implementation repository** (the worktree root that receives the code change), not necessarily the checkout that holds `.sedea/` for planning scripts.
+Names apply to the **implementation repository** (the worktree root that receives the code change), not necessarily the checkout that holds `.sedea/` for planning scripts. **Worktree setup examples** above are split by repo type — use Example A or B, not both.
 
 ### Hosting checkout (sedea-ai/app and equivalents)
 
 When the implementation repo **is** the Sedea **hosting checkout** — the tree whose root contains `.sedea/centers/sedea/` on the active workbench — follow **[`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)** ([`0_hosting-checkout.mdc`](../../sedea/rules/0_hosting-checkout.mdc) defines that checkout).
+
+- Stacked integration on `main`: **`<prefix>/<NN>-<slug>`** with exactly two digits (`01`–`99`). Default prefix for a new stack is **`feat`** unless the plan or developer names another prefix.
+- **Invalid on hosting stacked workflow:** `feat/token-auth`, `improve/logger`, `feature/01-foo` — missing `NN`, wrong prefix family, or non-kebab slug.
+- Rename locally **before first push** if the branch name is wrong ([`7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc) § *Before the first git push*).
+
+Benefit-style prefixes (`improve/`, `simplify/`, …) from [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc) apply to **product** implementation repos unless the stack explicitly uses them **with** `<NN>-` on the hosting repo (e.g. `improve/02-logger`).
 
 ### Other implementation repos
 
@@ -270,4 +298,17 @@ When the worktree is **another** product or service repository, use descriptive 
 - `improve/<short-description>` — improvements (or a more specific verb prefix like `simplify/`, `harden/`, `speedup/`; see [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc))
 - `fix/<short-description>` — bug fixes
 
+No two-digit stack index unless that repo's own rules or an explicit stacked-PR plan requires it.
+
 If that repo ships branch-naming rules under `.sedea/centers/<centerSlug>/rules/` or `.cursor/rules/`, follow those for that worktree.
+
+## Review passes (two roles)
+
+Do not conflate **pre-PR review** with **PR-surface review**:
+
+| Role | Session | When | Skill / surface |
+|------|---------|------|-----------------|
+| **Pre-PR reviewer agent** | **Fresh** child lane — no coding-session transcript carry-over | After committed cut point, before **`create-pr`** | [`pre-pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pre-pr-review/SKILL.md) |
+| **Reviewer agent** | GitHub PR diff + description (Sedea or third-party) | After PR is open | [`pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pr-review/SKILL.md) for comment triage; not a substitute for pre-PR |
+
+Full definitions: [`.sedea/centers/research-and-development/docs/development-process.md`](../docs/development-process.md) § *Agents and roles*.

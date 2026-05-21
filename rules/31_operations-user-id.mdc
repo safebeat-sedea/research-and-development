@@ -36,3 +36,24 @@ Slug collision: the **user** tree wins over **`joint`** when both define the sam
 
 - If **`operationsUserId`** is missing in a spawned skill that requires it, return **`partial`** with `outputs.missingFields: ["operationsUserId"]` — do not invent an id or read from focused files alone.
 - When documenting **`plan-state.mjs`**, show **`--operations-user-id`** in command examples and state that agents pass the Mission Control **`operationsUserId`** value.
+
+## Worked example (`plan-state.mjs`)
+
+Flag order is **global** — **`--operations-user-id <id>` before the subcommand** (see [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Commit and push cadence*).
+
+From the **hosting repository root** (directory containing `.sedea/`):
+
+```bash
+OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" resolve --cwd "$PWD"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" upsert-pr \
+  --slug <slug-from-resolve> \
+  --repo "$(basename "$(git rev-parse --show-toplevel)")" \
+  --number <pr-number>
+```
+
+Without **`--operations-user-id`**, the CLI searches **`joint`** plans only and may warn that user-scoped paths were skipped — do not treat that as "no plans exist" for the developer.

@@ -69,7 +69,7 @@ flowchart TD
 - `intent`: Write the root-level topic plan and sidecar by following the assigned skill on this lane.
 - `target agent role`: Topics Squad Leader (same lane).
 - `assigned skill`: [`skills/create-topic-plan/SKILL.md`](skills/create-topic-plan/SKILL.md).
-- `required rule context`: **Sedea center always-apply rules** (Mission Control session warm-up under `.sedea/centers/sedea/rules/`), [`10_plan-naming-convention.mdc`](../../rules/10_plan-naming-convention.mdc), and [`development-process.md`](../../docs/development-process.md). This mission has **no** `missions/topics/rules/*.mdc` pack — do not search for mission-scoped rule files.
+- `required rule context`: **Sedea center always-apply rules** (Mission Control session warm-up under `.sedea/centers/sedea/rules/`), `.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`, and `.sedea/centers/research-and-development/docs/development-process.md`. This mission has **no** `missions/topics/rules/*.mdc` pack — do not search for mission-scoped rule files.
 - `inputs`: `topicName`, `topicDescription`, `objectives`, `storageScope`, and `operationsUserId` from step 2.
 - `expected output`: Inline skill result per **`create-topic-plan`** **`## Completion (inline)`** — `planPath`, `sidecarPath`, `storageScope`, `topicSlug`, `creationStatus`, `remainingTasks`.
 - `next-step resolution`: Continue to step 4 after the skill procedure and verification complete on this lane.
