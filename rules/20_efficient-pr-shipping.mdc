@@ -233,8 +233,18 @@ Every description starter (including on first `commit-push`) should cover, in wh
 
 ## Branch naming
 
-Descriptive kebab-case reflecting scope on the **implementation repository** (the worktree root that receives the code change):
+Names apply to the **implementation repository** (the worktree root that receives the code change), not necessarily the checkout that holds `.sedea/` for planning scripts.
+
+### Hosting checkout (sedea-ai/app and equivalents)
+
+When the implementation repo **is** the Sedea **hosting checkout** — the tree whose root contains `.sedea/centers/sedea/` on the active workbench — follow **[`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)** ([`0_hosting-checkout.mdc`](../../sedea/rules/0_hosting-checkout.mdc) defines that checkout).
+
+### Other implementation repos
+
+When the worktree is **another** product or service repository, use descriptive kebab-case on **that** repo:
 
 - `feat/<short-description>` — new features
 - `improve/<short-description>` — improvements (or a more specific verb prefix like `simplify/`, `harden/`, `speedup/`; see [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc))
 - `fix/<short-description>` — bug fixes
+
+If that repo ships branch-naming rules under `.sedea/centers/<centerSlug>/rules/` or `.cursor/rules/`, follow those for that worktree.
