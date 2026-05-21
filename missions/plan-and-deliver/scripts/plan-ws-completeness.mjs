@@ -6,7 +6,7 @@
 // Intentional tension with **pr-plan** `readyForImplementation`: pr-plan may set ready
 // when §§1–4 are drafted while §§5–8 stay _TBD_; this script scans the whole per-PR
 // body and exits INCOMPLETE until _TBD_ is gone (or coding-session bypass applies).
-// See pr-plan/SKILL.md §5b, coding-session/SKILL.md § Plan completeness gate,
+// See pr-plan/SKILL.md §5b, coding-session/SKILL.md § Pre-worktree validation + Worktree-open gate,
 // development-process.md § Planning readiness vs worktree completeness.
 //
 // Usage (from hosting repo root):

@@ -411,9 +411,9 @@ Two independent gates apply before a worktree opens. Do not treat **`pr-plan`** 
 | Layer | Mechanism | Pass criteria | `_TBD_` in per-PR §§5–8 |
 |-------|-----------|---------------|-------------------------|
 | **Planning handoff** | **`pr-plan`** → `readyForImplementation` | §§1–4, deploy capstone todo, parent link | **Allowed** at handoff |
-| **Worktree gate** | **`plan-ws-completeness.mjs`** in **`coding-session`** | No `_TBD_` in per-PR body (outside fenced code) | **Blocks** until filled or overridden |
+| **Worktree gate** | **`coding-session`** worktree-open gate (runs **`plan-ws-completeness.mjs`** first) | No `_TBD_` in per-PR body (outside fenced code), unless override chosen in that gate | **Blocks** until filled or override |
 
-When **`readyForImplementation`** is true but §§5–8 still contain `_TBD_`, the script prints **`INCOMPLETE`** — expected, not a bug. Proceed only after the developer finishes those sections, uses **`pr-plan`** pre-fill sketches, or explicitly overrides via **`coding-session`** (**AskQuestion** executive override or **`override incomplete plan`** in the message). See **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *PR-plan completeness before coding-session*.
+When **`readyForImplementation`** is true but §§5–8 still contain `_TBD_`, the script prints **`INCOMPLETE`** — expected, not a bug. Proceed only after the developer finishes those sections, uses **`pr-plan`** pre-fill sketches, chooses **Start with incomplete plan (executive override)** in the worktree-open gate, or sends **`override incomplete plan`** in the message. See **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *PR-plan completeness before coding-session*.
 
 #### Coding Session
 

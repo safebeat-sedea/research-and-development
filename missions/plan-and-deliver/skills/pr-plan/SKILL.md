@@ -300,7 +300,7 @@ Set `readyForImplementation: false` when any of those checks fail. Add each miss
 | Layer | Where | What passes |
 |-------|--------|-------------|
 | **Planning handoff** | This skill → `outputs.readyForImplementation` | §§ 1–4 drafted, capstone todo, parent link (§5a). §§ 5–8 may stay `_TBD_`. |
-| **Worktree gate** | **`coding-session`** runs **`plan-ws-completeness.mjs`** | Per-PR body has **no** `_TBD_` outside fenced code, unless the developer uses **AskQuestion** executive override or **`override incomplete plan`** in the message. |
+| **Worktree gate** | **`coding-session`** § *Worktree-open gate* | Per-PR body has **no** `_TBD_` outside fenced code, unless the developer chooses **Start with incomplete plan (executive override)** or sends **`override incomplete plan`** in the message. |
 
 `readyForImplementation: true` does **not** bypass the script. Agents that report “ready” here may still hit **`INCOMPLETE`** at worktree open — that is expected; point the developer to finish §§ 5–8, pre-fill sketches (option 2), or the **`coding-session`** override path.
 
@@ -321,7 +321,7 @@ End with:
    1. **Revise § *N*** — The **developer** names the section and feedback; one focused `StrReplace`; echo.
    2. **Pre-fill § 5 / § 6 / § 7 / § 8 (sketch)** — Draft a *starting* sketch from parent + § 3 context; label it speculative; § 7 must use numbered GFM **`1. [ ]`** lists and **`**Status:** drafted`** opener; apply **`.sedea/centers/research-and-development/docs/development-process.md`** § 7 *What NOT to include* and the italic fallback when empty. After accepting a § 7 sketch, run **4a-bis** if the capstone todo is still missing.
    3. **Commit when ready** — Remind the **developer** to commit; this skill does **not** run `git`.
-   4. **Continue in `coding-session`** — Opens a **separate** **`coding-session`** run (detached lane or dispatch). **`readyForImplementation`** here is **planning** readiness only. Worktree approval happens in **`coding-session`** (**Start implementation now**); that skill sets `outputs.developerApprovedImplementation` for §8. **`coding-session`** still runs **`plan-ws-completeness.mjs`** — remaining `_TBD_` in §§ 5–8 blocks worktrees until filled or overridden (see **`coding-session`** § *Plan completeness gate*). Implementation fills §§ 5–7 before merge cadence per **`development-process.md`**; **`deploy-walk`** drives § 7 checkbox lifecycle.
+   4. **Continue in `coding-session`** — Layer 1 only: sets planning handoff intent (`readyForImplementation` when checks pass). Opens a **separate** **`coding-session`** run; layer 2 is one worktree-open **AskQuestion** there (**Start implementation now** or **Start with incomplete plan (executive override)**) → `outputs.developerApprovedImplementation`. See **`coding-session`** § *Implementation consent (two layers)*.
 
 **Stop** after this block — do not spawn or run **`coding-session`** on this lane.
 
@@ -355,11 +355,11 @@ Required `outputs` fields:
 - `outputs.parentPlanPath`, `outputs.parentPlanSlug`, `outputs.parentIndex`
 - `outputs.parentPlanLinkStatus` — `linked` | `blocked` | `unknown`
 - `outputs.readyForImplementation`, `outputs.implementationReadinessReasons`
-- `outputs.implementationApprovalStatus` — `pending` until developer explicitly chooses implementation handoff
+- `outputs.implementationHandoffStatus` — `not-offered` | `offered` | `continue-to-coding-session` (step 5c option 4 chosen); planning menu only — not `developerApprovedImplementation`
 - `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`
 - `outputs.continuationOwner`: `"pr-plan-agent"`
 - `outputs.continuationStatus`:
-  - `terminal` when `readyForImplementation: true`, parent link is trusted, implementation approval is granted or out of scope, and no blocking `remainingTasks`
+  - `terminal` when `readyForImplementation: true`, parent link is trusted, handoff menu is complete (or out of scope), and no blocking `remainingTasks`
   - `active` when parent link repair, fill sketches, or implementation handoff decision remains
   - `terminal` with `readyForImplementation: false` only when upstream or developer marks the PR plan deferred, abandoned, or out of scope
 

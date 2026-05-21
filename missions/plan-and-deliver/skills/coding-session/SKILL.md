@@ -24,7 +24,7 @@ inputs:
     required: false
   developerApprovedImplementation:
     type: boolean
-    description: Internal/output only — set true after **Start implementation now** in this skill. Not supplied by **pr-plan** spawn.
+    description: Layer 2 output — true only after an authorizing worktree-open gate choice. Not supplied by **pr-plan**.
     required: false
   repoPath:
     type: string
@@ -58,7 +58,7 @@ inputs:
 
 Hand off a unit of work from the **initiating** session to **a coding agent** in a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process.
 
-**Owns:** `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, completeness gate, curated session prompt emission.
+**Owns:** `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, pre-worktree validation + worktree-open gate, curated session prompt emission.
 
 **Out of scope:** implementing product code in this chat; opening PRs; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
@@ -70,40 +70,53 @@ After emitting the implementation session prompt(s), **stop** — do not `cd` in
 
 When `targetPlanPath` / `targetPlanSlug` are known (message, `@` path, snapshot, or spawn `inputs`), use them for sidecar writes and the session prompt.
 
-Optional `readyForImplementation` from a prior **`pr-plan`** run is **informational only** — it does not authorize worktrees. **`readyForImplementation: true` does not bypass the plan completeness gate below.** **`pr-plan`** may set ready when §§ 1–4 are drafted while §§ 5–8 remain `_TBD_`; **`plan-ws-completeness.mjs`** still exits **`INCOMPLETE`** until those placeholders are gone or the developer explicitly overrides.
-
-**Implementation approval** is granted only in [Start implementation approval gate](#start-implementation-approval-gate) below (**Start implementation now**). Set `outputs.developerApprovedImplementation: true` only after that choice. Until then, emit `false` or omit the field.
-
 If repo targets are missing, stop and ask the developer with **AskQuestion** to choose or provide the implementation repo(s). Do not infer from focused files alone.
 
-## Plan completeness gate (before any worktree)
+## Implementation consent (two layers)
 
-**Worktree layer** of implementation readiness (see **`pr-plan`** §5b *Two-layer readiness* and **`.sedea/centers/research-and-development/docs/development-process.md`** § *Planning readiness vs worktree completeness*). Independent of upstream **`readyForImplementation`**.
+Only **two** developer-consent layers apply before worktrees. Do not stack extra approval **AskQuestion** rounds for the same decision.
 
-When this run anchors Phase 2 to a Plan Board **`.plan.md`** under the **`.sedea/operations/`** union (absolute path from the user message, an `@` path, or `node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs resolve --cwd "$PWD"` from the **hosting repo** when already linked), **validate the plan** before `git worktree add`, Mission Control attach, or emitting the session prompt.
+| Layer | Where decided | Output field | This skill |
+|-------|---------------|--------------|------------|
+| **1 — Planning handoff** | **`pr-plan`** step 5c (especially option 4) | `readyForImplementation` | Read as a hint only; **do not** re-ask. Echo in results when known. |
+| **2 — Worktree open** | [Worktree-open gate](#worktree-open-gate) below (one **AskQuestion**) | `developerApprovedImplementation` | Set `true` only after an authorizing choice in that gate. |
 
-**Lane-change snapshots** (*back to plan*, *where are we?*, …) follow `.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc` § *PR-plan completeness before coding-session*: when a snapshot lists both an incomplete per-PR plan and **coding-session**, **finishing the plan** must be ordered **first**.
+**Not consent layers** (validation / setup only — no separate approval **AskQuestion**):
 
-**Skip this gate** when there is **no** plan file anchor (handoff with no `*.plan.md` in the task body).
+- **`plan-ws-completeness.mjs`** — script check; incomplete plans are handled inside the worktree-open gate (override option), not a second gate.
+- **Repo selection** — **AskQuestion** only when `repoPath` / `repoPaths` are missing.
 
-**Bypass** when the user’s message contains **`override incomplete plan`** anywhere (ASCII, case-insensitive).
+`inputs.developerApprovedImplementation` is never a substitute for layer 2; ignore upstream `true` until the developer picks an authorizing worktree-open option in **this** run.
+
+## Pre-worktree validation (plan completeness)
+
+**Worktree validation** (see **`pr-plan`** §5b and **development-process.md** § *Planning readiness vs worktree completeness*). Independent of layer 1 **`readyForImplementation`**.
+
+When this run anchors Phase 2 to a Plan Board **`.plan.md`** under **`.sedea/operations/`**, run validation **before** the [Worktree-open gate](#worktree-open-gate) — but **do not** use a separate completeness **AskQuestion**; record the script result and present override/stop choices in that single gate.
+
+**Lane-change snapshots** (*back to plan*, *where are we?*, …) follow **30_planning-target-resolution.mdc** § *PR-plan completeness before coding-session*: when a snapshot lists both an incomplete per-PR plan and **coding-session**, **finishing the plan** must be ordered **first**.
+
+**Skip** when there is **no** plan file anchor.
+
+**Treat as override already chosen** when the user message contains **`override incomplete plan`** (ASCII, case-insensitive) — skip the script; proceed to the worktree-open gate.
 
 Otherwise:
 
-1. Resolve the plan’s **absolute** path. If you cannot, **stop** and ask for a path or a `plan-state` linkage — do not silently skip validation.
-2. From the **hosting repo root** (the tree that contains `.sedea/`), run:
+1. Resolve the plan’s **absolute** path. If you cannot, **stop** and ask for a path or `plan-state` linkage.
+2. From the **hosting repo root**:
    ```bash
    node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-ws-completeness.mjs --file "<absolute-plan-path>"
    ```
-   - Exit **0** and stdout `OK` or `SKIP_NOT_PER_PR` → proceed.
-   - Exit **1** and stdout `INCOMPLETE` → **per-PR plan** still has `_TBD_` after stripping fenced code. **Do not** create worktrees or emit the prompt until the user accepts proceeding:
-     - **Preferred:** **AskQuestion** — **“Stop — I’ll complete the plan first”** vs **“Executive override — proceed with incomplete plan”**. On stop, end with a short nudge (finish §§ 5–8 / deploy per **development-process**, then re-run **coding-session**). On override, continue **in the same turn** with worktree creation.
+   - Exit **0** (`OK` / `SKIP_NOT_PER_PR`) → `planCompleteness: complete` for the worktree-open gate.
+   - Exit **1** (`INCOMPLETE`) → `planCompleteness: incomplete` — **do not** create worktrees yet; offer override only in the worktree-open gate.
 
-**Multi-repo:** run the script **once** on the shared plan before creating any worktrees.
+**Multi-repo:** run the script **once** on the shared plan before the worktree-open gate.
 
-## Start implementation approval gate
+## Worktree-open gate
 
-After readiness, repo selection, and plan completeness checks pass, but before any `git worktree add`, sidecar session write, Mission Control worktree attach, or coding-agent prompt emission, ask the developer for explicit start approval with **AskQuestion**. Required options:
+**Layer 2 — single AskQuestion** before any `git worktree add`, sidecar session write, Mission Control worktree attach, or coding-agent prompt emission.
+
+**When `planCompleteness: complete`** (or validation skipped / override already in the user message), required options:
 
 - **Start implementation now**
 - **Revise PR plan first**
@@ -111,7 +124,21 @@ After readiness, repo selection, and plan completeness checks pass, but before a
 - **Defer implementation**
 - **More details for option _**
 
-Only **Start implementation now** authorizes worktree creation, session-state mutation, and `outputs.developerApprovedImplementation: true`. This gate applies to every **`coding-session`** run (spawned child or standalone). A prior **`pr-plan`** menu choice does not substitute for this gate.
+**When `planCompleteness: incomplete`**, required options (do **not** offer plain **Start implementation now** without override):
+
+- **Start with incomplete plan (executive override)**
+- **Stop — I’ll complete the plan first**
+- **Revise PR plan first**
+- **Change repo or branch settings**
+- **Defer implementation**
+- **More details for option _**
+
+**Authorizing choices** (set `outputs.developerApprovedImplementation: true`):
+
+- **Start implementation now** — only when `planCompleteness: complete`.
+- **Start with incomplete plan (executive override)** — when `planCompleteness: incomplete`.
+
+All other choices → `developerApprovedImplementation: false`; end or stay `continuationStatus: active` without worktrees. A prior **`pr-plan`** menu option does not substitute for this gate.
 
 ## Copy/paste-safe prompt output (required)
 
@@ -123,7 +150,7 @@ When you emit the final session prompt for the user to paste into **a coding age
 
 ## Generic flow (single repo)
 
-Run only **after** the [Plan completeness gate](#plan-completeness-gate-before-any-worktree) passes or is skipped / bypassed and the [Start implementation approval gate](#start-implementation-approval-gate) is approved.
+Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-completeness) and an authorizing choice in the [Worktree-open gate](#worktree-open-gate).
 
 1. Create a worktree on a fresh branch from `origin/main`:
    ```bash
@@ -275,9 +302,8 @@ When this skill runs as a spawned child, end with a child result containing at l
 
 - `outputs.targetPlanPath`
 - `outputs.targetPlanSlug`
-- `outputs.readyForImplementation`
-- `outputs.developerApprovedImplementation` — `true` only after **Start implementation now**; never inherit from **`pr-plan`**
-- `outputs.startImplementationApprovalStatus` — `approved` when **Start implementation now** was chosen
+- `outputs.readyForImplementation` — echo layer 1 when known; set only by **`pr-plan`**, not by this gate
+- `outputs.developerApprovedImplementation` — layer 2; `true` only after an authorizing worktree-open choice; never inherit from **`pr-plan`**
 - `outputs.repoPaths`
 - `outputs.worktrees` (array of `{repo, path, branch, attached}`)
 - `outputs.branchName`
