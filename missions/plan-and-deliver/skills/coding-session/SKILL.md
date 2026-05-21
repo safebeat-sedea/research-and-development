@@ -271,13 +271,21 @@ When **`pre-pr-review`** returns `recommendation: "no-go"` or any `blockers`:
 4. After approved fixes are implemented, require a new explicit committed cut point and spawn **`pre-pr-review`** again. The loop repeats until **`pre-pr-review`** returns `go` or the developer explicitly defers/abandons.
 5. Track each loop pass in outputs as `reviewLoopCount` and keep `continuationStatus: "active"` while approval, fixes, commit cut point, or re-review remains open.
 
+### User requests to open a PR (before `create-pr` spawn)
+
+When the developer says *open a PR*, *create a pull request*, or similar **before** **`pre-pr-review`** returns **`go`** and the **Create-PR handoff after go** gate:
+
+1. **Do not** call `gh pr create` or surface GitHub `pull/new/` URLs (rule **20** § *PR creation* and § *User phrases → required handoff*).
+2. State the required order: implementation → **committed cut point** → spawn **`pre-pr-review`** → on **`go`**, **AskQuestion** in **Create-PR handoff after go** → spawn **`create-pr`** child only.
+3. If they only pushed and expect a PR, confirm whether **`pre-pr-review`** has run; first-push cadence does **not** replace the **`create-pr`** child lane.
+
 ### Create-PR handoff after go
 
 When **`pre-pr-review`** returns `recommendation: "go"`:
 
 This path is the normative **`create-pr`** handoff on this lane — it **supersedes** rule **20** § *Commit and push cadence* step 5 prompt-only wording when both apply.
 
-1. Verify the worktree branch is pushed or pushable per **efficient-pr-shipping**. Do not open the PR directly from coding-session.
+1. Verify the worktree branch is pushed or pushable per **efficient-pr-shipping**. Do not open the PR directly from coding-session — only the **`create-pr`** child may run `gh pr create`.
 2. Present the reviewer `go` summary, non-blocking flags, and any proposed follow-ups to the developer, then use **AskQuestion** before plan follow-up mutation or PR creation. Required options:
    - **Approve follow-ups and create PR now**
    - **Create PR without appending proposed follow-ups**

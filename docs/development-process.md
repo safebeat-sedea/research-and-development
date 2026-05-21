@@ -51,6 +51,36 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/v
 
 Exit **0** when manifest and disk match; **1** prints paths only on disk or only in YAML. Plan-and-deliver authors also see **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`** § *Adding or removing a skill*.
 
+### PRD authoring — which path?
+
+Two R&D flows produce requirements upstream of **`master-plan`**. Pick **one** row; do not run both for the same feature unless the developer explicitly switches (for example after **`manage prd`** on an existing doc, then **`plan and deliver`** with that `@path`).
+
+| Situation | Start here | Mission command phrase | Artifact | Typical next step |
+| --- | --- | --- | --- | --- |
+| **Full PRD** — create or revise a structured product/feature requirements doc **outside** an active `plan and deliver` planning dispatch | **`prd`** mission | **`create prd`** / **`manage prd`** | **`.sedea/operations/<operationsUserId>/docs/`** — path from **`author-prd`** (flexible sections) | When **`planningReadiness`** is sufficient, developer starts **`plan and deliver`** with PRD link or `@path` → Squad Leader §2 |
+| **Ad-hoc PRD** — bug, small improvement, or short blurb **inside** **`plan and deliver`** (no existing PRD file yet) | **`plan and deliver`** Squad Leader §1 | **`plan and deliver`** (then §1 **AskQuestion** option 2) → spawn **`ad-hoc-prd`** | **`ad_hoc_<slug>_<hex>.ad-hoc-prd.md`** only under **`<operationsUserId>/docs/`** (never **`joint/docs/`** from this skill) | Developer approves Ad-Hoc PRD → §4 seed → §5 **`master-plan`** |
+| **Existing external PRD** — Confluence, Google Docs, or workspace file **already authored** | **`plan and deliver`** Squad Leader §1 | **`plan and deliver`** (then §1 option 1) | Link, URL, or `@path` (may live outside **`operations/`**) | §2 validate readable body → §4 seed → §5 **`master-plan`** |
+| **Existing Ad-Hoc PRD file** on disk | **`plan and deliver`** | **`plan and deliver`** with `@path` to **`.ad-hoc-prd.md`** | Treat as §1 option 1 local file — same as external PRD for §2 | §2 read → §4–§5 |
+| **External URL auth-blocked** during **`plan and deliver`** §2 | Stay on **`plan and deliver`** or **`prd`** | §2 **AskQuestion** (paste body, ad-hoc branch, **`create prd`** first, or new `@path`) | Readable artifact required before **`master-plan`** | Per **`plan.mdc`** §2 *Auth-blocked or unreadable PRD* |
+
+**Do not use**
+
+- **`create prd`** / **`manage prd`** when the developer is already on **`plan and deliver`** §1 option 2 — use **`ad-hoc-prd`** spawn instead (lighter template, same dispatch).
+- **`ad-hoc-prd`** for a full multi-section PRD that needs **`author-prd`** section policy and iterative **`manage prd`** — use the **`prd`** mission first.
+- **`joint/docs/`** for new Ad-Hoc PRD writes — **`ad-hoc-prd`** is personal **`operationsUserId`** only; move the file manually to share.
+
+**Referenced skills:** **`ad-hoc-prd`**, **`author-prd`**; missions **`plan-and-deliver/plan.mdc`** §§1–2, **`prd/plan.mdc`**.
+
+### Agent UX pitfalls (easy mis-runs)
+
+| Pitfall | Correct surface |
+|---------|-----------------|
+| **Squad Leader §6** shows decomposition menus | **Forbidden** — only **Master Plan agent** Step 7 (**`master-plan/SKILL.md`**) offers §6 routes; leader **ack only** (**`plan.mdc`** §6) |
+| **`pr-review`** as its own Mission Control dispatch | **Stop** — inline on active **`coding-session`** only (**`pr-review/SKILL.md`** § *Standalone dispatch*) |
+| **Commit and push cadence** step 3 | Rule **20** step 3 = **`pr-review` Step 5 — GitHub only** after push when Steps 1–4 already ran — not a second full triage |
+| **High complexity** Master Plan (score **> 20**) | Omit §6 spawn routes until score **≤ 20**; Squad Leader never spawns **`delivery-phases`** / **`pr-breakdown`** |
+| Branch/PR/chat titles | **`.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`** — benefit verbs only; never the forbidden busy-work prefix |
+
 ### Agents and roles
 
 **Coding agent.** Delivers deliverables defined in a PR plan.
@@ -67,7 +97,7 @@ Exit **0** when manifest and disk match; **1** prints paths only on disk or only
 - **Plan board** — Where **developers** open and review planning-mode `.plan.md` files in the plans folder `.sedea/operations/**/plans/**`).
 - **Path placeholders (`...`)** — In this document and R&D governance, `` `...` `` inside path examples (e.g. `.sedea/operations/.../plans/`) denotes **omitted segments**, not a folder named `...`. Substitute **`joint`**, **`operationsUserId`**, or a real **`slug`**. See **`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`** § *Path placeholders in documentation*.
 - **`.plan.md` files** — Standalone plan files at each hierarchy level (Master Plan, phase plans, PR plans); canonical location is under `.sedea/operations/**/plans/**`.
-- **PRD** — Product (or feature) Requirements Document — the prime input for the one-shot **Master Plan** (mode #1). **Bugs and small improvements** may start as an **Ad-Hoc PRD** at **`.sedea/operations/<operationsUserId>/docs/ad_hoc_<slug>_<hex>.ad-hoc-prd.md`** (personal operations space only when using the **`ad-hoc-prd`** skill; **`joint/docs/`** is not written by that protocol — promote by moving the file if the developer wants it shared). Authoring is defined by the **`ad-hoc-prd`** protocol branch (file shape is embedded in that skill).
+- **PRD** — Product (or feature) Requirements Document — the prime input for the one-shot **Master Plan** (mode #1). **Which authoring flow** (`prd` mission vs **`plan and deliver`** + **`ad-hoc-prd`**) is decided in § *PRD authoring — which path?* above — not by filename alone.
 - **Git worktree** — Isolated checkout used by the **`coding-session`** protocol branch when spinning up a coding agent.
 - **Protocol** — The **plan and deliver** mission (`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`, command phrase *plan and deliver*) — protocol branches and skills under `missions/plan-and-deliver/skills/` implement this document's cadence. 
 
@@ -430,7 +460,7 @@ Two independent gates apply before a worktree opens. Do not treat **`pr-plan`** 
 | **Planning handoff** | **`pr-plan`** → `readyForImplementation` | §§1–4, deploy capstone todo, parent link | **Allowed** at handoff |
 | **Worktree gate** | **`coding-session`** worktree-open gate (runs **`plan-ws-completeness.mjs`** first) | No `_TBD_` in per-PR body (outside fenced code), unless override chosen in that gate | **Blocks** until filled or override |
 
-When **`readyForImplementation`** is true but §§5–8 still contain `_TBD_`, the script prints **`INCOMPLETE`** — expected, not a bug. Proceed only after the developer finishes those sections, uses **`pr-plan`** pre-fill sketches, chooses **Start with incomplete plan (executive override)** in the worktree-open gate, or sends **`override incomplete plan`** in the message. **`readyForImplementation` alone does not advance the Squad Leader §8 ship `phase` beyond `not-started`** until completeness passes or is overridden and **`coding-session`** sets `developerApprovedImplementation` (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §7–§8). See **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *PR-plan completeness before coding-session*.
+When **`readyForImplementation`** is true but §§5–8 still contain `_TBD_`, the script prints **`INCOMPLETE`** — expected, not a bug. Proceed only after the developer finishes those sections, uses **`pr-plan`** pre-fill sketches, chooses **Start with incomplete plan (executive override)** in the worktree-open gate, or sends **`override incomplete plan`** in the message. **`readyForImplementation` alone does not advance the Squad Leader §8 ship `phase` beyond `not-started`** until completeness passes or is overridden and **`coding-session`** sets `developerApprovedImplementation` (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §7–§8). See **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *PR-plan completeness before coding-session* and § *Agent checklist (planning vs ship — do not conflate)*.
 
 #### Coding Session
 

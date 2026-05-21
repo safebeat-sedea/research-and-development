@@ -73,6 +73,8 @@ The procedure below is a hard contract — do **not** skip steps or start drafti
 
 After step 5c option 4, **stop** this lane. The developer opens **`coding-session`** elsewhere; layer 2 worktree approval happens there (**`coding-session`** § *Implementation consent*).
 
+**Signals (canonical):** **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Planning readiness vs ship* and § *Agent checklist (planning vs ship — do not conflate)* — `readyForImplementation` on this lane does **not** authorize code edits, worktrees, commit/push, or §8 `phase` past `not-started`.
+
 ## Trigger
 
 - Mission dispatch or explicit request to run the **`pr-plan`** protocol branch.

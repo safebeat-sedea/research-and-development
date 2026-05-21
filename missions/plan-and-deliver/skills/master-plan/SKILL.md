@@ -467,7 +467,9 @@ On the **next turn**, invoke **AskQuestion** / **`MC_ASKQUESTION_V1`**. Build op
 | `commit-plans` | Commit plans (say *commit* in chat) | Remind sedea **6_git-commit-push-gate**; do not run git unless same message asks |
 | `more` | More details for option _ | Elaborate, then re-ask |
 
-**When complexity is high (C > 20)** — **omit** `route-6` until score ≤ 20 (unless user explicitly accepts risk after warning). Foreground **revise §4**, **revise §5**, optional **draft-7**, **commit-plans**, **more**. Show journey-split bullets from Step 6c **above** the AskQuestion turn (information-only).
+**When complexity is high (C > 20)** — **omit** `route-6` until score ≤ 20. **Do not** add `route-6` because the user says *decompose anyway* unless they pick an explicit **accept decomposition risk** option you add after the Step 6c journey-split guidance (information-only turn first). Even then, prefer **`revise`** / journey splits until score ≤ 20. The **Squad Leader** must **never** spawn **`delivery-phases`** or **`pr-breakdown`** — only this **Master Plan agent** lane may emit those spawns after **`route-6`**.
+
+Foreground **revise §4**, **revise §5**, optional **draft-7**, **commit-plans**, **more**. Show journey-split bullets from Step 6c **above** the AskQuestion turn (information-only).
 
 Always include **More details for option _** per conduct.
 

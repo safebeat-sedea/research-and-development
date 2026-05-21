@@ -24,6 +24,16 @@ Three different signals appear in plan-and-deliver; advancing one does **not** a
 
 **`pr-plan` does not spawn `coding-session`.** After **`pr-plan`**, the developer starts **`coding-session`** on a **detached** lane (phrase, snapshot, or new session). Do not implement on the **`pr-plan`** lane because `readyForImplementation` is true.
 
+### Agent checklist (planning vs ship — do not conflate)
+
+| Mistake | Correct behavior |
+|--------|------------------|
+| Edit product code on the **`pr-plan`** planning lane after `readyForImplementation: true` | **Stop** — developer starts **`coding-session`** on a **detached** lane; layer 2 worktree-open gate runs there |
+| Open a worktree because **`pr-plan`** finished §§1–4 only | Run **`plan-ws-completeness.mjs`** (or documented override in **`coding-session`** worktree-open gate) — layer 1 is not enough |
+| Set Squad Leader §8 `phase` to `worktree` / `implementing` from **`pr-plan`** outputs alone | Advance §8 only after **`coding-session`** reports `developerApprovedImplementation: true` or a parsed **Ship recap** on the leader dispatch |
+| Run **`git commit`** / **`git push`** while still on a planning skill lane | Ship cadence is **`coding-session`** (or rule **20** on an implementation lane) — see rule **20** § *AskQuestion vs git commit/push* |
+| Treat planning **AskQuestion** (*next phase*, *continue planning*) as ship or git consent | Planning picks use § *Standard flow*; commit/push need rule **20** + **`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`** same-message words |
+
 Squad Leader §8 ship rows advance from **`coding-session`** outputs or an explicit **Ship recap — plan and deliver** on the leader dispatch — see [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](../missions/plan-and-deliver/plan.mdc) §8 and rule **20** § *Leader §8 ship recap*.
 
 ## Planning vs ship cadence

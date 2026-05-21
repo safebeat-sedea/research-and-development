@@ -157,7 +157,7 @@ flowchart TD
 - **§§1–7** — Squad Leader **planning** steps on the leader lane (see prose subsections below).
 - **§8** — Squad Leader **ship oversight** on the leader lane; detached skills run elsewhere.
 - **Spawn nodes** — emit `AGENT_RUN_REQUEST_V1`; stop until `AGENT_RESULT_RESPONSE_V1`.
-- **§6** — **not** decomposition routing (that lives on the **Master Plan agent** lane — **AskQuestion** + spawn in `master-plan/SKILL.md` Step 7).
+- **§6** — **not** decomposition routing (that lives on the **Master Plan agent** lane — **AskQuestion** + spawn in `master-plan/SKILL.md` Step 7). See §6 *Forbidden on the Squad Leader lane*.
 - **§7** — register **planning** downstream lanes/plans from child `outputs`; do not infer completion from silence.
 - **§8** — register **ship** progress per PR plan; **do not** propose **`resolved`** dispatch while ship rows are open unless the developer explicitly closes planning-only (see §8).
 
@@ -198,7 +198,7 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 ### 1. Establish PRD source
 
 - **Type:** Branching logic
-- **Intent:** Capture requirements input before any planning artifacts (per **Setup** in `.sedea/centers/research-and-development/docs/development-process.md`: PRD is upstream to the Master Plan).
+- **Intent:** Capture requirements input before any planning artifacts (per **Setup** and § *PRD authoring — which path?* in `.sedea/centers/research-and-development/docs/development-process.md`: PRD is upstream to the Master Plan; use §1 **AskQuestion** options below — do not start the separate **`prd`** mission from this dispatch unless the developer explicitly switches).
 - **Inputs:** Opening message matching `plan and deliver` (case-insensitive); optional remainder is context only.
 - **Expected output:** A PRD link or `@path`, or a short ad-hoc task description for ad-hoc PRD authoring.
 - **Next-step resolution:**
@@ -210,7 +210,7 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 1. Match `plan and deliver` on the opening message (case-insensitive).
 2. Use **AskQuestion** (per Sedea conduct — includes the standard *More details for option _* escape hatch) to ask where the PRD will come from:
    1. **PRD link or file** — Confluence, Google Docs, or `@path` in the workspace.
-   2. **Ad-hoc task description** — Short blurb the agent uses to draft an ad-hoc PRD via **`ad-hoc-prd`** (see development-process **PRD** bullet and protocol branches table).
+   2. **Ad-hoc task description** — Short blurb the agent uses to draft an ad-hoc PRD via **`ad-hoc-prd`** (see development-process § *PRD authoring — which path?* and protocol branches table — not **`create prd`** on the **`prd`** mission).
 3. Apply the branch for the confirmed choice (see **Next-step resolution** above). Do not engage downstream protocol branches from partial or ambiguous answers.
 
 **Out of scope for this step:** **`new-plan`** indexed-child expansion (and downstream **`phase-plan`** / **`pr-plan`**) — those use **AskQuestion** / numbered options and often a separate session command (not `plan and deliver` §1–2 PRD intake).
@@ -226,7 +226,7 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 - **Next-step resolution:**
   - Local file / `@path` read successfully → continue to the planning seed step for **`master-plan`**.
   - URL fetched successfully → continue to the planning seed step for **`master-plan`**.
-  - URL is unavailable or auth-blocked → stop and ask the developer to provide a readable `@path`, paste the PRD body, or switch to the ad-hoc branch.
+  - URL is unavailable or auth-blocked → run **AskQuestion** per § *Auth-blocked or unreadable PRD* below (do not guess body text).
   - PRD reference is missing or unreadable → stop and ask for a valid PRD link or file.
 
 **Procedure**
@@ -235,9 +235,23 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 2. Resolve source type:
    - **Local file / `@path`** — read the full file.
    - **Confluence, Google Docs, or web URL** — fetch the document body.
-3. If the source is auth-blocked or unreadable, stop without engaging downstream skills.
+3. If the source is auth-blocked or unreadable, stop without engaging downstream skills and use **AskQuestion** (§ *Auth-blocked or unreadable PRD*).
 4. Acknowledge the loaded PRD in one line, including title when available and source reference.
 5. Preserve the original PRD reference for the **`master-plan`** seed.
+
+**Auth-blocked or unreadable PRD (§2 step 3)**
+
+When fetch fails (auth, VPN, paywall, or empty body), use **AskQuestion** once. Point to **`.sedea/centers/research-and-development/docs/development-process.md`** § *PRD authoring — which path?* for the full routing table. Minimum options:
+
+| Option | Action |
+|--------|--------|
+| **Paste PRD body** in chat or save to `@path` under workspace / **`.sedea/operations/<operationsUserId>/docs/`** | Re-run §2 read on the pasted or saved artifact |
+| **Switch to ad-hoc PRD** (§1 option 2 → §3 **`ad-hoc-prd`**) | Abandon external URL for this dispatch; collect task description |
+| **Use `create prd` mission first** | Tell developer to start a **new** dispatch: **`create prd`** on **`prd`** mission, then return with **`plan and deliver`** + `@path` to the written doc |
+| **Provide a different readable `@path`** | Retry §2 |
+| **More details for option _** | Elaborate, then re-ask |
+
+Do **not** invent PRD content from the URL alone. Do **not** call **`author-prd`** from this **`plan and deliver`** dispatch — that is the **`prd`** mission.
 
 ### 3. Create ad-hoc PRD via agent
 
@@ -339,7 +353,7 @@ Related (optional):
 
 1. Read the Master Plan agent result.
 2. If the result includes a usable plan path and indicates the **Master Plan agent** owns continuation, acknowledge status only.
-3. Do not ask the developer to choose Delivery phases, PR breakdown, or Caveats from the **Squad Leader** lane.
+3. **Forbidden on the Squad Leader lane:** Do **not** present **Delivery phases**, **PR breakdown**, **Caveats**, or §6 decomposition **AskQuestion** menus here. Those routes live on the **Master Plan agent** child lane only (**`master-plan/SKILL.md`** Step 7 — separate turn per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**). The leader emits **no** `AGENT_RUN_REQUEST_V1` for **`delivery-phases`** or **`pr-breakdown`** from §6.
 4. Pause the **Squad Leader** in a resumable wait state for downstream notifications.
 
 ### 7. Maintain planning closure ledger
