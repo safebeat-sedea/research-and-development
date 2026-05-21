@@ -274,6 +274,8 @@ When **`pre-pr-review`** returns `recommendation: "no-go"` or any `blockers`:
 
 When **`pre-pr-review`** returns `recommendation: "go"`:
 
+This path is the normative **`create-pr`** handoff on this lane — it **supersedes** rule **20** § *Commit and push cadence* step 5 prompt-only wording when both apply.
+
 1. Verify the worktree branch is pushed or pushable per **efficient-pr-shipping**. Do not open the PR directly from coding-session.
 2. Present the reviewer `go` summary, non-blocking flags, and any proposed follow-ups to the developer, then use **AskQuestion** before plan follow-up mutation or PR creation. Required options:
    - **Approve follow-ups and create PR now**

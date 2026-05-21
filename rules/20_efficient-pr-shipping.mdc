@@ -53,15 +53,14 @@ Developers always open pull requests themselves. On **coding, planning, review, 
 
 **Who may run `gh pr create`:** only **a PR-creating agent** executing [`create-pr/SKILL.md`](../missions/plan-and-deliver/skills/create-pr/SKILL.md) after **`pre-pr-review`** returns `go` and this skill's gates pass. That lane may create the PR on the developer's behalf. **Coding-session**, **pre-pr-review**, **pr-review**, **master-plan**, and other planning or implementation agents may **not** call `gh pr create` even when the user says "open a PR".
 
-This holds on non–PR-creating lanes even when a task description explicitly says "open a PR", "push and open a PR", or "create a pull request". Interpret those as: prepare the branch and hand off to **`create-pr`** (spawn **a PR-creating agent** or emit the skill's PR prompt) — do not open the PR from the current lane.
+This holds on non–PR-creating lanes even when a task description explicitly says "open a PR", "push and open a PR", or "create a pull request". Interpret those as: prepare the branch and hand off to **`create-pr`** — on an active **`coding-session`** lane, **spawn** **a PR-creating agent** via **`AGENT_RUN_REQUEST_V1`** (see that skill § *Create-PR handoff after go*); on other lanes, generate the skill's PR prompt for the developer to start a PR-creating agent session — do not open the PR from the current lane.
 
 This prohibition covers **chat output**, not just tool calls. After `git push`, do **not** surface or paraphrase GitHub's remote hint (the `Create a pull request for '<branch>' on GitHub by visiting: https://github.com/<org>/<repo>/pull/new/<branch>` line) in the response. That URL links directly to the GitHub UI PR-creation form and nudges toward the wrong handoff. The only PR-creation artifact the assistant ever presents is **a PR-creating agent** prompt from the `create-pr` protocol branch.
 
-The correct handoff after a pushed branch is:
+The correct handoff after a pushed branch depends on the active lane:
 
-1. Use the `create-pr` protocol branch to generate a prompt for **a PR-creating agent**.
-2. Spin **a PR-creating agent**, pass the generated prompt, and stop.
-3. **A PR-creating agent** opens the PR on the developer's behalf.
+- **`coding-session`** (normal ship chain) — after **`pre-pr-review`** returns `go` and the developer approves PR creation, emit **`AGENT_RUN_REQUEST_V1`** for [`create-pr/SKILL.md`](../missions/plan-and-deliver/skills/create-pr/SKILL.md) per [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Create-PR handoff after go*; announce wait for **`AGENT_RESULT_RESPONSE_V1`** and stop. Do **not** substitute an inline copy-paste prompt for that spawn.
+- **Other lanes** (Squad Leader, or coding work outside the **`coding-session`** ship chain) — use the **`create-pr`** protocol branch to generate a prompt for **a PR-creating agent**, start that session, and stop. **A PR-creating agent** opens the PR on the developer's behalf.
 
 ## Worktree setup in plans
 
@@ -124,7 +123,10 @@ Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)**
    Skip silently when `resolve` exits non-zero (session with no plan) or `gh pr list` returns empty (first push — the PR will appear after a PR-creating agent opens it; the **next** commit-and-push pass picks it up). Never block this cadence on a helper failure — log and continue with the remaining steps. **Exit code 3** from `upsert-pr` means the resolved plan is not a PR plan (the helper refuses to link PRs onto Master / Phase / top-level topic / stub plans, since sidecar `prs[]` is reconcile-tracked); surface the helper's stderr message verbatim so the user can fix the worktree → plan linkage, then continue with the remaining steps.
 
    The [`pr-review` protocol branch](../missions/plan-and-deliver/skills/pr-review/SKILL.md) runs the same `upsert-pr` call at its Step 0 (after the PR is resolved) as a belt-and-braces linker for cases where no follow-up commit-and-push pass ever happens — `pr-review` triage that ends with all comments skipped (no commit, no push), quiet PRs with zero reviewer rounds, or single-commit PRs merged straight from GitHub. **`pr-review`** and this cadence upserts are idempotent against each other.
-5. Check if this is the **first push** for the branch (e.g. `git push` output contains `[new branch]`, or `gh pr list` in step 4 returned empty). If so, also generate **a PR-creating agent PR prompt** via the `create-pr` protocol branch — this is mandatory, not prompted by a separate `create-pr` option from the user. The PR-creating agent prompt **replaces** any GitHub create-PR URL. The prompt’s description starter must satisfy **Comprehensive PR descriptions** (including slice boundaries and plan lineage when applicable). On subsequent pushes, only commit/push/reconcile/upsert — skip the PR-creating agent prompt.
+5. Check if this is the **first push** for the branch (e.g. `git push` output contains `[new branch]`, or `gh pr list` in step 4 returned empty). If so, **`create-pr`** handoff is mandatory — not prompted by a separate user option. The handoff **replaces** any GitHub create-PR URL.
+   - **Active `coding-session` lane** — follow that skill's ship chain: first-push alone does **not** open a PR from this cadence step. After **`pre-pr-review`** returns `go` and the developer approves PR creation in **Create-PR handoff after go**, emit **`AGENT_RUN_REQUEST_V1`** for [`create-pr/SKILL.md`](../missions/plan-and-deliver/skills/create-pr/SKILL.md) and stop for the child result — do **not** paste an inline PR-creating prompt instead of spawning. If pre-PR review has not run yet, do not skip to prompt-only PR creation; run the cut point and **`pre-pr-review`** first per [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md).
+   - **Other lanes** — generate **a PR-creating agent PR prompt** via the **`create-pr`** protocol branch. The prompt’s description starter must satisfy **Comprehensive PR descriptions** (including slice boundaries and plan lineage when applicable).
+   On subsequent pushes, only commit/push/reconcile/upsert — skip **`create-pr`** handoff until a new first-push branch needs a PR.
 
 Example:
 
