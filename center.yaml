@@ -2,7 +2,8 @@ name: R&D
 description: >-
   How developers deliver new features from idea to production — planning, implementation,
   PR shipping, deploy verification, and plan hygiene. Agents and Mission Control discover
-  content by filesystem convention; this manifest documents the checkout layout.
+  skills from `missions/<slug>/skills/**/SKILL.md` on disk; this manifest documents the
+  checkout for audits and center-maintenance. Keep `skillEntries` in sync when adding skills.
 
 # Paths below are relative to `.sedea/centers/research-and-development/` unless noted.
 
@@ -28,17 +29,39 @@ missions:
     skills: missions/plan-and-deliver/skills/
     commands:
       - plan and deliver
+    skillEntries:
+      - missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md
+      - missions/plan-and-deliver/skills/coding-session/SKILL.md
+      - missions/plan-and-deliver/skills/create-pr/SKILL.md
+      - missions/plan-and-deliver/skills/delivery-phases/SKILL.md
+      - missions/plan-and-deliver/skills/deploy-walk/SKILL.md
+      - missions/plan-and-deliver/skills/master-plan/SKILL.md
+      - missions/plan-and-deliver/skills/new-plan/SKILL.md
+      - missions/plan-and-deliver/skills/phase-plan/SKILL.md
+      - missions/plan-and-deliver/skills/plan-reconcile/SKILL.md
+      - missions/plan-and-deliver/skills/pr-breakdown/SKILL.md
+      - missions/plan-and-deliver/skills/pr-plan/SKILL.md
+      - missions/plan-and-deliver/skills/pr-review/SKILL.md
+      - missions/plan-and-deliver/skills/pre-pr-review/SKILL.md
   - slug: prd
     plan: missions/prd/plan.mdc
     skills: missions/prd/skills/
     commands:
       - create prd
       - manage prd
+    skillEntries:
+      - missions/prd/skills/author-prd/SKILL.md
   - slug: topics
     plan: missions/topics/plan.mdc
     skills: missions/topics/skills/
     commands:
       - create topic
+    skillEntries:
+      - missions/topics/skills/create-topic-plan/SKILL.md
+
+centerSkills:
+  readme: missions/plan-and-deliver/skills/README.md
+  note: Spawn contracts and normative terminal stop for plan-and-deliver; not a runnable skill.
 
 governance:
   missionScopedRules: false
