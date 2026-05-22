@@ -66,23 +66,12 @@ foot-guns eliminated, future work unblocked>
 
 Branch naming depends on the **implementation repository** (the worktree that receives the code change), not the checkout where `.sedea/` planning scripts may live.
 
-### Checkout types (glossary — disambiguate “hosting repo”)
+| Implementation repo | Pattern | Authority |
+|---------------------|---------|-----------|
+| **Sedea hosting checkout** (root contains `.sedea/centers/sedea/`) | `<prefix>/<NN>-<slug>` — two-digit stack index required when the team uses stacked PRs on `main` | [`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc) and [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Branch naming* |
+| **Hosting repo** (e.g. `push`, `payments-web`) | `improve/<desc>`, `simplify/<desc>`, `harden/<desc>`, `fix/<desc>`, etc. — benefit-named prefix, **no** `NN` unless that repo's own rules require stacking | This rule § *Forbidden word* and *GOOD branch names* above |
 
-R&D docs use **hosting repo** in two senses. Use these labels in plans, PRs, and agent instructions:
-
-| Label | What it is | Typical path signal | Branch pattern |
-|-------|------------|---------------------|----------------|
-| **Governance hosting checkout** | Sedea App checkout that **contains** `.sedea/centers/sedea/` (governance + centers) | Root has `.sedea/centers/sedea/` | Stacked on `main`: `<prefix>/<NN>-<slug>` (e.g. `feat/01-token-auth`) — [`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc) |
-| **Implementation hosting repo worktree** | **Separate** git repository where service/product code ships (`push`, `payments-web`, …); worktree root often **lacks** `.sedea/centers/` | `git rev-parse` top-level is the product repo, not `sedea-ai/app` | Benefit prefix, **no** two-digit stack index unless that repo's plan requires it: `improve/<desc>`, `feat/<desc>`, … — this rule § *GOOD branch names* |
-
-**HOSTING_ROOT** for `plan-state.mjs` / scripts is always the **governance hosting checkout** (tree containing `.sedea/`), even when the **worktree** edits code in an **implementation hosting repo** — see [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
-
-| Worktree type | Pattern | Authority |
-|---------------|---------|-----------|
-| **Governance hosting checkout** (implementation = same tree as governance) | `<prefix>/<NN>-<slug>` when stacked PRs on `main` | Rule **20** § *Branch naming* + Sedea rule **7** |
-| **Implementation hosting repo worktree** (e.g. `push`, `payments-web`) | `improve/<desc>`, `simplify/<desc>`, `harden/<desc>`, `fix/<desc>`, etc. | This rule § *Forbidden word* and *GOOD branch names* |
-
-Do **not** copy **governance** stacked names (`feat/token-auth`, bare `improve/logger`) onto a **governance** stacked workflow — use `feat/01-token-auth`. Do **not** add `<NN>-` to **implementation** repos unless their plan or repo rules require stacking. Do **not** use the forbidden busy-work prefix from any center naming rule.
+Do **not** copy hosting-checkout examples such as `feat/token-auth` or bare `improve/logger` onto a **stacked** hosting-repo workflow — use `feat/01-token-auth` (or the agreed stack prefix and next free index). Do **not** use the forbidden busy-work prefix from any center naming rule.
 
 ## When tempted to reach for the forbidden word
 

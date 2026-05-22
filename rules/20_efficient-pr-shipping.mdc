@@ -249,7 +249,7 @@ Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation 
 
 **Examples — pick the block that matches the implementation repo.** Do not mix patterns on one repo.
 
-Example A — **governance hosting checkout** (worktree root contains `.sedea/centers/sedea/`; stacked PRs on `main` per [`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)):
+Example A — **hosting checkout** (implementation repo root contains `.sedea/centers/sedea/`; stacked PRs on `main` per [`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)):
 
 ```
 ## Worktree setup
@@ -273,7 +273,7 @@ Cleanup after merge:
 git worktree prune
 ```
 
-Example B — **implementation hosting repo worktree** (e.g. `push`; no two-digit stack index unless that repo's rules require it):
+Example B — **hosting repo** (e.g. `push`; no two-digit stack index unless that repo's rules require it):
 
 ```
 ## Worktree setup
@@ -372,28 +372,19 @@ Every description starter (including on the first push in this cadence) should c
 
 Names apply to the **implementation repository** (the worktree root that receives the code change), not necessarily the checkout that holds `.sedea/` for planning scripts. **Worktree setup examples** above are split by repo type — use Example A or B, not both.
 
-### Checkout types (glossary — same labels as rule 10)
+### Hosting checkout (sedea-ai/app and equivalents)
 
-| Label | What it is | Branch pattern on that worktree |
-|-------|------------|--------------------------------|
-| **Governance hosting checkout** | Tree whose root contains **`.sedea/centers/sedea/`** (e.g. `sedea-ai/app`) | Stacked on `main`: `<prefix>/<NN>-<slug>` — [`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc) |
-| **Implementation hosting repo worktree** | Separate product/service repo (`push`, `payments-web`, …); `.sedea/` usually on **governance** checkout only | `improve/<desc>`, `feat/<desc>`, … — **no** `<NN>-` unless that repo stacks |
-
-Full table: [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc) § *Checkout types (glossary)*.
-
-### Governance hosting checkout (sedea-ai/app and equivalents)
-
-When the **worktree root** is the **governance hosting checkout** (contains `.sedea/centers/sedea/` on the active workbench), follow **[`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)** ([`0_hosting-checkout.mdc`](../../sedea/rules/0_hosting-checkout.mdc) defines that checkout).
+When the implementation repo **is** the Sedea **hosting checkout** — the tree whose root contains `.sedea/centers/sedea/` on the active workbench — follow **[`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)** ([`0_hosting-checkout.mdc`](../../sedea/rules/0_hosting-checkout.mdc) defines that checkout).
 
 - Stacked integration on `main`: **`<prefix>/<NN>-<slug>`** with exactly two digits (`01`–`99`). Default prefix for a new stack is **`feat`** unless the plan or developer names another prefix.
-- **Invalid on governance stacked workflow:** `feat/token-auth`, `improve/logger`, `feature/01-foo` — missing `NN`, wrong prefix family, or non-kebab slug.
+- **Invalid on hosting stacked workflow:** `feat/token-auth`, `improve/logger`, `feature/01-foo` — missing `NN`, wrong prefix family, or non-kebab slug.
 - Rename locally **before first push** if the branch name is wrong ([`7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc) § *Before the first git push*).
 
-Benefit-style prefixes (`improve/`, `simplify/`, …) may appear **with** `<NN>-` on the **governance** checkout when the stack explicitly uses them (e.g. `improve/02-logger`).
+Benefit-style prefixes (`improve/`, `simplify/`, …) from [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc) apply to **hosting repo** implementation repos unless the stack explicitly uses them **with** `<NN>-` on the hosting repo (e.g. `improve/02-logger`).
 
-### Implementation hosting repo worktree
+### Other implementation repos
 
-When the worktree is an **implementation hosting repo** (separate repository from the governance checkout), use descriptive kebab-case on **that** repo:
+When the worktree is **another** hosting repository, use descriptive kebab-case on **that** repo:
 
 - `feat/<short-description>` — new features
 - `improve/<short-description>` — improvements (or a more specific verb prefix like `simplify/`, `harden/`, `speedup/`; see [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc))
