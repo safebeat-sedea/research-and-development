@@ -16,7 +16,7 @@ Planning protocol branches act on a specific `.plan.md` under the **`.sedea/oper
 
 | You are on… | Signal that fired | Safe next step | Do **not** |
 |-------------|-------------------|----------------|------------|
-| **`pr-plan`** or Squad Leader planning lane | `readyForImplementation: true` | Tell developer to start **`coding-session`** on a **detached** lane — **`.sedea/centers/research-and-development/docs/development-process.md`** § *Start implementation (`coding-session` entry)* | Open worktree, edit product code, or set §8 `phase` past `not-started` here |
+| **`pr-plan`** or Squad Leader planning lane | `readyForImplementation: true` | Tell developer to start **`coding-session`** on a **detached** lane — **`.sedea/centers/research-and-development/docs/development-process.md`** § *Start implementation (`coding-session` entry)* | Open worktree, edit hosting repo code, or set §8 `phase` past `not-started` here |
 | **`coding-session`** (detached) | `plan-ws-completeness.mjs` exit 0 or override in worktree-open gate | Proceed with worktree + implementation | Assume planning handoff alone was enough |
 | **`coding-session`** (detached) | `developerApprovedImplementation: true` | Continue ship chain; nudge **Ship recap** on leader dispatch for §8 | Assume §8 auto-updated without recap or host sync |
 | Squad Leader **`plan and deliver`** dispatch | Parsed **Ship recap** or host-sync message | Refresh §8 rows; then resolution gates | Close dispatch **`resolved`** while rows `open`/`blocked` without recap — **`plan.mdc`** §8 *§8 troubleshooting* |
@@ -52,7 +52,7 @@ Three different signals appear in plan-and-deliver; advancing one does **not** a
 
 | Mistake | Correct behavior |
 |--------|------------------|
-| Edit product code on the **`pr-plan`** planning lane after `readyForImplementation: true` | **Stop** — developer starts **`coding-session`** on a **detached** lane; layer 2 worktree-open gate runs there |
+| Edit hosting repo code on the **`pr-plan`** planning lane after `readyForImplementation: true` | **Stop** — developer starts **`coding-session`** on a **detached** lane; layer 2 worktree-open gate runs there |
 | Open a worktree because **`pr-plan`** finished §§1–4 only | Run **`plan-ws-completeness.mjs`** (or documented override in **`coding-session`** worktree-open gate) — layer 1 is not enough |
 | Set Squad Leader §8 `phase` to `worktree` / `implementing` from **`pr-plan`** outputs alone | Advance §8 only after **`coding-session`** reports `developerApprovedImplementation: true` or a parsed **Ship recap** on the leader dispatch |
 | Run **`git commit`** / **`git push`** while still on a planning skill lane | Ship cadence is **`coding-session`** (or rule **20** on an implementation lane) — see rule **20** § *AskQuestion vs git commit/push* |
@@ -114,7 +114,7 @@ Markdown table for each in-flight plan (typically one Master Plan subtree):
 | **Status** | Drafted sections, `_TBD_`, PR linked, archived. |
 | **Next viable moves** | **Numbered** options naming **protocol branch + target** (e.g. *1. **new-plan** — expand list item **2** under `<parent-slug>`*; *2. **phase-plan** — populate child `<path>`*). |
 
-Below the table, repeat the same options as **`AskQuestion`** choices or a **numbered bullet list** the developer can answer with a digit. Session and plan-path contracts for planning live in this center rule, **`planning-target-resolution`**, center skills, and **`.sedea/centers/research-and-development/docs/development-process.md`** — product-repo **`.cursor/rules/`** cover codebase architecture and navigation only.
+Below the table, repeat the same options as **`AskQuestion`** choices or a **numbered bullet list** the developer can answer with a digit. Session and plan-path contracts for planning live in this center rule, **`planning-target-resolution`**, center skills, and **`.sedea/centers/research-and-development/docs/development-process.md`** — hosting-repo **`.cursor/rules/`** cover codebase architecture and navigation only.
 
 **Snapshot-scoped prompts** (e.g. *Option 2: **phase-plan** on `<path>`*) belong **only** inside that snapshot.
 
@@ -140,7 +140,7 @@ Snapshots should respect **coding-session** pre-worktree validation and the work
      --operations-user-id <operationsUserId> resolve --cwd "$WORKTREE_ROOT"
    ```
 
-   When not in a worktree, use the PR plan path explicitly in play. Do **not** set script paths from `ROOT="$(git rev-parse --show-toplevel)"` in a product worktree alone.
+   When not in a worktree, use the PR plan path explicitly in play. Do **not** set script paths from `ROOT="$(git rev-parse --show-toplevel)"` in a hosting repo worktree alone.
 
 3. If incomplete **and** that plan is the default **coding-session** anchor, the **first** numbered option must be finishing the PR plan sections; list **coding-session** only after completeness or with an explicit override label consistent with the **coding-session** skill.
 

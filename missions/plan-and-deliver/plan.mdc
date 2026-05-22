@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## Objectives
 
-The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `plan and deliver` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; branch names and the strategic product loop are in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** + **Cadence**). **This `plan.mdc`** remains canonical for dispatch protocol §§1–8, spawn ownership, and §8 ship ledger.
+The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `plan and deliver` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; branch names and the strategic hosting repo loop are in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** + **Cadence**). **This `plan.mdc`** remains canonical for dispatch protocol §§1–8, spawn ownership, and §8 ship ledger.
 
 ### Cadence reference (all branches — not Squad Leader protocol steps)
 
@@ -457,7 +457,7 @@ Ship skills usually run on **detached** lanes; the Squad Leader often receives *
 
 ### Mission Control host sync (section 8)
 
-When Mission Control hosts a **`plan and deliver`** dispatch, the extension may **auto-sync** §8 from detached ship child terminals (product behavior in the hosting repo Mission Control extension — not defined in this center repo alone). Host implementation contract: **`extensions/mission-control/docs/plan-and-deliver-section-8-ship-ledger.md`**; manifest: **`center.yaml`** `governance.hostSync`.
+When Mission Control hosts a **`plan and deliver`** dispatch, the extension may **auto-sync** §8 from detached ship child terminals (hosting repo behavior in the hosting repo Mission Control extension — not defined in this center repo alone). Host implementation contract: **`extensions/mission-control/docs/plan-and-deliver-section-8-ship-ledger.md`**; manifest: **`center.yaml`** `governance.hostSync`.
 
 | Step | Behavior |
 |------|----------|

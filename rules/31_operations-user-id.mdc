@@ -43,7 +43,7 @@ Ellipses in path examples (for example `` `.sedea/operations/.../plans/` ``, `` 
 
 ## Hosting repo cwd (scripts)
 
-**`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** run from **`HOSTING_ROOT`** (checkout containing `.sedea/`), not from a product worktree’s `git rev-parse --show-toplevel` alone. Full contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
+**`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** run from **`HOSTING_ROOT`** (checkout containing `.sedea/`), not from a hosting repo worktree’s `git rev-parse --show-toplevel` alone. Full contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
 
 ## Worked example (`plan-state.mjs`)
 

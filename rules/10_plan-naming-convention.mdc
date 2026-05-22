@@ -69,7 +69,7 @@ Branch naming depends on the **implementation repository** (the worktree that re
 | Implementation repo | Pattern | Authority |
 |---------------------|---------|-----------|
 | **Sedea hosting checkout** (root contains `.sedea/centers/sedea/`) | `<prefix>/<NN>-<slug>` — two-digit stack index required when the team uses stacked PRs on `main` | [`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc) and [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Branch naming* |
-| **Product or service repo** (e.g. `push`, `payments-web`) | `improve/<desc>`, `simplify/<desc>`, `harden/<desc>`, `fix/<desc>`, etc. — benefit-named prefix, **no** `NN` unless that repo's own rules require stacking | This rule § *Forbidden word* and *GOOD branch names* above |
+| **Hosting repo** (e.g. `push`, `payments-web`) | `improve/<desc>`, `simplify/<desc>`, `harden/<desc>`, `fix/<desc>`, etc. — benefit-named prefix, **no** `NN` unless that repo's own rules require stacking | This rule § *Forbidden word* and *GOOD branch names* above |
 
 Do **not** copy hosting-checkout examples such as `feat/token-auth` or bare `improve/logger` onto a **stacked** hosting-repo workflow — use `feat/01-token-auth` (or the agreed stack prefix and next free index). Do **not** use the forbidden busy-work prefix from any center naming rule.
 

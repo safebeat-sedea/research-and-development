@@ -24,7 +24,7 @@ When the Squad Leader receives an implementation request, PR review, or cross-re
 
 R&D automation scripts **`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** live under **`.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/`** in the **hosting repository** — the Git checkout whose root contains **`.sedea/`** (and usually **`.sedea/centers/sedea/`**).
 
-**Product worktrees** (`git worktree add` for `push`, `payments-web`, etc.) often have a **different** `git rev-parse --show-toplevel` and **no** `.sedea/centers/` tree. Do **not** derive script paths from the worktree root alone.
+**Hosting repo worktrees** (`git worktree add` for `push`, `payments-web`, etc.) often have a **different** `git rev-parse --show-toplevel` and **no** `.sedea/centers/` tree. Do **not** derive script paths from the worktree root alone.
 
 ### Resolve `HOSTING_ROOT`
 
@@ -111,8 +111,8 @@ When Mission Control dispatches **`plan and deliver`** on **research-and-develop
 
 | Situation | [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](../../sedea/rules/6_git-commit-push-gate.mdc) § *Hosting-repo file edits* |
 |-----------|-------------------------------------------------------------------------------------------------------------------------------------|
-| **`coding-session`** / ship child on product worktree | **Do not** duplicate rule-6 pre-edit or post-satisfaction AskQuestion for the same commit/push — follow **this rule** § *Review before commit* and the skill cadence |
-| **`plan and deliver`** Squad Leader (planning only) | Usually no product-repo writes — rule 6 often N/A on that lane |
+| **`coding-session`** / ship child on hosting repo worktree | **Do not** duplicate rule-6 pre-edit or post-satisfaction AskQuestion for the same commit/push — follow **this rule** § *Review before commit* and the skill cadence |
+| **`plan and deliver`** Squad Leader (planning only) | Usually no hosting-repo writes — rule 6 often N/A on that lane |
 | Edits under **`.sedea/centers/`** on a **center-maintenance** or hosting dispatch | Rule 6 **applies** (not mission-owned) unless another mission owns git for that lane |
 
 **Both gates still apply** on implementation lanes: (1) workflow pause and AskQuestion here, and (2) explicit *commit* / *push* in the **same user message** per rule 6. Approving *next stage* or *run pre-pr-review* is **not** commit or push consent.
@@ -273,7 +273,7 @@ Cleanup after merge:
 git worktree prune
 ```
 
-Example B — **product repo** (e.g. `push`; not the hosting checkout — no two-digit stack index unless that repo's rules require it):
+Example B — **hosting repo** (e.g. `push`; no two-digit stack index unless that repo's rules require it):
 
 ```
 ## Worktree setup
@@ -380,11 +380,11 @@ When the implementation repo **is** the Sedea **hosting checkout** — the tree 
 - **Invalid on hosting stacked workflow:** `feat/token-auth`, `improve/logger`, `feature/01-foo` — missing `NN`, wrong prefix family, or non-kebab slug.
 - Rename locally **before first push** if the branch name is wrong ([`7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc) § *Before the first git push*).
 
-Benefit-style prefixes (`improve/`, `simplify/`, …) from [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc) apply to **product** implementation repos unless the stack explicitly uses them **with** `<NN>-` on the hosting repo (e.g. `improve/02-logger`).
+Benefit-style prefixes (`improve/`, `simplify/`, …) from [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc) apply to **hosting repo** implementation repos unless the stack explicitly uses them **with** `<NN>-` on the hosting repo (e.g. `improve/02-logger`).
 
 ### Other implementation repos
 
-When the worktree is **another** product or service repository, use descriptive kebab-case on **that** repo:
+When the worktree is **another** hosting repository, use descriptive kebab-case on **that** repo:
 
 - `feat/<short-description>` — new features
 - `improve/<short-description>` — improvements (or a more specific verb prefix like `simplify/`, `harden/`, `speedup/`; see [`10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc))

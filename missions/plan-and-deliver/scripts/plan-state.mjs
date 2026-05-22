@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Single writer for Plan Board sidecars + plan archival.
-// Invoked by: coding-session skill, plan-reconcile, efficient-pr-shipping commit-and-push cadence, product automation.
+// Invoked by: coding-session skill, plan-reconcile, efficient-pr-shipping commit-and-push cadence, hosting repo automation.
 // Design contract: Sedea `.sedea/operations/` plan union (joint + optional per-user namespace).
 
 import * as fs from 'node:fs/promises';

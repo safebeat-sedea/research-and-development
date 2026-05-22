@@ -247,7 +247,7 @@ Where `{X}` is the count of `[x]` boxes (including skipped) in `### Before deplo
 
 ## Step 4 — Step presentation contract
 
-When `deploy-walk present <N>` lands a clean `[ ]` step, present it with this structure. **Plan path:** show the absolute path you resolved in Step 1 (from **`plan-state resolve`** output, an explicit path the **developer** supplied, or the read tool path). Do **not** use `~/.cursor/plans/` or other non-**`.sedea/operations/`** locations for product plan IO.
+When `deploy-walk present <N>` lands a clean `[ ]` step, present it with this structure. **Plan path:** show the absolute path you resolved in Step 1 (from **`plan-state resolve`** output, an explicit path the **developer** supplied, or the read tool path). Do **not** use `~/.cursor/plans/` or other non-**`.sedea/operations/`** locations for hosting repo plan IO.
 
 Use a **blockquote** or plain lines for the presentation shell — **do not** put `{slug}`, paths, or `{state}` inside raw `<…>` angle brackets (Markdown/HTML will eat them). Template:
 
@@ -379,7 +379,7 @@ No blocking — the **developer** is in control.
 This skill walks **one PR plan's `## N. Deploy test plan` section at a time**. It does **not**:
 
 - Run shell commands on the user's behalf (curl, psql, `gh`, kubectl). The skill **describes** the command in the step presentation; the **developer** runs it. The agent can be asked to run a command in the loose-mode collaboration window between `deploy-walk present <N>` and `deploy-walk <N> done` — that's the agent in its general-purpose mode, not this skill.
-- **`git commit`**, **`git push`**, or any other write to the **hosting** git tree on behalf of the **developer** unless they explicitly ask in the same message. Plan body edits are normal **`StrReplace`** on the **`.plan.md`** file; syncing **`.sedea/operations/`** (or the hosting repo) to version control follows the **developer**'s workflow and product docs — this skill does **not** prescribe a monorepo-specific plan-commit command.
+- **`git commit`**, **`git push`**, or any other write to the **hosting** git tree on behalf of the **developer** unless they explicitly ask in the same message. Plan body edits are normal **`StrReplace`** on the **`.plan.md`** file; syncing **`.sedea/operations/`** (or the hosting repo) to version control follows the **developer**'s workflow and hosting repo docs — this skill does **not** prescribe a monorepo-specific plan-commit command.
 - Reconcile / archive the plan when it reaches `done`, or auto-run **`plan-reconcile`**. **`plan-reconcile`** is never auto-invoked from this skill. The `done` flip + frontmatter `deploy-test-plan-verified` → `done` close the **deploy checklist only**; archival still depends on merge + explicit **plan-reconcile** (see **development-process** cadence).
 - Spawn child plans, edit other plans, or modify the parent plan's PR list / scope. Those are **`master-plan`**, **`pr-breakdown`**, **`phase-plan`**, etc.
 - Run **`coding-session`**, **`pre-pr-review`**, **`pr-review`**, or any other protocol branch from inside this one. If the **developer** wants those, they invoke them via mission dispatch or natural language.

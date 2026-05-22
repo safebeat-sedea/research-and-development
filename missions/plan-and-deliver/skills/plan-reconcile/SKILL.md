@@ -96,7 +96,7 @@ All **`plan-state.mjs`** invocations run from the **hosting repo root** (the tre
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs <subcommand> …
 ```
 
-Plans and sidecars live only under the **`.sedea/operations/`** union — **`.sedea/operations/joint/plans/`** and **`.sedea/operations/<operationsUserId>/plans/`** (literal **`joint`**). Do **not** use **`~/.cursor/plans/`** for Sedea product plans.
+Plans and sidecars live only under the **`.sedea/operations/`** union — **`.sedea/operations/joint/plans/`** and **`.sedea/operations/<operationsUserId>/plans/`** (literal **`joint`**). Do **not** use **`~/.cursor/plans/`** for Sedea hosting repo plans.
 
 ## Flow
 
@@ -250,7 +250,7 @@ Mutations are under **`.sedea/operations/`** (and possibly center git elsewhere)
 **Out of scope**
 
 - Creating worktrees (**`coding-session`**).
-- Removing worktrees or closing windows (product scripts / user).
+- Removing worktrees or closing windows (hosting repo scripts / user).
 - Editing plan frontmatter or sidecar YAML directly — **`plan-state.mjs`** is the sole writer for those; step 3.5 only edits **`## Follow-ups`** markdown bodies.
 - Promoting routed bullets into **Changes** / **Caveats** / **Delivery phases** — planning work the user does later.
 - Pushing fixes to individual PRs. If a flagged plan needs an amend, tell the user; do not silently **`gh`**-mutate from here.

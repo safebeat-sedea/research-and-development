@@ -14,7 +14,7 @@ layout:
 
 docs:
   - path: docs/development-process.md
-    summary: Protocol branch catalogue, planning modes, product cadence; canonical PR sizing sync contract (§ PR sizing — test cases and kinds of changes). Squad dispatch contract lives in plan-and-deliver/plan.mdc.
+    summary: Protocol branch catalogue, planning modes, hosting repo cadence; canonical PR sizing sync contract (§ PR sizing — test cases and kinds of changes). Squad dispatch contract lives in plan-and-deliver/plan.mdc.
 
 rules:
   - path: rules/10_plan-naming-convention.mdc

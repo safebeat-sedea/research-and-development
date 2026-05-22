@@ -66,7 +66,7 @@ If the file has changed since you last knew it, the in-file template is the sour
 
 Read the workspace paths from your session's `<user_info>` block (and any additional roots the user may have added, e.g. a **git worktree** opened as another workspace folder). Filter:
 
-- **Skip linked worktrees (do not offer them in 3a, do not treat them as the product repo).** Use the **same** linked-worktree test as step **3b §3** (`git -C <path> rev-parse --show-toplevel` vs `<path>` after resolving symlinks — if they differ, skip). Also skip when **`<path>/.git` is a file** (not a directory): that is the usual layout for a **git worktree** checkout. Extra workspace roots that exist only because the hosting editor **appended a worktree** (e.g. Mission Control MCP / “add worktree folder to workspace”) are almost always in this bucket — **ignore them** for the 3a `AskQuestion` list and for **which paths you load `.cursor/rules` from** in step 3c; they are not a second independent product repo. If **every** loaded root is filtered out as a linked worktree (or non-repo), say so explicitly and ask the user to open the **primary** checkout or monorepo root they use for planning, then re-run — do not fabricate a repo from a worktree-only workspace.
+- **Skip linked worktrees (do not offer them in 3a, do not treat them as the hosting repo).** Use the **same** linked-worktree test as step **3b §3** (`git -C <path> rev-parse --show-toplevel` vs `<path>` after resolving symlinks — if they differ, skip). Also skip when **`<path>/.git` is a file** (not a directory): that is the usual layout for a **git worktree** checkout. Extra workspace roots that exist only because the hosting editor **appended a worktree** (e.g. Mission Control MCP / “add worktree folder to workspace”) are almost always in this bucket — **ignore them** for the 3a `AskQuestion` list and for **which paths you load `.cursor/rules` from** in step 3c; they are not a second independent hosting repo. If **every** loaded root is filtered out as a linked worktree (or non-repo), say so explicitly and ask the user to open the **primary** checkout or monorepo root they use for planning, then re-run — do not fabricate a repo from a worktree-only workspace.
 - **Drop** anything that doesn't look like a code repo (no `.git`, or clearly a dotfiles/config dir). When in doubt, keep it — the user can deselect.
 - **Keep** every other workspace path. Display them with a friendly label (the leaf folder name) and the absolute path as the tooltip / sub-text.
 
@@ -78,7 +78,7 @@ Each option's `id` is the absolute path; each `label` is the leaf folder name (e
 
 If the PRD or the title strongly implies a single repo (e.g. it mentions "merchant dashboard" or "push worker"), still surface the multi-select — but mention the implied repo in the prompt's preface so the user can accept the default with one click. Do not auto-select on the user's behalf; multi-repo features are common enough that the agent shouldn't presume.
 
-If only one repo remains after filtering, skip the AskQuestion and tell the user *"Only one product repo in this workspace — defaulting to <name>. Reply 'add <path>' if you want to include another."*
+If only one repo remains after filtering, skip the AskQuestion and tell the user *"Only one hosting repo in this workspace — defaulting to <name>. Reply 'add <path>' if you want to include another."*
 
 ### 3b — Sync each selected repo to its default branch
 
@@ -331,7 +331,7 @@ Repeat the analogous shape for §§ 1, 2, 3, 5. Leave the `_TBD_` placeholders u
 
 ### § 1 Background
 
-One paragraph, **1–2 sentences**, framed from the **product** perspective (not implementation). What is the feature, in plain language? Who is it for? What problem does it solve? Pull this directly from the PRD's overview / goals — paraphrase, don't quote at length. Implementation framing belongs in § 4 / § 5, not here.
+One paragraph, **1–2 sentences**, framed from the **hosting repo** perspective (not implementation). What is the feature, in plain language? Who is it for? What problem does it solve? Pull this directly from the PRD's overview / goals — paraphrase, don't quote at length. Implementation framing belongs in § 4 / § 5, not here.
 
 ### § 2 Benefits
 
@@ -425,7 +425,7 @@ When the band is **high**:
 
 1. **Do not** offer **§ 6 decomposition** (spawn **delivery-phases** / **pr-breakdown**) in **AskQuestion** until the **overall score** is **≤ 20** — routing on this file as-is risks an oversized § 6.
 2. **Do** tell the user explicitly to **pause decomposition** until scope is narrower (revise §§ 4–5, or split the feature).
-3. **Split guidance (required)** — Propose **2–4** concrete slices framed as **user journeys / outcomes** for merchants or their customers (e.g. *"Merchants can configure campaign guardrails before launch"*, *"Shoppers see compliant previews in the app"*). Each slice should be shippable as a **separate planning conversation** (its own Master Plan under the same roadmap topic, or a future **Delivery phases** item that is outcome-titled). **Avoid** recommending splits that are only **topology** ("frontend vs backend", "this API vs that API", "repo A vs repo B") unless you **pair** each slice with **who gains what** so the human can still reason in product terms.
+3. **Split guidance (required)** — Propose **2–4** concrete slices framed as **user journeys / outcomes** for merchants or their customers (e.g. *"Merchants can configure campaign guardrails before launch"*, *"Shoppers see compliant previews in the app"*). Each slice should be shippable as a **separate planning conversation** (its own Master Plan under the same roadmap topic, or a future **Delivery phases** item that is outcome-titled). **Avoid** recommending splits that are only **topology** ("frontend vs backend", "this API vs that API", "repo A vs repo B") unless you **pair** each slice with **who gains what** so the human can still reason in hosting repo terms.
 4. On the next turn, use **AskQuestion** / **`MC_ASKQUESTION_V1`** (per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**) for **revise §4**, **revise §5**, optional **draft Caveats**, or **commit plans** — not typed command tokens.
 
 When band is **low** or **medium**, proceed to **Step 7**; the status line in Step 7a must mention complexity (e.g. *"Complexity: medium (overall score = 12) — §6 decomposition available in next AskQuestion."*).

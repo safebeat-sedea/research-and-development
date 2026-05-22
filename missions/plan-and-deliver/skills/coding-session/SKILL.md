@@ -28,11 +28,11 @@ inputs:
     required: false
   repoPath:
     type: string
-    description: Absolute path to the product repo primary checkout for a single-repo coding session.
+    description: Absolute path to the hosting repo primary checkout for a single-repo coding session.
     required: false
   repoPaths:
     type: array
-    description: Absolute paths to product repo primary checkouts for a multi-repo coding session.
+    description: Absolute paths to hosting repo primary checkouts for a multi-repo coding session.
     required: false
     default: []
   baseBranch:
@@ -66,7 +66,7 @@ Hand off a unit of work from the **initiating** session to **a coding agent** in
 
 **Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, pre-worktree validation + worktree-open gate, curated session prompt emission; ship-chain spawns (**`pre-pr-review`**, **`create-pr`**, inline **`pr-review`**) after cut points.
 
-**Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing product code in this chat; opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
+**Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code in this chat; opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
 After emitting the implementation session prompt(s), **stop** — do not `cd` into the worktree to implement. When invoked later from the coding agent lane after a committed cut point, this same skill owns spawning **`pre-pr-review`**.
 
@@ -432,11 +432,11 @@ Infer touched subtrees from the anchored plan and PR scope. List **absolute** pa
 
 - Paths must point at the **worktree**, not the main clone.
 - **De-duplicate** and order: baseline → architecture → area-specific.
-- **No vendor-specific matrix** — curate from plan headings, § 5 repo rules impact, and file paths. **Repo-specific** path patterns (extra checkout roots, package sub-trees, etc.) belong in **that product repository’s** `.cursor/rules/*.mdc` — keep this center skill **repo-agnostic**.
+- **No vendor-specific matrix** — curate from plan headings, § 5 repo rules impact, and file paths. **Repo-specific** path patterns (extra checkout roots, package sub-trees, etc.) belong in **that hosting repository’s** `.cursor/rules/*.mdc` — keep this center skill **repo-agnostic**.
 
 ### Phase 1 — Warm-up (before the task)
 
-R&D **center** rules (`10_`–`40_`, all `alwaysApply: true`) load on every dispatch via Mission Control. This warm-up block is for **product-repo** `.cursor/rules/*.mdc` paths under **Project rules** — list explicit `Read` steps for those only.
+R&D **center** rules (`10_`–`40_`, all `alwaysApply: true`) load on every dispatch via Mission Control. This warm-up block is for **hosting-repo** `.cursor/rules/*.mdc` paths under **Project rules** — list explicit `Read` steps for those only.
 
 **Four vs five steps:** If Phase 2 links a **`.plan.md`** (absolute path), use **five** steps and include **Plan file + sidecar** (step 5). Otherwise use **four** steps (omit step 5).
 
@@ -467,7 +467,7 @@ If the user supplies custom prompt text, keep their prose **verbatim** inside Ph
 When emitting a **real** prompt, substitute **concrete absolute paths** for every `<…>` placeholder (worktree root, hosting checkout root, plan file, etc.). Do **not** paste unresolved placeholders into **a coding agent** session.
 
 ```text
-product-repo — feat/01-example
+hosting-repo — feat/01-example
 
 ### Project rules (read during warm-up, before the task body)
 
