@@ -90,10 +90,17 @@ If any gate fails, stop with `partial`, keep `continuationStatus: "active"`, and
 
 ## Script CLI (hosting repo)
 
-All **`plan-state.mjs`** invocations run from the **hosting repo root** (the tree that contains **`.sedea/`**). Use a **direct `node` command** — the **Node runtime bundled with Sedea / VS Code** (e.g. integrated terminal where `node` is the editor’s runtime). **Do not** rely on **fnm**, **nvm**, or other host-installed Node managers.
+All **`plan-state.mjs`** invocations run from **`HOSTING_ROOT`** (the checkout whose root contains **`.sedea/`**). Use a **direct `node` command** — the **Node runtime bundled with Sedea / VS Code** (e.g. integrated terminal where `node` is the editor’s runtime). **Do not** rely on **fnm**, **nvm**, or other host-installed Node managers.
+
+**`--operations-user-id <id>`** is **required before the subcommand** for user-scoped plans (same value as Mission Control **`operationsUserId`**). Without it, only **`joint`** plans are visible. See [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) and rule **20** § *Hosting repo cwd for scripts (canonical)*.
 
 ```bash
-node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs <subcommand> …
+# HOSTING_ROOT: walk up until .sedea/centers/sedea/ or .sedea/ exists
+cd "$HOSTING_ROOT"
+OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" <subcommand> …
 ```
 
 Plans and sidecars live only under the **`.sedea/operations/`** union — **`.sedea/operations/joint/plans/`** and **`.sedea/operations/<operationsUserId>/plans/`** (literal **`joint`**). Do **not** use **`~/.cursor/plans/`** for Sedea hosting repo plans.
@@ -103,7 +110,11 @@ Plans and sidecars live only under the **`.sedea/operations/`** union — **`.se
 ### 1. Preview reconcile (PR-tracked path)
 
 ```bash
-node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs reconcile --dry-run
+cd "$HOSTING_ROOT"
+OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" reconcile --dry-run
 ```
 
 This queries **`gh pr view`** for every sidecar **`prs[]`** entry without moving files or appending parent bullets. The printed report has three buckets:
@@ -127,7 +138,10 @@ Present the dry-run report to the developer and use **AskQuestion** before runni
 Only **Approve PR-tracked reconcile mutations** authorizes:
 
 ```bash
-node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs reconcile
+cd "$HOSTING_ROOT"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" reconcile
 ```
 
 If the developer skips PR-tracked reconcile, do not run non-dry-run `reconcile`; continue only to read-only `list-candidates` and developer-selected archive work. If the developer aborts, stop with `continuationStatus: "active"` and no archive mutations.
@@ -135,7 +149,10 @@ If the developer skips PR-tracked reconcile, do not run non-dry-run `reconcile`;
 ### 2. Run list-candidates (non-PR path)
 
 ```bash
-node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs list-candidates --json
+cd "$HOSTING_ROOT"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" list-candidates --json
 ```
 
 Emits a JSON array of plans reconcile could not auto-decide. Schema per entry:
@@ -215,7 +232,10 @@ If a plan in scope has no **`## Follow-ups`** section, or the section is empty, 
 For each slug the user picked that is **not** in the **`postponed:`** set from step 3.5:
 
 ```bash
-node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs archive \
+cd "$HOSTING_ROOT"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" archive \
   --slug <slug> \
   --signal "<signal-text>"
 ```
@@ -339,8 +359,12 @@ Maintenance subcommands and future UX — **not** part of the default reconcile 
   **Gate:** present dry-run output and use **AskQuestion** before any non-dry-run run (same approval pattern as step 1b). Then continue with **Flow** from step 1.
 
   ```bash
-  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs backfill-prs-from-body --slug <slug> --dry-run
-  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs backfill-prs-from-body --all --dry-run
+  cd "$HOSTING_ROOT"
+
+  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+    --operations-user-id "$OPS_ID" backfill-prs-from-body --slug <slug> --dry-run
+  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+    --operations-user-id "$OPS_ID" backfill-prs-from-body --all --dry-run
   ```
 
   After developer approval, drop **`--dry-run`**. Add **`--force`** only when re-running after prose corrections and existing **`shippedPrs`** must be overwritten.
