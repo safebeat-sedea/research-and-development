@@ -28,11 +28,11 @@ inputs:
     required: false
   repoPath:
     type: string
-    description: Absolute path to the hosting repo primary checkout for a single-repo coding session.
+    description: Absolute path to the hosting repo root for a single-repo coding session.
     required: false
   repoPaths:
     type: array
-    description: Absolute paths to hosting repo primary checkouts for a multi-repo coding session.
+    description: Absolute paths to hosting repo roots for a multi-repo coding session.
     required: false
     default: []
   baseBranch:
@@ -176,7 +176,7 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
    - Prefix sibling paths with the repo directory basename (see **Worktree setup** in `.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`).
    - Always branch from **`origin/main`**, not **`main`** (same failure mode as in **efficient-pr-shipping**).
    - Branch naming: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Branch naming* (primary **hosting repo** → Sedea **`7_stacked-pr-branch-naming`**; **hosting repo worktree** → `feat/`, `improve/`, `fix/`, …).
-   - Refuse dirty primary checkouts before creating a worktree: run `git status --porcelain` in each repo and stop on any output. Do not stash, commit, discard, or clean the user's WIP.
+   - Refuse dirty hosting repo trees before creating a worktree: run `git status --porcelain` in each repo and stop on any output. Do not stash, commit, discard, or clean the user's WIP.
    - If `baseBranch` input is supplied, it must be a remote branch ref such as `origin/main`; do not accept a local-only branch for worktree creation.
 
 2. **Record the session on the plan** (see [Sidecar state](#sidecar-state)). From the **hosting repo root**:
@@ -432,7 +432,7 @@ Infer touched subtrees from the anchored plan and PR scope. List **absolute** pa
 
 - Paths must point at the **worktree**, not the main clone.
 - **De-duplicate** and order: baseline → architecture → area-specific.
-- **No vendor-specific matrix** — curate from plan headings, § 5 repo rules impact, and file paths. **Repo-specific** path patterns (extra checkout roots, package sub-trees, etc.) belong in **that hosting repository’s** `.cursor/rules/*.mdc` — keep this center skill **repo-agnostic**.
+- **No vendor-specific matrix** — curate from plan headings, § 5 repo rules impact, and file paths. **Repo-specific** path patterns (extra hosting repo roots, package sub-trees, etc.) belong in **that hosting repo’s** `.cursor/rules/*.mdc` — keep this center skill **repo-agnostic**.
 
 ### Phase 1 — Warm-up (before the task)
 

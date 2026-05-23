@@ -58,7 +58,7 @@ flowchart TD
   2. Treat the remaining text as the initial `topicName` when present.
   3. Ask the user for `topicName` if missing.
   4. Ask the user for `topicDescription` if missing.
-  5. Ask whether `storageScope` is `user` or `joint` if missing; `user` maps to `.sedea/operations/<operationsUserId>/plans/roadmap-topics/`, and `joint` maps to `.sedea/operations/joint/plans/roadmap-topics/`. Those `roadmap-topics/` folders live in the operations checkout and are **created on the first `create topic` write** for that scope when absent — they are not shipped inside the center repo.
+  5. Ask whether `storageScope` is `user` or `joint` if missing; `user` maps to `.sedea/operations/<operationsUserId>/plans/roadmap-topics/`, and `joint` maps to `.sedea/operations/joint/plans/roadmap-topics/`. Those `roadmap-topics/` folders live in the operations repository and are **created on the first `create topic` write** for that scope when absent — they are not shipped inside the center repo.
   6. Accept `objectives` as optional; if none are supplied, pass an empty list to the skill.
 - `valid early-exit conditions`: Stop without running the skill if the user declines to provide a topic name, description, or storage scope.
 

@@ -22,7 +22,7 @@ When the Squad Leader receives an implementation request, PR review, or cross-re
 
 ## Hosting repo cwd for scripts (canonical)
 
-R&D automation scripts **`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** live under **`.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/`** in the **hosting repository** — the Git checkout whose root contains **`.sedea/`** (and usually **`.sedea/centers/sedea/`**).
+R&D automation scripts **`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** live under **`.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/`** in the **hosting repo** whose root contains **`.sedea/`** (and usually **`.sedea/centers/sedea/`**).
 
 **Hosting repo worktrees** (`git worktree add` for `push`, `payments-web`, etc.) often have a **different** `git rev-parse --show-toplevel` and **no** `.sedea/centers/` tree. Do **not** derive script paths from the worktree root alone.
 
@@ -35,7 +35,7 @@ Before any `node …/plan-state.mjs` or `python3 …/pr-review.py` invocation:
 3. Set **`HOSTING_ROOT`** to that directory (parent of `.sedea/`).
 4. **`cd "$HOSTING_ROOT"`** for every script shell line; use repo-relative paths from there (for example `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs`).
 
-When the agent already knows the Mission Control primary checkout path, set **`HOSTING_ROOT`** explicitly instead of guessing.
+When the agent already knows the Mission Control primary hosting repo path, set **`HOSTING_ROOT`** explicitly instead of guessing.
 
 ### Worktree context for `resolve --cwd`
 
@@ -65,7 +65,7 @@ node "$ROOT/.sedea/centers/.../plan-state.mjs" ...
 
 Use **`HOSTING_ROOT`** plus a repo-relative script path from the hosting repo, or an absolute path to the script file under **`HOSTING_ROOT`**.
 
-Cross-refs: [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](31_operations-user-id.mdc) § *Worked example*; [`.sedea/centers/sedea/rules/0_hosting-checkout.mdc`](../../sedea/rules/0_hosting-checkout.mdc).
+Cross-refs: [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](31_operations-user-id.mdc) § *Worked example*; [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](../../sedea/rules/0_hosting-repo.mdc).
 
 ## Plan for independence
 
@@ -370,11 +370,11 @@ Every description starter (including on the first push in this cadence) should c
 
 ## Branch naming
 
-Names apply to the **hosting repo worktree** that receives the code change, not necessarily the checkout that holds `.sedea/` for planning scripts. **Worktree setup examples** above are split by repo type — use Example A or B, not both.
+Names apply to the **hosting repo worktree** that receives the code change, not necessarily the hosting repo that holds `.sedea/` for planning scripts. **Worktree setup examples** above are split by repo type — use Example A or B, not both.
 
 ### Hosting repo (primary, sedea-ai/app and equivalents)
 
-When the **hosting repo** root contains `.sedea/centers/sedea/` on the active workbench — follow **[`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)** ([`0_hosting-checkout.mdc`](../../sedea/rules/0_hosting-checkout.mdc) defines the hosting repo).
+When the **hosting repo** root contains `.sedea/centers/sedea/` on the active workbench — follow **[`.sedea/centers/sedea/rules/7_stacked-pr-branch-naming.mdc`](../../sedea/rules/7_stacked-pr-branch-naming.mdc)** ([`0_hosting-repo.mdc`](../../sedea/rules/0_hosting-repo.mdc) defines the hosting repo).
 
 - Stacked integration on `main`: **`<prefix>/<NN>-<slug>`** with exactly two digits (`01`–`99`). Default prefix for a new stack is **`feat`** unless the plan or developer names another prefix.
 - **Invalid on hosting stacked workflow:** `feat/token-auth`, `improve/logger`, `feature/01-foo` — missing `NN`, wrong prefix family, or non-kebab slug.

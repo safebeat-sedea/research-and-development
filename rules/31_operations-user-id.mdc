@@ -20,12 +20,12 @@ One opaque stable string identifies the developer’s private tree under **`.sed
 ## Do not use
 
 - **`user-uuid`**, **`operations-user-uuid`**, or other aliases in skill frontmatter or path examples.
-- Legacy **`.sedea/local/operations-user-id`** — not part of the operations union contract (see **`.sedea/centers/sedea/rules/0_hosting-checkout.mdc`**).
+- Legacy **`.sedea/local/operations-user-id`** — not part of the operations union contract (see **`.sedea/centers/sedea/rules/0_hosting-repo.mdc`**).
 - Asking the developer to set **git config** for the operations user id in Mission Control runs — the host supplies context.
 
 ## Plans union
 
-Per **`.sedea/centers/sedea/rules/0_hosting-checkout.mdc`**:
+Per **`.sedea/centers/sedea/rules/0_hosting-repo.mdc`**:
 
 1. **`.sedea/operations/joint/...`** — shared namespace (literal `joint`).
 2. **`.sedea/operations/<operationsUserId>/...`** — per-user private namespace.
@@ -43,7 +43,7 @@ Ellipses in path examples (for example `` `.sedea/operations/.../plans/` ``, `` 
 
 ## Hosting repo cwd (scripts)
 
-**`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** run from **`HOSTING_ROOT`** (checkout containing `.sedea/`), not from a hosting repo worktree’s `git rev-parse --show-toplevel` alone. Full contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
+**`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** run from **`HOSTING_ROOT`** (hosting repo containing `.sedea/`), not from a hosting repo worktree’s `git rev-parse --show-toplevel` alone. Full contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
 
 ## Worked example (`plan-state.mjs`)
 

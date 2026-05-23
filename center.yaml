@@ -3,7 +3,7 @@ description: >-
   How developers deliver new features from idea to production — planning, implementation,
   PR shipping, deploy verification, and plan hygiene. Agents and Mission Control discover
   skills from `missions/<slug>/skills/**/SKILL.md` on disk; this manifest documents the
-  checkout for audits and center-maintenance. Keep `skillEntries` in sync when adding skills.
+  center layout for audits and center-maintenance. Keep `skillEntries` in sync when adding skills.
 
 # Paths below are relative to `.sedea/centers/research-and-development/` unless noted.
 

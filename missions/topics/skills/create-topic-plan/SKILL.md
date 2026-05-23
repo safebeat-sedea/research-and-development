@@ -48,7 +48,7 @@ Create one root-level topic plan and its sidecar under the selected Sedea operat
    - `topicName` and `topicDescription` must be non-empty after trimming.
    - `storageScope` must be exactly `user` or `joint`.
    - `operationsUserId` must be non-empty when `storageScope` is `user`.
-2. Resolve output directory (operations checkout; **created on first topic write** when absent):
+2. Resolve output directory (operations repository; **created on first topic write** when absent):
    - `user` -> `.sedea/operations/<operationsUserId>/plans/roadmap-topics/`
    - `joint` -> `.sedea/operations/joint/plans/roadmap-topics/`
 3. Derive the filename stem:

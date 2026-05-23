@@ -12,7 +12,7 @@ import { parseDocument, Document, YAMLMap, YAMLSeq, isMap, isSeq } from 'yaml';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
-/** Repo root containing `.sedea/` (Sedea app checkout). */
+/** Repo root containing `.sedea/` (hosting repo). */
 let SEDEA_REPO_ROOT = null;
 /** Absolute plan directories (user scope first, then joint; subdirs only if present). */
 let SEDEA_PLAN_DIRS = null;

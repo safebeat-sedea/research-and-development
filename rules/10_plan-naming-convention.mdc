@@ -64,7 +64,7 @@ foot-guns eliminated, future work unblocked>
 
 ## Branch names (which repo?)
 
-Branch naming depends on the **hosting repo worktree** that receives the code change, not necessarily the checkout where `.sedea/` planning scripts run.
+Branch naming depends on the **hosting repo worktree** that receives the code change, not necessarily the hosting repo where `.sedea/` planning scripts run.
 
 | Hosting repo | Pattern | Authority |
 |--------------|---------|-----------|
