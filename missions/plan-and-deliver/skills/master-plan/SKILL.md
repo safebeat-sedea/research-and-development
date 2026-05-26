@@ -280,11 +280,7 @@ _TBD_
 
 The literal `## 6. Delivery phases | PR breakdown` heading is the **deliberate, not-yet-decided** form documented in the dev-process doc's **§ 6 / § 5 contents rule**. When § 6 is drafted in a follow-up turn, the agent picks one of `Delivery phases` (the feature decomposes into phases) or `PR breakdown` (the feature is small enough to skip the phase layer) and rewrites the heading to the chosen value, dropping the other side. Until then, the dual heading communicates "decomposition pending" at a glance.
 
-Why a uniform `_TBD_`:
-
-- **Scannability.** Italic `_TBD_` reads as a clear hole; you can flick down the file and count how many holes remain. Long stub sentences like "TBD — drafted in a follow-up turn after §§ 4 + 5 are settled" hide the same information inside paragraphs that look written.
-- **Renders everywhere.** Markdown italic is visible in Cursor, on the Plan Board, on GitHub, anywhere the file gets read. HTML comments (the previous convention) only render in the source view, so § 4 and § 5 looked falsely empty before Step 6 ran.
-- **Easy to grep / find.** `rg '^_TBD_$'` against the plan file lists every pending section.
+Use uniform italic **`_TBD_`** for every pending section (scannable in Plan Board and GitHub; grep with `rg '^_TBD_$'`). Rationale and template rules: **`.sedea/centers/research-and-development/docs/development-process.md`** § *Master Plan template*.
 
 Frontmatter rules carry over from the new-plan contract:
 

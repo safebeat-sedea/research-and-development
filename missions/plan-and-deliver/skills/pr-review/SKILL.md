@@ -24,7 +24,7 @@ If Mission Control opened a session whose only intent is **`pr-review`** / *tria
 
 ## Helper script
 
-Script: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py` (reads PAT from `GH_TOKEN`, then hosting-repo **`.sedea/mcp.json`**, then `~/.sedea/mcp.json` — config only; **do not invoke any GitHub MCP** during **`pr-review`** — see § *GitHub MCP is out of scope*).
+Script: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py` (reads PAT from `GH_TOKEN`, then hosting-repo **`.sedea/mcp.json`**, then `~/.sedea/mcp.json` for token lookup only — see § *GitHub access*).
 
 ### Hosting repo cwd (`pr-review.py` and `plan-state.mjs`)
 
@@ -74,9 +74,11 @@ Input format — **one object** (single command) or a **JSON array** of command 
 
 Supported `command` values: `threads`, `reply`, `resolve`, `minimize`, `pr-for-branch`, `reviews`, `review-comments`, `pull-reviews`, `issue-comments`, `request-review`, `summary`.
 
-### GitHub MCP is **out of scope** for `pr-review`
+### GitHub access
 
-Do **not** call **any GitHub MCP** (for example server id **`github`** in hosting **`.sedea/mcp.json`**, or legacy **`user-github`**) to list reviews, comments, or threads. That duplicates the script, stresses the agent UI with huge payloads, and is forbidden here. **All** GitHub reads and writes for this workflow go through **`cd "$HOSTING_ROOT" && PR_REVIEW_INPUT="<absolute-path-from-step-1>" python3 .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py`** (plus `git` / `gh` in the **worktree** in Step 0 only if you already use them for branch or URL resolution — optional; `pr-for-branch` in the script is preferred when resolving the PR from the current branch).
+**All** GitHub reads and writes for this skill use **`pr-review.py`** via the two-step **`PR_REVIEW_INPUT`** workflow (§ *Input file and script*). In Step 0 you may use `git` / `gh` in the **worktree** for branch or URL resolution; prefer **`pr-for-branch`** in the script when resolving the PR from the current branch.
+
+Superseded paths (token/config lookup only — **not** for listing threads or posting replies): GitHub MCP server ids such as **`github`** or **`user-github`** in **`.sedea/mcp.json`**. Those tools duplicate **`pr-review.py`** and inflate agent context.
 
 ## When coding-session executes `pr-review`
 

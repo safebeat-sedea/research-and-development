@@ -1,7 +1,7 @@
 ---
 description: >-
   Canonical operationsUserId — Mission Control context, filesystem paths, skill
-  inputs/outputs, and plan-state CLI flag. Replaces legacy user-uuid placeholders.
+  inputs/outputs, and plan-state CLI flag.
 alwaysApply: true
 ---
 
@@ -16,12 +16,6 @@ One opaque stable string identifies the developer’s private tree under **`.sed
 | Mission Control warm-up, skill `inputs` / `outputs`, MCP | **`operationsUserId`** (camelCase) | Pass through spawn `inputs`; refresh with **`sedea_get_current_user`** |
 | Filesystem path segment | **`<operationsUserId>`** in prose placeholders | `.sedea/operations/<operationsUserId>/plans/<slug>.plan.md` |
 | `plan-state.mjs` CLI (hosting repo, no MC context) | **`--operations-user-id <id>`** before the subcommand | Same value as **`operationsUserId`**; kebab-case flag only on the CLI |
-
-## Do not use
-
-- **`user-uuid`**, **`operations-user-uuid`**, or other aliases in skill frontmatter or path examples.
-- Legacy **`.sedea/local/operations-user-id`** — not part of the operations union contract (see **`.sedea/centers/sedea/rules/0_hosting-repo.mdc`**).
-- Asking the developer to set **git config** for the operations user id in Mission Control runs — the host supplies context.
 
 ## Plans union
 

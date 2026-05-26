@@ -627,6 +627,38 @@ A **child plan** (one scaffolded via **`new-plan`** with a non-Master `parent` i
 
 The diagram above describes the per-feature shape and deliberately does not draw the cross-loop arrows for every hierarchy level — adding them makes it unreadable. The shape is fractal: every plan in the tree runs the same loop with the same triage step.
 
+## Plan reconcile triggers
+
+| Event | Starts **`plan-reconcile`?** |
+|-------|---------------------------|
+| **`deploy-walk`** completes (deploy checklist + capstone todo **done**) | **No** — use **AskQuestion** if the user wants reconcile next |
+| **`create-pr`** after merge; developer chooses reconcile | **Yes** (spawned; requires `deployStatus` / `deployTodoStatus` **done**) |
+| Developer says **plan reconcile** / mission dispatch | **Yes** |
+
+Ship cadence detail: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *deploy-walk vs plan-reconcile (not chained)*. Skill procedure: **`plan-reconcile/SKILL.md`** § *When this skill runs*.
+
+## Plan metadata backfill (`backfill-prs-from-body`)
+
+Optional **`plan-state.mjs`** subcommand (see **`--help`**) — run **before** reconcile step 1 when a PR plan lists merged PRs **only in body prose** and sidecar **`prs[]`** / frontmatter **`shippedPrs`** are empty (otherwise PR-tracked **`reconcile`** may **skip** the plan).
+
+| Step | Action |
+|------|--------|
+| 1 | Dry-run: `backfill-prs-from-body --slug <slug>` or `--all` |
+| 2 | **AskQuestion** — approve backfill vs skip |
+| 3 | Re-run without `--dry-run`; add `--force` only when overwriting existing **`shippedPrs`** after prose fixes |
+
+The subcommand **only** backfills **`shippedPrs`** — it does not archive, reparent, or run follow-ups triage.
+
+```bash
+cd "$HOSTING_ROOT"
+OPS_ID="<operationsUserId>"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" backfill-prs-from-body --slug <slug> --dry-run
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" backfill-prs-from-body --all --dry-run
+```
+
 ## Out of scope
 
 - Per-tool setup, packaging, and auth internals (e.g. Mission Control install, third-party OAuth). **Development tools** names what this process uses and where protocol branches are recorded; hosting-repo-specific mechanics belong with each hosting repo’s docs.

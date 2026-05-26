@@ -56,41 +56,25 @@ warmUpRules:
 
 Script-backed flow: **`plan-state.mjs`** owns YAML and file moves; the agent decides **which** archive candidates to take (and how to route **follow-ups**) by surfacing choices via **`AskQuestion`**.
 
-## When to trigger
+## When this skill runs
 
-- **Mission dispatch**, natural language (**plan reconcile**, **reconcile plans**, archive pass after merges), or an explicit user request in that vein.
-- Do **not** trigger on **`plan`** alone — too generic.
-- Spawned by **`create-pr`** only after both PR merge and deploy verification are complete **and the developer explicitly chooses to run reconcile**. A `deploy-walk` completion by itself is not enough; spawned reconcile requires `prState: "merged"`, `deployStatus: "done"`, and `deployTodoStatus: "done"`.
-- Standalone natural-language reconcile remains available for developer-initiated archive passes.
+| How it starts | Requirements | Auto-start? |
+|---------------|--------------|-------------|
+| Developer says **plan reconcile** / **reconcile plans**, or mission dispatch | Valid **`operationsUserId`**; follow **Flow** below | No — explicit start |
+| **`create-pr`** spawns this skill | Developer chose reconcile on that turn; `prState: merged`; `deployStatus: done`; `deployTodoStatus: done`; `targetPlanPath` or `targetPlanSlug` | Yes |
+| **`deploy-walk`** finishes (checklist + capstone todo **done**) | — | **No** — deploy done alone does not start reconcile |
 
-## Not auto-started from `deploy-walk`
+Do **not** trigger on the word **`plan`** alone — too generic.
 
-**`deploy-walk` completion does not open this skill.** Deploy verification (`deployStatus` / `deployTodoStatus` **done**) is necessary for **spawned** reconcile from **`create-pr`**, but **`deploy-walk` alone never triggers reconcile**.
+When **`deploy-walk`** just finished and the user expects archive, use **AskQuestion** once: start **`plan-reconcile`** now vs defer. Merge + deploy verification are still required for spawned reconcile from **`create-pr`**.
 
-| Prior step completed | Starts **`plan-reconcile` automatically?** |
-|----------------------|---------------------------------------------|
-| **`deploy-walk`** (checklist + capstone todo done) | **No** |
-| **`create-pr`** after merge + developer chooses reconcile | **Yes** (spawned child) |
-| Developer says **plan reconcile** / mission dispatch | **Yes** (explicit start) |
+Detail: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *deploy-walk vs plan-reconcile (not chained)*; **`.sedea/centers/research-and-development/docs/development-process.md`** § *Plan reconcile triggers*.
 
-If the user expects archive right after deploy, use **AskQuestion** once: start **`plan-reconcile`** now vs defer — do not assume merge + deploy implied reconcile.
-
-Canonical: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *deploy-walk vs plan-reconcile (not chained)*.
-
-## Spawned reconcile gate
-
-When spawned by `create-pr`, verify:
-
-1. `targetPlanPath` or `targetPlanSlug` is present.
-2. `prState` is `merged`.
-3. `deployStatus` is `done`.
-4. `deployTodoStatus` is `done`.
-
-If any gate fails, stop with `partial`, keep `continuationStatus: "active"`, and report the missing status. Do not archive plans before merge and deploy verification are both complete.
+**Spawned gate:** if any required field is missing, stop with `partial`, keep `continuationStatus: "active"`, and report what is missing. Do not archive before merge and deploy verification are complete.
 
 ## Script CLI (hosting repo)
 
-All **`plan-state.mjs`** invocations run from **`HOSTING_ROOT`** (the hosting repo whose root contains **`.sedea/`**). Use a **direct `node` command** — the **Node runtime bundled with Sedea / VS Code** (e.g. integrated terminal where `node` is the editor’s runtime). **Do not** rely on **fnm**, **nvm**, or other host-installed Node managers.
+All **`plan-state.mjs`** invocations run from **`HOSTING_ROOT`** (the hosting repo whose root contains **`.sedea/`**). Use a **direct `node` command** with the runtime in [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) § *Hosting repo cwd (scripts)* and this center’s **`.cursor/rules/`** on the hosting repo.
 
 **`--operations-user-id <id>`** is **required before the subcommand** for user-scoped plans (same value as Mission Control **`operationsUserId`**). Without it, only **`joint`** plans are visible. See [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) and rule **20** § *Hosting repo cwd for scripts (canonical)*.
 
@@ -352,19 +336,4 @@ Maintenance subcommands and future UX — **not** part of the default reconcile 
 
 - **`shippedPrs` frontmatter** — **`reconcile`** / **`archive`** write **`shippedPrs`** from sidecar **`prs[]`** at archive time. **`list-candidates`** prefers that field over body-regex hits when present (adjust step 2 commentary when this field is populated).
 
-- **`backfill-prs-from-body` (implemented; separate from reconcile).** Subcommand already exists on **`plan-state.mjs`** (see script **`--help`**). Use **before** step 1 when legacy PR plans still reference merged PRs **only in plan body prose** and lack frontmatter **`shippedPrs`** — without it, PR-tracked **`reconcile`** may **`skip`** plans that have no sidecar **`prs[]`**. The subcommand **only** backfills **`shippedPrs`**; it does **not** archive, reparent, or run follow-ups triage. Skips plans that already have non-empty **`shippedPrs`** unless **`--force`**.
-
-  **Triggers (examples):** *backfill shipped PRs*, *fix legacy PR metadata before reconcile*, dry-run **`list-candidates`** shows body-only PR hits with empty **`shippedPrs`**.
-
-  **Gate:** present dry-run output and use **AskQuestion** before any non-dry-run run (same approval pattern as step 1b). Then continue with **Flow** from step 1.
-
-  ```bash
-  cd "$HOSTING_ROOT"
-
-  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-    --operations-user-id "$OPS_ID" backfill-prs-from-body --slug <slug> --dry-run
-  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-    --operations-user-id "$OPS_ID" backfill-prs-from-body --all --dry-run
-  ```
-
-  After developer approval, drop **`--dry-run`**. Add **`--force`** only when re-running after prose corrections and existing **`shippedPrs`** must be overwritten.
+- **`backfill-prs-from-body`** — optional pre-step when sidecar **`prs[]`** is empty but merged PRs appear only in plan body prose. Procedure, triggers, and CLI examples: **`.sedea/centers/research-and-development/docs/development-process.md`** § *Plan metadata backfill (`backfill-prs-from-body`)*. Gate with **AskQuestion** before any non-dry-run run; then continue **Flow** from step 1.
