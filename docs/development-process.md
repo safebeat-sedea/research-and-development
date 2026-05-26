@@ -486,7 +486,7 @@ The triage decision is the human-in-the-loop part of the cycle — there is no r
 
 #### Next Phase Decomposition
 
-Pick up the next phase to ship from the active plan's dual-title section (Master Plan § 6 or, recursively, a phase plan's § 5). The **section's heading** is the decomposition decision: `Delivery phases` means the body is a **short numbered list** of child phases; `PR breakdown` means "skip mode #2 and go straight to mode #3 here" — the body's `### PR list` sub-section is itself a **short numbered list** of child PRs. The two heading variants share the same numbered-list shape. Expanding list item **N** uses **`new-plan`** (indexed child) after the developer picks **N** via **AskQuestion** or a numbered option per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`**.
+Pick up the next phase to ship from the active plan's dual-title section (Master Plan § 6 or, recursively, a phase plan's § 5). The **section's heading** is the decomposition decision: `Delivery phases` means the body is a **short numbered list** of child phases; `PR breakdown` means "skip mode #2 and go straight to mode #3 here" — the body's `### PR list` sub-section is itself a **short numbered list** of child PRs. The two heading variants share the same numbered-list shape. Expanding list item **N** uses **`new-plan`** (indexed child) after the developer picks **N** via **AskQuestion** per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Sedea input channel* (**N** is the parent plan list index, not a prose menu).
 
 #### PRs Breakdown
 
@@ -494,14 +494,9 @@ For a plan decided to be PR-ready (its dual-title section is titled `PR breakdow
 
 #### Planning readiness vs worktree completeness
 
-Two independent gates apply before a worktree opens. Do not treat **`pr-plan`** “ready” as automatic permission to skip plan-body validation.
+**Canonical (do not duplicate here):** [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../rules/30_planning-target-resolution.mdc) § *Planning readiness vs ship* (three signals + agent checklist), § *PR-plan completeness before coding-session* (script + snapshot ordering), and § *§8 ship ledger and inline `pr-review`* (leader recap after inline **`pr-review`**).
 
-| Layer | Mechanism | Pass criteria | `_TBD_` in per-PR §§5–8 |
-|-------|-----------|---------------|-------------------------|
-| **Planning handoff** | **`pr-plan`** → `readyForImplementation` | §§1–4, deploy capstone todo, parent link | **Allowed** at handoff |
-| **Worktree gate** | **`coding-session`** worktree-open gate (runs **`plan-ws-completeness.mjs`** first) | No `_TBD_` in per-PR body (outside fenced code), unless override chosen in that gate | **Blocks** until filled or override |
-
-When **`readyForImplementation`** is true but §§5–8 still contain `_TBD_`, the script prints **`INCOMPLETE`** — expected, not a bug. Proceed only after the developer finishes those sections, uses **`pr-plan`** pre-fill sketches, chooses **Start with incomplete plan (executive override)** in the worktree-open gate, or sends **`override incomplete plan`** in the message. **`readyForImplementation` alone does not advance the Squad Leader §8 ship `phase` beyond `not-started`** until completeness passes or is overridden and **`coding-session`** sets `developerApprovedImplementation` (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §7–§8). See **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *PR-plan completeness before coding-session* and § *Agent checklist (planning vs ship — do not conflate)*.
+Two independent gates apply before a worktree opens: layer 1 **`readyForImplementation`** from **`pr-plan`**, then layer 2 **`developerApprovedImplementation`** from **`coding-session`** after **`plan-ws-completeness.mjs`** (or documented override). Neither alone advances Squad Leader §8 past `not-started` — **`plan-and-deliver/plan.mdc`** §7–§8.
 
 #### Start implementation (`coding-session` entry)
 
@@ -514,10 +509,7 @@ After **`pr-plan`** handoff (or an approved per-PR plan), implementation runs on
 | **Re-use a prior session prompt** | Detached / coding-agent | Two-phase prompt from an earlier **`coding-session`** run; branch and sidecar `worktrees` must still match |
 | **Planning snapshot** | Detached | Snapshot with `targetPlanPath`, `operationsUserId`, repo paths per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** |
 
-**Do not**
-
-- Implement hosting repo code on the **`pr-plan`** lane or the Squad Leader planning lane because `readyForImplementation` is true.
-- Open a worktree from planning outputs alone without **`plan-ws-completeness.mjs`** exit 0 or an explicit override in **`coding-session`** § *Worktree-open gate*.
+**Do not** — see rule **30** § *Agent checklist (planning vs ship — do not conflate)*.
 
 **Canonical skill:** `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`  
 **Squad Leader §8:** post **Ship recap — plan and deliver** on the active leader dispatch as ship milestones complete (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §8).

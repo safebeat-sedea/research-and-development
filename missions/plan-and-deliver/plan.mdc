@@ -392,8 +392,7 @@ Related (optional):
 - The **Squad Leader** must receive terminal closure for every open **planning** entry before treating planning as complete.
 - A plan entry may close as completed, deferred, abandoned, or out of scope, but the closing status must be explicit.
 - Silence, missing metadata, or an unreported lane is not completion.
-- When a PR plan child reports `readyForImplementation` in planning `outputs`, record planning-handoff readiness on the **planning** ledger only. **§8 ship rows** open from **`coding-session`** (see §8), not from **`pr-plan`** child results.
-- **`readyForImplementation: true` does not advance §8 `phase` beyond `not-started`** — planning-ready ≠ worktree-ready. Do not set `phase` to `worktree` or later until **`plan-ws-completeness.mjs`** passes (or the developer overrides in **`coding-session`**) **and** layer-2 `developerApprovedImplementation: true` is reported (see §8 *Register or refresh*).
+- When a PR plan child reports `readyForImplementation` in planning `outputs`, record planning-handoff readiness on the **planning** ledger only. Planning vs ship signals and §8 phase rules: [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../../rules/30_planning-target-resolution.mdc) § *Planning readiness vs ship*; §8 registration: §8 *Register or refresh* below.
 
 **Procedure**
 
@@ -459,7 +458,7 @@ Maintain one row per in-scope **PR plan** path under `.sedea/operations/.../plan
 | `deploy-walk` | `deployStatus: done` and `deployTodoStatus: done` → `deploy-walk` (then `done` when reconcile complete) |
 | `plan-reconcile` | terminal reconcile with target archived → `reconcile` or `done` |
 
-**`readyForImplementation` vs worktree completeness:** Layer 1 (`readyForImplementation` from **`pr-plan`**) may be true while §§5–8 still contain `_TBD_`. **`plan-ws-completeness.mjs`** may exit **`INCOMPLETE`** until those sections are filled or the developer overrides in **`coding-session`**. When registering or refreshing a §8 row from planning signals alone, keep `phase: not-started` — do **not** advance to `worktree` or later until completeness passes or is overridden **and** `developerApprovedImplementation: true` is reported.
+**Planning vs ship signals:** [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../../rules/30_planning-target-resolution.mdc) § *Planning readiness vs ship* and § *PR-plan completeness before coding-session*. When registering or refreshing a §8 row from planning signals alone, keep `phase: not-started` until layer-2 **`developerApprovedImplementation`** is reported on **`coding-session`**.
 
 **Register or refresh a ship row when any of:**
 
@@ -486,14 +485,14 @@ When Mission Control hosts a **`plan and deliver`** dispatch, the extension may 
 
 - Host sync **does not** replace child **`AGENT_RESULT_RESPONSE_V1`** delivery to parent lanes, domain **`continuationStatus`** fields, or *Pre-resolution checklist* / **`MC_DISPATCH_RESOLVED_V1`** gates.
 - If **`outputs.targetPlanPath`** is missing on a terminal line, the host **skips** ledger sync for that result (agents must populate required fields).
-- **`pr-review`** runs **inline** on the active **`coding-session`** lane — there is often **no** separate child terminal, so **`pr-review`** milestones still need a **manual Ship recap** on the leader dispatch (or fields forwarded from **`coding-session`**). See **`skills/pr-review/SKILL.md`** § *Leader §8 recap* and **`coding-session`** § *Squad Leader bubble-up*.
+- **`pr-review`** is **not** host-synced (inline on **`coding-session`** — no separate child terminal). See [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../../rules/30_planning-target-resolution.mdc) § *§8 ship ledger and inline `pr-review`*.
 - Leader-tab UI for the full ledger may lag persistence; treat **`ship-ledger.v1.json`** and the silent recap message as source of truth until UI catches up.
 
 Manual **Ship recap** paste on the leader dispatch remains valid and should be used when host sync did not run or rows look stale.
 
 ### §8 troubleshooting (when the ledger looks wrong)
 
-Use this when the **plan and deliver** leader dispatch cannot propose **`resolved`**, §8 rows look stale, or detached ship work finished but the leader lane shows no progress.
+Use this when the **plan and deliver** leader dispatch cannot propose **`resolved`**, §8 rows look stale, or detached ship work finished but the leader lane shows no progress. **Cross-center:** [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../../rules/30_planning-target-resolution.mdc) § *§8 ship ledger and inline `pr-review`* (host sync vs inline **`pr-review`**).
 
 | Symptom | Likely cause | What to do |
 |---------|--------------|------------|
@@ -509,9 +508,7 @@ Use this when the **plan and deliver** leader dispatch cannot propose **`resolve
 2. **Manual recap** — developer or agent posts the template block below on **this** dispatch.
 3. **Forwarded child-output** — parent lane forwards parseable results; leader parses like a recap.
 
-**Never:** treat silence on a detached lane as ship complete; advance §8 `phase` from **`pr-plan`** `readyForImplementation` alone; or emit **`resolved`** while any row is `open`/`blocked` without recap or planning-only **AskQuestion** choice.
-
-**`pr-review`** runs **inline** on the active **`coding-session`** lane (still often detached from the leader). After PR comment triage, post **Ship recap** on the leader dispatch with `shipPhase: pr-review` and fields from **`coding-session`** / **`pr-review`** (`prReviewStatus`, `githubReconciliationStatus`) — see **`skills/pr-review/SKILL.md`** § *Leader §8 recap* and **`coding-session`** § *Squad Leader bubble-up*.
+**Never:** treat silence on a detached lane as ship complete; advance §8 `phase` from **`pr-plan`** `readyForImplementation` alone; or emit **`resolved`** while any row is `open`/`blocked` without recap or planning-only **AskQuestion** choice. After inline **`pr-review`**, always use **Ship recap** on this dispatch — rule **30** § *§8 ship ledger and inline `pr-review`*.
 
 When the developer returns to the **plan and deliver** leader dispatch and any ship row is `open` or `blocked`, collect a **minimal recap** per PR plan (use **AskQuestion** once if they give only vague chat). Do **not** advance `phase` from **`inferred`** unless unavoidable — ask for the fields below.
 

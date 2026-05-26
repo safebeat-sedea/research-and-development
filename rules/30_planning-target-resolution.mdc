@@ -27,9 +27,21 @@ When a turn **requires a user reply** before you continue (pick a planning branc
 | **`pr-plan`** or Squad Leader planning lane | `readyForImplementation: true` | Tell developer to start **`coding-session`** on a **detached** lane — **`.sedea/centers/research-and-development/docs/development-process.md`** § *Start implementation (`coding-session` entry)* | Open worktree, edit hosting repo code, or set §8 `phase` past `not-started` here |
 | **`coding-session`** (detached) | `plan-ws-completeness.mjs` exit 0 or override in worktree-open gate | Proceed with worktree + implementation | Assume planning handoff alone was enough |
 | **`coding-session`** (detached) | `developerApprovedImplementation: true` | Continue ship chain; nudge **Ship recap** on leader dispatch for §8 | Assume §8 auto-updated without recap or host sync |
+| **`coding-session`** after inline **`pr-review`** | PR comment triage finished on the coding lane | Nudge **Ship recap** on the leader dispatch (`shipPhase: pr-review`) | Assume host sync updated §8 — **`pr-review` is not host-synced** (§ *§8 ship ledger and inline `pr-review`* below) |
 | Squad Leader **`plan and deliver`** dispatch | Parsed **Ship recap** or host-sync message | Refresh §8 rows; then resolution gates | Close dispatch **`resolved`** while rows `open`/`blocked` without recap — **`plan.mdc`** §8 *§8 troubleshooting* |
 
 **Lane rule:** Planning skills (**`pr-plan`**, **`master-plan`**, decomposition tree) ≠ ship skills (**`coding-session`** → **`pre-pr-review`** → **`create-pr`** → …). **`pr-plan` does not spawn `coding-session`.**
+
+## §8 ship ledger and inline `pr-review`
+
+Squad Leader **§8** on the **`plan and deliver`** dispatch is updated from **host sync**, a developer-posted **Ship recap**, or forwarded child **`outputs`** — not from silence on a detached coding lane.
+
+| Source | Host sync? | Leader §8 action |
+|--------|------------|------------------|
+| **`coding-session`**, **`pre-pr-review`**, **`create-pr`**, **`deploy-walk`**, **`plan-reconcile`** child terminal with `outputs.targetPlanPath`, `outputs.shipPhase`, `outputs.rowStatus` | **Yes** when Mission Control implements §8 sync | Parse silent **`Mission Control: ship-ledger sync (section 8).`** or recap template — **`plan.mdc`** §8 |
+| **`pr-review`** (inline on **`coding-session`**) | **No** — no separate child terminal | **Always** post or nudge **Ship recap — plan and deliver** on the leader dispatch after triage milestones (`prReviewStatus`, `githubReconciliationStatus` when applicable) — **`pr-review/SKILL.md`** § *Leader §8 recap*, **`coding-session/SKILL.md`** § *Squad Leader bubble-up* |
+
+Do not report §8 as up to date, or propose dispatch **`resolved`**, because **`pr-review`** finished on a detached lane without a recap on the leader dispatch.
 
 ## Disambiguation — rule 20 cadence step 3 vs `pr-review` steps
 
@@ -128,7 +140,7 @@ When a pick is required, offer the same moves as **`AskQuestion`** `options` (§
 
 ### PR-plan completeness before coding-session
 
-Snapshots should respect **coding-session** pre-worktree validation and the worktree-open gate when a PR plan would anchor a worktree session. **`readyForImplementation: true`** from **`pr-plan`** does **not** bypass validation — see **development-process.md** § *Planning readiness vs worktree completeness*.
+Snapshots should respect **coding-session** pre-worktree validation and the worktree-open gate when a PR plan would anchor a worktree session. **`readyForImplementation: true`** from **`pr-plan`** does **not** bypass validation — see § *Planning readiness vs ship* above.
 
 1. For each in-scope **PR plan** row, detect `_TBD_` outside fenced code in §§5–8 / deploy where applicable, or run **`plan-ws-completeness.mjs`** from **`HOSTING_ROOT`** (§ *Hosting repo cwd for scripts (canonical)* in [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc)):
 
