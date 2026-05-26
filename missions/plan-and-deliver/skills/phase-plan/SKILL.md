@@ -67,7 +67,7 @@ Invocation context (mission dispatch and structured choices):
 - Natural language: populate / draft / fill the phase plan body.
 - Immediately after **`new-plan`** ignition when the parent dual-title is **`Delivery phases`** — the usual next step on the new child stub.
 
-The **developer** picks the next move via **AskQuestion** or a **numbered** list you present.
+The **developer** picks the next move per **30_planning-target-resolution** § *Sedea input channel*.
 
 ## Step 1 — Identify the target plan and verify it's a phase plan stub
 
@@ -75,7 +75,7 @@ The skill operates on a **target** `.plan.md` resolved before this skill runs, p
 
 When spawned by `new-plan`, `targetPlanPath`, `targetPlanSlug`, `parentPlanPath`, `parentPlanSlug`, and `parentIndex` are already locked. Treat missing or conflicting values as a spawn-contract failure: stop with `failure` or `partial` and report the missing field. Do not fall back to IDE focus or free-form target discovery in spawned mode.
 
-If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot; let the developer pick the lane via **AskQuestion** or numbered options, then continue.
+If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot (information-only turn); in a **separate** turn, collect the lane pick via **AskQuestion** or **`MC_ASKQUESTION_V1`** per **30_planning-target-resolution** § *Sedea input channel*, then continue.
 
 Acknowledge in one line: *"Target plan: `<slug>`."*
 
@@ -363,22 +363,20 @@ End with:
 
 1. A **file link** — absolute `file://` path to the target `.plan.md` under `.sedea/operations/.../plans/...`.
 2. The parent's indicative decomposition line for this phase: **`<Delivery phases | PR breakdown>`** (from step 3a).
-3. **Structured route options** (use **AskQuestion** when waiting for the developer) — numbered choices naming the **protocol branch** to run next.
+3. **Structured route options** — when waiting for the developer, invoke **AskQuestion** or **`MC_ASKQUESTION_V1`** with one `option` per protocol branch (brief `label`; detail in `prompt`). Example `options`:
 
-Suggested options (adapt labels to context):
-
-1. **Run `delivery-phases`** protocol branch — draft the § 5 **list** as child phases (`Delivery phases` heading).
-2. **Run `pr-breakdown`** protocol branch — draft the § 5 **list** as PR breakdown (the branch gates **Delivery phases** vs multi-PR vs single-PR `PR breakdown`). Align with **`### Decomposition assessment`** when the choice disagrees with the parent's hint.
-3. **Revise a section** — the developer names § N and feedback; you apply one focused `StrReplace` and echo. For assessment-only edits, anchor on `## 4. Changes` … `### Decomposition assessment`.
-4. **Commit plans** — remind the developer to commit when the body reads cleanly; this skill does **not** run git.
+- **`delivery-phases`** — draft the § 5 **list** as child phases (`Delivery phases` heading).
+- **`pr-breakdown`** — draft the § 5 **list** as PR breakdown (gates **Delivery phases** vs multi-PR vs single-PR `PR breakdown`). Align with **`### Decomposition assessment`** when the choice disagrees with the parent's hint.
+4. **Revise a section** — the developer names § N and feedback; you apply one focused `StrReplace` and echo. For assessment-only edits, anchor on `## 4. Changes` … `### Decomposition assessment`.
+5. **Commit plans** — remind the developer to commit when the body reads cleanly; this skill does **not** run git.
 
 **Stop** after presenting options — wait for the developer's reply. Do **not** chain **`delivery-phases`** or **`pr-breakdown`** inside this turn unless mission dispatch explicitly continues the session and route signal is clear.
 
 ## Step 5d — Follow-up turns
 
-When the developer asks to revise § N, re-read that section and apply edits via `StrReplace`; echo the result; offer the same numbered menu.
+When the developer asks to revise § N, re-read that section and apply edits via `StrReplace`; echo the result; offer the same **AskQuestion** route options on the next turn when a pick is required.
 
-When they choose decomposition (options 1 or 2), emit one child-spawn request for the chosen **protocol branch** with inputs `targetPlanPath`, `targetPlanSlug`, `parentAgentRole: "phase-plan-agent"`, `ledgerParent`, the current `### Decomposition assessment`, and `routeLock`. Do **not** impersonate the other skill's full procedure in the same turn; announce that this agent is waiting if the result is needed to keep the mission ledger current.
+When they choose **`delivery-phases`** or **`pr-breakdown`** via **AskQuestion**, emit one child-spawn request for the chosen **protocol branch** with inputs `targetPlanPath`, `targetPlanSlug`, `parentAgentRole: "phase-plan-agent"`, `ledgerParent`, the current `### Decomposition assessment`, and `routeLock`. Do **not** impersonate the other skill's full procedure in the same turn; announce that this agent is waiting if the result is needed to keep the mission ledger current.
 
 ## Step 5e — Aggregate downstream result
 

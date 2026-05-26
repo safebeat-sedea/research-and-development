@@ -69,11 +69,11 @@ Invocation context examples (mission dispatch and structured choices):
 - Natural language: scaffold a new plan file …; expand list item **N** under a parent’s `Delivery phases` or `### PR list` (then usually **`phase-plan`** or **`pr-plan`** on the child path).
 - Free-form (“I need a plan for …”) — confirm scope, then **`new-plan`** standalone or indexed-child per **30_planning-target-resolution**.
 
-The **developer** selects continuation via **AskQuestion** or a **numbered** option you present.
+The **developer** selects continuation per **30_planning-target-resolution** § *Sedea input channel*.
 
 ## Indexed child spawn (parent list item **N**)
 
-This path applies when **before this skill runs** the parent `.plan.md` and the child index **N** are already resolved per **planning-target-resolution** (explicit path, snapshot choice, or mid-flow continuation after a numbered option). It expands one row from the parent’s dual-title section into its own plan file beside sibling plans.
+This path applies when **before this skill runs** the parent `.plan.md` and the child index **N** are already resolved per **planning-target-resolution** (explicit path, snapshot choice, or mid-flow continuation after an **AskQuestion** pick of list index **N**). It expands one row from the parent’s dual-title section into its own plan file beside sibling plans.
 
 When `mode: "indexed-child"` is supplied, treat the indexed path as mandatory and fail fast if any of `parentPlanPath`, `parentPlanSlug`, `index`, or `childKind` is missing. Do not fall back to free-form parent discovery in indexed-child mode; the upstream decomposition agent already locked the row, and guessing a parent would corrupt the plan tree.
 
@@ -238,7 +238,7 @@ Always write the sidecar. `parent:` required; use YAML `null` unquoted for a **t
    - `failure`, `aborted`, or `abandoned` → return the same status upstream with the child stub path and the populator errors; the upstream decomposition agent decides retry/defer/abandon for that row.
    - Missing or malformed populator outputs → return `partial` and keep the row open; silence is not completion.
 
-6. **Non-indexed spawns:** no populator handoff table — suggest filling stubs or choosing the next **protocol branch** via mission / numbered options.
+6. **Non-indexed spawns:** no populator handoff table — suggest filling stubs or choosing the next **protocol branch** via **AskQuestion** per **30_planning-target-resolution** § *Sedea input channel*.
 
 7. **Worktrees, broad `git` operations, and `## Child plans` on the parent** — owned by **`coding-session`**, **`plan-reconcile`**, and other cadence steps after this skill completes.
 

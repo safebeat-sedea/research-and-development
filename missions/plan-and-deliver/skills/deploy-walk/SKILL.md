@@ -132,7 +132,7 @@ Resolution order (highest confidence first):
 3. **Most recent agent recommendation.** The agent's last turn proposed a **deploy-walk** step command against a specific plan (e.g. *"Reply `deploy-walk present 4` when ready"*).
 4. **Single candidate in chat context.** Exactly one PR plan was read / referenced in the recent chat window — use it.
 5. **Multiple candidates.** Stop and use **AskQuestion** listing PR plans with at least one unchecked `[ ]` in their `## N. Deploy test plan`. The **developer** picks; subsequent commands stick with that plan.
-6. **No candidate.** Stop with: *"**deploy-walk** needs a target PR plan. Per **planning-target-resolution**, emit a fresh "Where we are now in the plan tree" snapshot, let the **developer** pick the lane (via **AskQuestion** or numbered options), then re-invoke."*
+6. **No candidate.** Stop with: *"**deploy-walk** needs a target PR plan. Per **planning-target-resolution**, emit a fresh "Where we are now in the plan tree" snapshot (information-only), then collect the lane pick via **AskQuestion** or **`MC_ASKQUESTION_V1`** (§ *Sedea input channel*), then re-invoke."*
 
 The IDE focused-file list (host-injected **open and recently viewed files** metadata) is **not** consulted.
 

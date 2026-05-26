@@ -229,7 +229,7 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
    2. **Ad-hoc task description** — Short blurb the agent uses to draft an ad-hoc PRD via **`ad-hoc-prd`** (see development-process § *PRD authoring — which path?* and protocol branches table — not **`create prd`** on the **`prd`** mission).
 3. Apply the branch for the confirmed choice (see **Next-step resolution** above). Do not engage downstream protocol branches from partial or ambiguous answers.
 
-**Out of scope for this step:** **`new-plan`** indexed-child expansion (and downstream **`phase-plan`** / **`pr-plan`**) — those use **AskQuestion** / numbered options and often a separate session command (not `plan and deliver` §1–2 PRD intake).
+**Out of scope for this step:** **`new-plan`** indexed-child expansion (and downstream **`phase-plan`** / **`pr-plan`**) — those use **AskQuestion** per **30_planning-target-resolution** § *Sedea input channel* and often a separate session command (not `plan and deliver` §1–2 PRD intake).
 
 **Referenced assets:** `.sedea/centers/research-and-development/docs/development-process.md`; `skills/ad-hoc-prd/SKILL.md`; `skills/master-plan/SKILL.md`.
 

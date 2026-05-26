@@ -16,7 +16,7 @@ Planning protocol branches act on a specific `.plan.md` under the **`.sedea/oper
 
 When a turn **requires a user reply** before you continue (pick a planning branch, confirm a target plan, choose list index **N** for **`new-plan`**), collect that pick through **AskQuestion** or **`MC_ASKQUESTION_V1`** per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](../../sedea/rules/2_ask-question-instructions.mdc). **Supersedes** the former *AskQuestion or numbered bullet list* option in this rule. Mission Control **AskQuestion** also exposes **free-form text** on the modal — use it for extra instruction alongside an `option` pick; do not reopen choices in prose chat.
 
-**Snapshot table (information-only).** The *Next viable moves* column may use **numbered rows** so the developer can read the plan tree in one glance. Those numbers are **reference labels** for the snapshot only — when a pick is required, the choosable paths live in **AskQuestion** `options`, not as a prose menu in the agent message.
+**Snapshot table (information-only).** The *Next viable moves* column may use **numbered rows** so the developer can read the plan tree in one glance. Those numbers are **reference labels** for the snapshot only — when a pick is required, offer the same moves as **AskQuestion** `options` (§ above).
 
 **Transcript boundary.** When the snapshot is long, use two assistant turns per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](../../sedea/rules/2_ask-question-instructions.mdc) § *Mission Control transcript boundary*: (1) snapshot only; (2) **AskQuestion** only with one `option` per move (brief `label`; full branch + target in `prompt` if needed).
 
@@ -162,7 +162,7 @@ Snapshots should respect **coding-session** pre-worktree validation and the work
 
    When not in a worktree, use the PR plan path explicitly in play. Do **not** set script paths from `ROOT="$(git rev-parse --show-toplevel)"` in a hosting repo worktree alone.
 
-3. If incomplete **and** that plan is the default **coding-session** anchor, the **first** numbered option must be finishing the PR plan sections; list **coding-session** only after completeness or with an explicit override label consistent with the **coding-session** skill.
+3. If incomplete **and** that plan is the default **coding-session** anchor, the **first** **AskQuestion** `option` must be finishing the PR plan sections; list **coding-session** only after completeness or with an explicit override label consistent with the **coding-session** skill.
 
 When every in-scope PR plan passes completeness, normal ordering resumes.
 

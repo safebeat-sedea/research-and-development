@@ -66,13 +66,13 @@ The procedure below is a hard contract — do **not** skip steps, re-order them,
 - Natural language: decompose into PRs, draft PR breakdown, PR breakdown.
 - After **`master-plan`** when the developer has already chosen **`PR breakdown`** for § 6 — **`master-plan`** spawns this skill; this skill drafts § 6 and owns indexed PR-child spawning for that branch.
 
-The **developer** picks the next move via **AskQuestion** or a **numbered** list you present.
+The **developer** picks the next move per **30_planning-target-resolution** § *Sedea input channel*.
 
 ## Step 1 — Identify the target plan and verify stage
 
 The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`30_planning-target-resolution.mdc`](../../../../rules/30_planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts (e.g. *Target plan: `<slug>` (from prior structured choice).*). Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative. Do **not** infer the target from the IDE’s focused-file list alone.
 
-If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot; let the developer pick the lane via **AskQuestion** or numbered options, then continue.
+If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot (information-only turn); in a **separate** turn, collect the lane pick via **AskQuestion** or **`MC_ASKQUESTION_V1`** per **30_planning-target-resolution** § *Sedea input channel*, then continue.
 
 Acknowledge in one line: *"Target plan: `<slug>`."*
 
@@ -81,7 +81,7 @@ Acknowledge in one line: *"Target plan: `<slug>`."*
 - **`kind: roadmap_topic`** or the file is clearly a **roadmap topic** → **stop** with: *"This is a roadmap topic. Roadmap topics do not decompose into PRs here. Open a child Master Plan and run **`pr-breakdown`** on that plan."*
 - Body has **`## Single concern`** (PR plan template) → **stop** with: *"This is a PR plan. PR plans are leaves; they are not decomposed with **`pr-breakdown`**. Use **`coding-session`** or **`pr-review`** as appropriate."*
 - Master Plan or Phase plan → proceed.
-- Ambiguous (stub with no distinguishing sections yet) → use **AskQuestion** (or a short numbered list): Master Plan vs Phase plan vs PR plan; if not Master or Phase plan, **stop**.
+- Ambiguous (stub with no distinguishing sections yet) → use **AskQuestion** or **`MC_ASKQUESTION_V1`** with one `option` per stage (Master Plan, Phase plan, PR plan); if not Master or Phase plan, **stop**.
 
 Acknowledge: *"Stage: <Master Plan | Phase plan>; proceeding."*
 
@@ -131,7 +131,7 @@ When the skill was spawned with `routeLock: "pr-breakdown"` (or with `parentAgen
 - If it recommends `PR breakdown` multi-PR, or the recommendation is ambiguous but PR-ready, use `pr_breakdown_multi`.
 - If it strongly recommends `Delivery phases`, stop and surface the conflict to the developer: continue with PR breakdown anyway, switch to `delivery-phases`, or revise the assessment. Do not silently bounce to `delivery-phases`.
 
-When no upstream route lock exists, use the **AskQuestion** tool (or an equivalent numbered choice) to ask:
+When no upstream route lock exists, use **AskQuestion** or **`MC_ASKQUESTION_V1`** to ask:
 
 > How should this plan recurse next? Use **`### Decomposition assessment`** as the default if you agree with it.
 
@@ -280,7 +280,7 @@ Only return `continuationStatus: "terminal"` when every row is explicitly `compl
 
 ## One primary choice per turn — surface observations
 
-Match the discipline in **`master-plan`**, **`delivery-phases`**, and **`phase-plan`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (Changes bullets that do not map to a PR, sequencing tension, assessment vs draft mismatch), list short **numbered observations** in the chat reply. Offer **AskQuestion** or a **numbered list** for accepting or skipping flags.
+Match the discipline in **`master-plan`**, **`delivery-phases`**, and **`phase-plan`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (Changes bullets that do not map to a PR, sequencing tension, assessment vs draft mismatch), list short **numbered observations** in the chat reply (information-only). When you need an explicit accept/skip decision on flags, use **AskQuestion** or **`MC_ASKQUESTION_V1`** with one `option` per flag plus **More details for option _**.
 
 ## Scope guard
 

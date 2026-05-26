@@ -61,13 +61,13 @@ The procedure below is a hard contract — do **not** skip steps, re-order them,
 - Natural language: decompose phases, draft delivery phases, phase decomposition.
 - After **`master-plan`** when the developer has already chosen **`Delivery phases`** over **`PR breakdown`** for § 6 — **`master-plan`** spawns this skill; this skill drafts § 6 and owns indexed phase-child spawning for that branch.
 
-The **developer** picks the next move via **AskQuestion** or a **numbered** list you present.
+The **developer** picks the next move per **30_planning-target-resolution** § *Sedea input channel*.
 
 ## Step 1 — Identify the target plan and verify stage
 
 The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`30_planning-target-resolution.mdc`](../../../../rules/30_planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts (e.g. *Target plan: `<slug>` (from prior structured choice).*). Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative. Do **not** infer the target from the IDE’s focused-file list alone.
 
-If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot; let the developer pick the lane via **AskQuestion** or numbered options, then continue.
+If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot (information-only turn); in a **separate** turn, collect the lane pick via **AskQuestion** or **`MC_ASKQUESTION_V1`** per **30_planning-target-resolution** § *Sedea input channel*, then continue.
 
 Acknowledge in one line: *"Target plan: `<slug>`."*
 
@@ -76,7 +76,7 @@ Acknowledge in one line: *"Target plan: `<slug>`."*
 - **`kind: roadmap_topic`** or the file is clearly a **roadmap topic** (top-level grouping of Master Plans) → **stop** with: *"This is a roadmap topic. Roadmap topics do not decompose into delivery phases here. Open a child Master Plan under this topic and run **`delivery-phases`** on that plan."*
 - Body has **`## Single concern`** (PR plan template) → **stop** with: *"This is a PR plan. PR plans are leaves; they are not decomposed with **`delivery-phases`**. Use **`coding-session`** or **`pr-review`** as appropriate."*
 - Master Plan (`## 4. Architectural design` + dual-title `## 6. …`) or Phase plan (`## 1. Background` … `## 5. …` dual-title) → proceed.
-- Ambiguous (stub with no distinguishing sections yet) → use **AskQuestion** (or a short numbered list): Master Plan vs Phase plan vs PR plan; if not Master or Phase plan, **stop**.
+- Ambiguous (stub with no distinguishing sections yet) → use **AskQuestion** or **`MC_ASKQUESTION_V1`** with one `option` per stage (Master Plan, Phase plan, PR plan); if not Master or Phase plan, **stop**.
 
 Acknowledge: *"Stage: <Master Plan | Phase plan>; proceeding."*
 
@@ -108,7 +108,7 @@ Acknowledge the state in one line.
 
 When the skill was spawned with `routeLock: "delivery-phases"` (or with `parentAgentRole: "master-plan-agent"` after the developer chose **Delivery phases**), the decision is already made upstream. Acknowledge *"Route locked: Delivery phases."* and skip directly to Step 5. Do not ask the developer to choose `Delivery phases` vs `PR breakdown` again.
 
-When no upstream route lock exists, use the **AskQuestion** tool (or an equivalent numbered choice) to ask:
+When no upstream route lock exists, use **AskQuestion** or **`MC_ASKQUESTION_V1`** to ask:
 
 > How does this plan decompose? Most features use a phase layer; small work (on the order of a few PRs) can skip the phase layer and break directly into PRs.
 
@@ -217,7 +217,7 @@ Only return `continuationStatus: "terminal"` when every row is explicitly `compl
 
 ## One primary choice per turn — surface observations
 
-Match the discipline in **`master-plan`** and **`phase-plan`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (diagram vs phase boundary, duplicate wording, phase count vs assessment), list short **numbered observations** in the chat reply; the developer addresses them on the next turn or folds them into a revise pass. Offer **AskQuestion** or a **numbered list** for accepting or skipping flags.
+Match the discipline in **`master-plan`** and **`phase-plan`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (diagram vs phase boundary, duplicate wording, phase count vs assessment), list short **numbered observations** in the chat reply (information-only); the developer addresses them on the next turn or folds them into a revise pass. When you need an explicit accept/skip decision on flags, use **AskQuestion** or **`MC_ASKQUESTION_V1`** with one `option` per flag plus **More details for option _**.
 
 ## Scope guard
 

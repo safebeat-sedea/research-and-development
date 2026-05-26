@@ -443,7 +443,7 @@ Do **not** draft section 6 (`Delivery phases | PR breakdown`) or section 7 (Cave
 
 ## Step 7 — Next moves (AskQuestion + spawn)
 
-§§ 1–5 are drafted (including **`### Complexity score`**); §6 and §7 stay `_TBD_` until the user chooses next moves. Per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** and Sedea conduct, the user picks via **`AskQuestion`** / **`MC_ASKQUESTION_V1`** or a **numbered list** in chat; you execute **one** chosen action per turn.
+§§ 1–5 are drafted (including **`### Complexity score`**); §6 and §7 stay `_TBD_` until the user chooses next moves. Collect each next-move pick per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Sedea input channel* (snapshot first, then **AskQuestion** on the next turn when a pick is required). Execute **one** chosen action per turn.
 
 §6 decomposition is owned by spawned **`delivery-phases`** / **`pr-breakdown`** agents (`AGENT_RUN_REQUEST_V1`). §7 **Caveats** is drafted **inline** in this skill when the user selects that option.
 
@@ -477,7 +477,7 @@ Always include **More details for option _** per conduct.
 
 ### Step 7c — One choice per turn
 
-Execute **only** what the user selected in **AskQuestion** (or the matching numbered pick). Multi-step work requires explicit multi-action approval in one user message.
+Execute **only** what the user selected in **AskQuestion** (or the matching **`option`** from **`MC_ASKQUESTION_V1`**). Multi-step work requires explicit multi-action approval in one user message.
 
 #### Route §6 decomposition (`route-6`)
 

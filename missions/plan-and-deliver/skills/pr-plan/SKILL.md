@@ -81,7 +81,7 @@ After step 5c option 4, **stop** this lane. The developer opens **`coding-sessio
 - Natural language: draft PR plan, populate PR plan body, fill per-PR §§ 1–4.
 - Immediately after **`new-plan`** ignition when the parent dual-title is **`PR breakdown`** — the usual next step on the new child stub.
 
-The **developer** picks the next move via **AskQuestion** or a **numbered** list you present.
+The **developer** picks the next move per **30_planning-target-resolution** § *Sedea input channel*.
 
 ## Step 1 — Identify the target plan and verify it's a PR plan stub
 
@@ -89,7 +89,7 @@ The skill operates on a **target** `.plan.md` resolved before this skill runs, p
 
 When spawned by `new-plan`, `targetPlanPath`, `targetPlanSlug`, `parentPlanPath`, `parentPlanSlug`, and `parentIndex` are already locked. Treat missing or conflicting values as a spawn-contract failure: stop with `failure` or `partial` and report the missing field. Do not fall back to IDE focus or free-form target discovery in spawned mode.
 
-If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot; let the **developer** pick the lane via **AskQuestion** or numbered options, then continue.
+If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot (information-only turn); in a **separate** turn, collect the lane pick via **AskQuestion** or **`MC_ASKQUESTION_V1`** per **30_planning-target-resolution** § *Sedea input channel*, then continue.
 
 Acknowledge in one line: *"Target plan: `<slug>`."*
 
