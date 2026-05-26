@@ -50,7 +50,7 @@ inputs:
     required: false
   upstreamSkill:
     type: string
-    description: Optional context label (developer dispatch, snapshot, planning skill). **pr-plan** does not spawn this skill.
+    description: Optional context label (developer dispatch, snapshot, pr-plan spawn, planning skill).
     required: false
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
@@ -76,17 +76,17 @@ After emitting the implementation session prompt(s), **stop** — do not `cd` in
 |---------|--------------|-----------------------------------|
 | §§ **1–4** | Drafted on the planning lane | Read for prompts and review; edit only when the developer revises the plan |
 | §§ **5–8** | **`_TBD_`** or optional speculative sketch | Substantive fill during implementation |
-| Handoff | Step 5c option 4 + `outputs.readyForImplementation` | Developer starts this skill on a **separate** lane — **`pr-plan`** does not emit **`AGENT_RUN_REQUEST_V1`** here |
+| Handoff | **`pr-plan`** §5d **`AGENT_RUN_REQUEST_V1`** or detached entry | Spawned child lane or developer-started detached session |
 
 See **`pr-plan/SKILL.md`** § *Handoff to coding-session*.
 
 ## Plan-anchored context (optional inputs)
 
-The developer starts **`coding-session`** on a detached lane, via mission dispatch, or after **`pr-plan`** step 5c option 4 (menu handoff only — not a spawn from **`pr-plan`**).
+The developer starts **`coding-session`** on a detached lane, via mission dispatch, or as a **spawned child** of **`pr-plan`** (§5d).
 
-When `targetPlanPath` / `targetPlanSlug` are known (message, `@` path, snapshot, or spawn `inputs`), use them for sidecar writes and the session prompt.
+When `targetPlanPath` / `targetPlanSlug` are known (message, `@` path, snapshot, or spawn `inputs`), use them for sidecar writes and the session prompt. When spawned from **`pr-plan`**, treat spawn `inputs` and `initiatingPrompt` as authoritative — do not re-resolve from documentation placeholders.
 
-If repo targets are missing, stop and ask the developer with **AskQuestion** to choose or provide the hosting repo(s). Do not infer from focused files alone.
+If `upstreamSkill` is **`pr-plan`** and `repoPath` is present in `inputs`, use it as hosting repo root. If repo targets are missing, stop and ask the developer with **AskQuestion** to choose or provide the hosting repo(s). Do not infer from focused files alone.
 
 ## Implementation consent (two layers)
 
@@ -94,7 +94,7 @@ Only **two** developer-consent layers apply before worktrees. Do not stack extra
 
 | Layer | Where decided | Output field | This skill |
 |-------|---------------|--------------|------------|
-| **1 — Planning handoff** | **`pr-plan`** step 5c (especially option 4) | `readyForImplementation` | Hint only; **do not** re-ask. Does **not** authorize worktrees or advance **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §8 `phase` past `not-started`. |
+| **1 — Planning handoff** | **`pr-plan`** §5c **Start coding session** + §5d spawn `inputs` | `readyForImplementation` | Hint only; **do not** re-ask. Does **not** authorize worktrees or advance **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §8 `phase` past `not-started`. |
 | **2 — Worktree open** | [Worktree-open gate](#worktree-open-gate) below (one **AskQuestion**) | `developerApprovedImplementation` | Set `true` only after an authorizing choice in that gate. |
 
 **Not consent layers** (validation / setup only — no separate approval **AskQuestion**):
@@ -176,7 +176,14 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
    - Prefix sibling paths with the repo directory basename (see **Worktree setup** in `.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`).
    - Always branch from **`origin/main`**, not **`main`** (same failure mode as in **efficient-pr-shipping**).
    - Branch naming: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Branch naming* (primary **hosting repo** → Sedea **`7_stacked-pr-branch-naming`**; **hosting repo worktree** → `feat/`, `improve/`, `fix/`, …).
-   - Refuse dirty hosting repo trees before creating a worktree: run `git status --porcelain` in each repo and stop on any output. Do not stash, commit, discard, or clean the user's WIP.
+   - **Dirty-tree gate (hosting repo)** — Before `git worktree add`, run `git status --porcelain` in the repo that receives the worktree (`HOSTING_ROOT` when branching from the primary hosting repo).
+     - **Submodule gitlink-only (non-blocking)** — When the active hosting repo pins `.sedea/` via git submodules (see [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Submodule pins*, for example **`sedea-ai/app`**), and **every** porcelain line is a **modified submodule gitlink** under `.sedea/` (paths under `.sedea/centers/` or `.sedea/operations/`), verify pointer-only drift before proceeding:
+       ```bash
+       git diff --stat -- <submodule-path>
+       ```
+       **Proceed** when each affected submodule shows only a **2 insertions(+), 2 deletions(-)** gitlink change and no other paths appear in that stat. Routine submodule pin updates do **not** block worktree creation.
+     - **Still blocking** — **Stop** when porcelain includes **any** path outside those `.sedea/` submodule gitlink lines (for example `extensions/`, `packages/`, other tracked application source), when `git diff --stat` shows content changes inside a submodule (not pointer-only), or when the hosting repo has non-empty porcelain that is not explained by allowed submodule gitlinks alone.
+     - Do **not** stash, commit, discard, or clean the user's WIP to clear a blocking dirty tree.
    - If `baseBranch` input is supplied, it must be a remote branch ref such as `origin/main`; do not accept a local-only branch for worktree creation.
 
 2. **Record the session on the plan** (see [Sidecar state](#sidecar-state)). From the **hosting repo root**:
@@ -203,7 +210,7 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
 When the plan’s **Worktree setup** lists two or more repos, or the user asks for a cross-repo session:
 
 1. For **each** repo, `git worktree add` with the **same branch name** (unless the plan says otherwise).
-   - Validate every repo before creating any worktree. If one repo is dirty or missing the requested base branch, stop before creating a partial multi-repo session.
+   - Validate every repo before creating any worktree using the same **Dirty-tree gate** as § *Generic flow* step 1. If one repo is blocking-dirty or missing the requested base branch, stop before creating a partial multi-repo session.
 
 2. Optionally create a **`.code-workspace`** file listing each worktree folder with absolute `path` values — use only if your team uses that layout; otherwise attach **each** worktree root with **`sedea_add_worktree_folder`** in turn.
 

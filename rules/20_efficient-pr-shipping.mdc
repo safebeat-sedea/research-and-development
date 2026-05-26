@@ -199,6 +199,10 @@ Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetc
 - Include cleanup for after PRs merge: for each retired worktree, **`sedea_remove_worktree_folder`** with that worktree's **absolute** path (Mission Control first), then **`git worktree remove`** and **`git worktree prune`**.
 - In the **Worktree setup** narrative, after each `git worktree add`, tell the Squad Leader to invoke **`sedea_add_worktree_folder`** with that worktree's **absolute** path before spawning the **coding-session** agent.
 
+### Dirty hosting repo before `git worktree add`
+
+[`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Generic flow* runs a **dirty-tree gate** before `git worktree add`. On hosting repos that pin `.sedea/` via git submodules ([`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Submodule pins*), **submodule gitlink-only** porcelain under `.sedea/centers/` and `.sedea/operations/` does **not** block worktrees when `git diff --stat -- <submodule-path>` shows pointer-only drift (2 +/- per submodule). All other non-empty porcelain still blocks.
+
 ## Commit and push cadence
 
 How to run the full cadence:
