@@ -99,6 +99,22 @@ Populate `outputs` from the skill’s **`## Completion (spawned)`** and any refe
 
 **Host protocol:** emit **exactly one** line — sentinel and **valid JSON on the same line** (no fence, no text after the JSON). Required keys: `version` (1), `correlationId` (spawn UUID), `status`, `summary`, `outputs`, `errors` (`[]` when none). Full format: **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line* and **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Agent session closure*.
 
+## Universal spawn preflight (all plan-and-deliver spawners)
+
+Run this checklist **before** every `AGENT_RUN_REQUEST_V1` emit on any lane (Squad Leader §§3/§5, **master-plan** Step 7, **pr-plan** §5d, ship-chain spawns). Host behavior is in **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Agent-to-agent spawn protocol*; this section is the **plan-and-deliver** operator checklist.
+
+| Step | Check |
+|------|--------|
+| 1 | Read the target **`SKILL.md`** frontmatter **`inputs`** map. Every key with **`required: true`** must appear in the spawn line’s **`inputs`** object with a non-empty value (unless the skill documents an explicit empty default). |
+| 2 | **`inputs` keys must match frontmatter names exactly** (camelCase). Do **not** invent aliases (for example `featurePlanning` when the skill requires **`featurePlanningTitle`**). |
+| 3 | Top-level spawn JSON includes **`version`** (`1`), a **new** **`correlationId`** (UUID), workspace-relative **`skillPath`** ending in **`/SKILL.md`**, **`name`**, dispatch-unique **`slug`**, **`description`**, and **`inputs`** (object — use `{}` only when the skill allows no required keys). |
+| 4 | Optional keys only when needed: **`warmUpRules`** (repo-relative paths merged with skill frontmatter), **`initiatingPrompt`** (handover prose). |
+| 5 | Emit **one physical line**: sentinel + JSON on the **same** line. No markdown fences, no `{...}` placeholders, no prose after the JSON — the host must parse it. |
+| 6 | **`skillPath`** must resolve under **`.sedea/centers/research-and-development/`** for this mission’s skills (or the correct center path when spawning cross-center). |
+| 7 | On failure (no child lane, immediate child validation error, or silent host reject): stop, name the failing checklist row, fix keys/paths/JSON, mint a **new** `correlationId`, and re-emit — do not guess. |
+
+Skill-specific **`inputs`** tables and paste-ready examples live in each **`SKILL.md`** (for example **`master-plan`** § *Spawn contract*). **`plan and deliver`** Squad Leader §5 adds a **master-plan** seed → **`inputs`** mapping before the §5 spawn step.
+
 ### Terminal stop (normative for every spawned skill)
 
 **This section is the canonical stop rule** for all **`## Completion (spawned)`** blocks in this mission, even when an individual `SKILL.md` ends that section after the host-protocol paragraph without repeating the sentence below.

@@ -48,6 +48,59 @@ The agent has enough context after step 4 to draft §§ 1–5 without further in
 
 The procedure below is a hard contract — do **not** skip steps, re-order them, or start drafting before steps 1–5 are complete. Skipping a step here is the difference between a high-quality Master Plan and one that drifts from the documented process.
 
+## Spawn contract (`AGENT_RUN_REQUEST_V1`)
+
+Cross-check every emit against **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`** § *Universal spawn preflight* before the host parses the line.
+
+### Inbound — Squad Leader → **master-plan** (`plan and deliver` §5)
+
+The **Squad Leader** must pass **`inputs`** keys that match this skill’s frontmatter **exactly** (see **`plan.mdc`** §5 *Spawn preflight* for the §4 seed → **`inputs`** map).
+
+| `inputs` key | Required | Notes |
+|--------------|----------|--------|
+| `seedBlock` | yes | Full compiled seed block text |
+| `featurePlanningTitle` | yes | Human title — **not** `featurePlanning` |
+| `prdRef` | yes | Readable PRD URL, `@path`, or absolute path |
+| `parent` | yes | Parent slug, `@path`, plan path, or `null` |
+| `related` | no | Array; use `[]` when §4 has no related docs |
+
+**Valid example (illustrative — replace UUID, paths, and seed text):**
+
+```text
+AGENT_RUN_REQUEST_V1 {"version":1,"correlationId":"00000000-0000-4000-8000-000000000001","skillPath":".sedea/centers/research-and-development/missions/plan-and-deliver/skills/master-plan/SKILL.md","name":"Master plan","slug":"master-plan-harden-spawn-example","description":"Draft Master Plan from PRD seed","inputs":{"seedBlock":"Feature planning: \"Example feature\"\nPRD: @/path/to/example.prd.md\nParent: null","featurePlanningTitle":"Example feature","prdRef":"/path/to/example.prd.md","parent":"null","related":[]}}
+```
+
+### Outbound — **master-plan** → **`delivery-phases`** / **`pr-breakdown`** (Step 7c)
+
+When the user selects **Route §6 decomposition**, emit **one** spawn line per Step 7c with **`inputs`** required by the target skill’s frontmatter. Minimum set for both decomposition skills:
+
+| `inputs` key | Value |
+|--------------|--------|
+| `targetPlanPath` | Absolute path to this Master Plan `.plan.md` |
+| `targetPlanSlug` | Slug from filename |
+| `parentAgentRole` | `"master-plan-agent"` |
+| `ledgerParent` | This plan’s slug |
+| `complexityBand` / `complexityScore` | From §5 **`### Complexity score`** when present |
+| `decompositionAssessment` | Full **`### Decomposition assessment`** block text when present |
+| `routeLock` | `"delivery-phases"` or `"pr-breakdown"` per the route choice |
+
+**Valid example — `delivery-phases` (illustrative):**
+
+```text
+AGENT_RUN_REQUEST_V1 {"version":1,"correlationId":"00000000-0000-4000-8000-000000000002","skillPath":".sedea/centers/research-and-development/missions/plan-and-deliver/skills/delivery-phases/SKILL.md","name":"Delivery phases","slug":"delivery-phases-example-slug","description":"Decompose Master Plan into delivery phases","inputs":{"targetPlanPath":"/absolute/path/to/master.plan.md","targetPlanSlug":"master_example_slug","parentAgentRole":"master-plan-agent","ledgerParent":"master_example_slug","routeLock":"delivery-phases"}}
+```
+
+### Failure modes (operator recovery)
+
+| Symptom | Likely cause | Fix |
+|---------|----------------|-----|
+| No child lane opens | Malformed JSON or sentinel not on its own line | Re-emit one parseable line; no fences or trailing prose |
+| No child lane | Wrong or missing `skillPath` | Workspace-relative path ending in `…/SKILL.md` |
+| Child bootstrap rejects `inputs` | Renamed key (`featurePlanning`, `prd`, `seed`) | Use frontmatter names (`featurePlanningTitle`, `prdRef`, `seedBlock`) |
+| Child bootstrap rejects `inputs` | Missing required field | Compile §4 seed / target plan path before spawn |
+| Duplicate spawn ignored | Reused `slug` in same dispatch | New unique `slug` + new `correlationId` |
+| Parent lane silent after emit | Host rejected payload (PR 2 diagnostics) | Fix keys per table; retry — do not advance protocol until a child lane exists or the developer abandons |
+
 ## Step 1 — Optional one-line model audit (non-blocking)
 
 If this session's agent/system context exposes a **model identifier** (and any thinking-depth flags), state them in **one line** for the user's audit trail — **not** the IDE model picker, which you cannot see reliably.

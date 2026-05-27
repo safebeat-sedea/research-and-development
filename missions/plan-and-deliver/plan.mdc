@@ -348,10 +348,22 @@ Related (optional):
 **Procedure**
 
 1. Compile the **Master Plan agent** input from the §4 seed.
-2. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Master Plan agent** using the `master-plan` skill path and compiled seed.
-3. Announce that the **Squad Leader** is waiting because later protocol steps need the produced plan path and complexity result.
-4. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId`.
-5. Validate that returned outputs include a readable Master Plan path, complexity band, continuation owner/status, and ledger-shaped arrays (`activeLanes`, `openLedgerEntries`, `spawnedPlans`, `remainingTasks`) before continuing.
+2. **Spawn preflight (mandatory before emit).** Read **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/master-plan/SKILL.md`** frontmatter **`inputs`** and **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`** § *Universal spawn preflight*. Build the spawn **`inputs`** object with **exact** keys:
+
+   | `inputs` key | Source |
+   |--------------|--------|
+   | `seedBlock` | Full §4 seed block text (`Feature planning`, `PRD`, `Parent`, optional `Related`) |
+   | `featurePlanningTitle` | Title from §4 / PRD heading — **not** `featurePlanning` |
+   | `prdRef` | Original PRD link or `@path` from §2/§3 |
+   | `parent` | Resolved `Parent` slug, `@path`, absolute plan path, or `null` |
+   | `related` | Array from §4 `Related` entries, or `[]` when none |
+
+   **Stop** and surface a one-line fix list when any required key is missing, renamed, or nested under the wrong parent key. Do **not** emit `AGENT_RUN_REQUEST_V1` until preflight passes.
+
+3. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Master Plan agent** using the `master-plan` skill path, a **new** `correlationId`, dispatch-unique `slug`, and the preflight **`inputs`** from step 2. See **`master-plan/SKILL.md`** § *Spawn contract* for a valid example line and failure modes.
+4. Announce that the **Squad Leader** is waiting because later protocol steps need the produced plan path and complexity result.
+5. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId`.
+6. Validate that returned outputs include a readable Master Plan path, complexity band, continuation owner/status, and ledger-shaped arrays (`activeLanes`, `openLedgerEntries`, `spawnedPlans`, `remainingTasks`) before continuing.
 
 ### 6. Acknowledge Master Plan status
 
