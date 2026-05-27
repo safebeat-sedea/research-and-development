@@ -24,7 +24,7 @@ Squad Leader steps **§3** and **§5** and downstream decomposition agents run t
 | `pr-breakdown` | Master Plan agent | Same as delivery-phases |
 | `new-plan` | decomposition agents | Register child plan path/slug per row index |
 | `phase-plan` | `new-plan` / decomposition | Populator lane; route fields for next branch |
-| `pr-plan` | `new-plan` / decomposition | Layer 1: `readyForImplementation`, `implementationHandoffStatus`; does not spawn **`coding-session`** |
+| `pr-plan` | `new-plan` / decomposition | Layer 1: `readyForImplementation`, `implementationHandoffStatus`; may spawn **`coding-session`** after **AskQuestion** **Start coding session** (§5d) |
 
 Field-level `outputs` and `continuationStatus` rules: each skill’s **`## Completion (spawned)`**.
 
@@ -35,7 +35,7 @@ Field-level `outputs` and `continuationStatus` rules: each skill’s **`## Compl
 | 1 — Planning handoff | `pr-plan` | `readyForImplementation`, `implementationHandoffStatus` — does **not** advance §8 `phase` past `not-started` |
 | 2 — Worktree open | `coding-session` | `developerApprovedImplementation` after **`plan-ws-completeness.mjs`** passes or override in the worktree-open gate |
 
-**`pr-plan` → `coding-session`:** sequential skills on **different lanes**. **`pr-plan`** drafts §§ 1–4 and may sketch §§ 5–8; **`coding-session`** owns implementation, §§ 5–8 fill, and ship execution. Step 5c option 4 is a **menu handoff** — not **`AGENT_RUN_REQUEST_V1`**. See **`pr-plan/SKILL.md`** § *Handoff to coding-session* and **`coding-session/SKILL.md`** § *Relationship to pr-plan*.
+**`pr-plan` → `coding-session`:** sequential skills on **different lanes**. **`pr-plan`** drafts §§ 1–4 and may sketch §§ 5–8; after **AskQuestion** **Start coding session**, **`pr-plan`** emits **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** (§5d). The **child lane** then owns worktrees, workspace attach, **implementation in the worktree** (default), §§ 5–8 fill, and ship execution — not prompt-only handoff unless **`promptOnly: true`** or **Defer implementation**. Detached **`coding-session`** entry may use prompt-only or implement on that detached lane after layer 2. See **`pr-plan/SKILL.md`** § *Handoff to coding-session* and **`coding-session/SKILL.md`** § *Execution mode after worktree attach*.
 
 ## Ship spawn (detached / coding-session chain)
 
@@ -43,7 +43,7 @@ These skills run on **detached** or **nested** lanes (often **not** the Squad Le
 
 | Skill | Typical spawner | Outputs section | §8 ship phase hints |
 |-------|-----------------|-----------------|---------------------|
-| `coding-session` | Developer / mission dispatch | `## Implementation handoff result` (+ **`## Completion (inline)`** if same-lane) | Layer 2: `developerApprovedImplementation` after worktree-open gate only |
+| `coding-session` | Developer / mission dispatch; **`pr-plan`** spawn (default **spawned-lane** implement) | `## Implementation handoff result` (+ **`## Completion (inline)`** if same-lane) | Layer 2: `developerApprovedImplementation` after worktree-open gate; `shipPhase: implementing` when spawned child codes on lane (not prompt-only stop) |
 | `pre-pr-review` | `coding-session` | Step 8 — Report and result | `pre-pr-review`; `recommendation: go` |
 | `create-pr` | `coding-session` | `## Result contract` (+ lifecycle sections) | `pr-open`; `prUrl`, `prNumber` |
 | `deploy-walk` | Developer phrase, **`create-pr`** after merge, or detached dispatch | `## Spawned result contract` | `deploy-walk`; entry points in **development-process.md** § *Ship chain* |
@@ -92,7 +92,7 @@ After emitting **`AGENT_RESULT_RESPONSE_V1`**, **stop on that lane** for the cur
 | Skill | Explicit “Stop after the terminal line” in `## Completion (spawned)`? | Notes |
 |-------|------------------------------------------------------------------------|--------|
 | `author-prd` (prd mission) | Yes | Also forbids downstream planning spawns |
-| `pr-plan` | Yes | Also forbids **`coding-session`** spawn |
+| `pr-plan` | Yes | May spawn **`coding-session`** in §5d before terminal; one spawn per turn |
 | `master-plan` | Yes | Procedure stop before terminal when `continuationStatus: active`; Step 7 spawns on **later** user messages only |
 | `delivery-phases`, `pr-breakdown`, `new-plan`, `ad-hoc-prd` | Yes | Step 6 / write handoff **before** terminal line; see each skill § *Completion (spawned)* |
 | Ship chain (`coding-session`, `pre-pr-review`, `create-pr`, `deploy-walk`, `plan-reconcile`) | Yes | See each skill § *Completion (spawned)* |

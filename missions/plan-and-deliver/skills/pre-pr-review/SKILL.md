@@ -156,6 +156,7 @@ Report:
 3. Flags.
 4. Recommendation: `go` only when there are no `FAIL` rows.
 5. Coding-agent handback: what to fix next, with `Must`, `Should`, and `Defer` groups.
+6. **Deploy test plan (§7):** when the developer reported manual §7 smoke during review, list which numbered **Before deploy** / **After deploy** steps they said passed — the coding agent should flip those lines in `targetPlanPath` only after the developer **confirms each step** in session (see **`coding-session`** § *Deploy test plan confirmations*). This reviewer skill does **not** append `[x]` without that per-step confirmation.
 
 The handback is advisory until the developer approves the fix pass. Do not frame reviewer feedback as automatic authorization for **`coding-session`** to edit code. The coding agent must present the review result to the developer and wait for an explicit approval choice before applying `Must`, `Should`, or `Defer` items.
 

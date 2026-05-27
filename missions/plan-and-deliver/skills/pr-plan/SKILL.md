@@ -59,21 +59,21 @@ The agent has enough context after step 3 to draft §§ 1–4 from the parent's 
 
 The procedure below is a hard contract — do **not** skip steps or start drafting before the target is verified as a PR plan stub.
 
-## Handoff to `coding-session` (planning only)
+## Handoff to `coding-session` (spawned child lane)
 
-**`pr-plan`** and **`coding-session`** are **sequential skills on different lanes** — not parent/child spawn.
+**`pr-plan`** and **`coding-session`** are **sequential skills on different lanes**. After planning handoff approval, **`pr-plan`** emits **`AGENT_RUN_REQUEST_V1`** for **`coding-session`**; the child owns worktrees, workspace attach, and **implements** the PR plan on that lane (default **spawned implementation lane** — see **`coding-session`** § *Execution mode after worktree attach*).
 
 | Concern | **`pr-plan`** (this skill) | **`coding-session`** |
 |---------|---------------------------|----------------------|
 | Per-PR §§ **1–4** | Draft and maintain | Read; revise only when the developer returns to planning |
-| Per-PR §§ **5–8** | Default **`_TBD_`**; optional *speculative* sketch if the developer picks step 5 option 2 | Substantive fill during implementation; final text once code paths are known |
-| `readyForImplementation` | Set in `outputs` | Read as layer-1 hint only |
-| Worktrees, session prompt, ship chain | Out of scope | Owns |
-| Start **`coding-session`** | Step 5c option 4 names the next skill — **does not** emit **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** on this lane | Developer starts via detached lane, mission dispatch, or snapshot |
-
-After step 5c option 4, **stop** this lane. The developer opens **`coding-session`** elsewhere; layer 2 worktree approval happens there (**`coding-session`** § *Implementation consent*).
+| Per-PR §§ **5–8** | Default **`_TBD_`**; optional *speculative* sketch if the developer picks a fill option | Substantive fill during implementation; final text once code paths are known |
+| `readyForImplementation` | Set in `outputs` and passed in spawn `inputs` | Read as layer-1 hint only |
+| Worktrees, implementation, ship chain | Out of scope — spawn only | Owns (spawned-lane default) |
+| Start **`coding-session`** | Step **5d** after **AskQuestion** **Start coding session** (§5c) when §5a passes | Spawned child lane; layer 2 worktree-open gate runs there |
 
 **Signals (canonical):** **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Planning readiness vs ship* and § *Agent checklist (planning vs ship — do not conflate)* — `readyForImplementation` on this lane does **not** authorize code edits, worktrees, commit/push, or §8 `phase` past `not-started`.
+
+**Detached entry still valid:** The developer may still start **`coding-session`** via a new Mission Control session, natural language, or snapshot per **development-process.md** § *Start implementation (`coding-session` entry)* — without a **`pr-plan`** spawn.
 
 ## Trigger
 
@@ -326,26 +326,70 @@ However:
 
 - If § 4 **Considered & rejected** is `_TBD_`, add a non-blocking `remainingTasks` note for `coding-session`.
 - If parent link is blocked, keep `continuationStatus: "active"` until **`plan-reconcile`** repairs it or the upstream agent explicitly accepts the partial state.
-- Do not start `coding-session`; report readiness only.
+- Do not run worktrees or implementation on this lane; spawn **`coding-session`** only per §5d.
 
-### 5c — Hand back with next-move options
+### 5c — Hand back (information-only + AskQuestion)
 
-End with:
+**Transcript boundary:** One assistant turn with (1)–(2) only — no **AskQuestion** in the same message. A **separate** turn runs **AskQuestion** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**.
 
 1. A **`file://`** link to the target `.plan.md` under `.sedea/operations/.../plans/...`.
 2. One-line summary: *Drafted per-PR §§ 1–4; implementation readiness: `<ready|not ready>`; §§ 5–8 remain **`_TBD_`** for **`coding-session`** unless you request a fill sketch.*
-3. **Numbered options** (adapt labels):
 
-   1. **Revise § *N*** — The **developer** names the section and feedback; one focused `StrReplace`; echo.
-   2. **Pre-fill § 5 / § 6 / § 7 / § 8 (sketch)** — Draft a *starting* sketch from parent + § 3 context; label it speculative; § 7 must use numbered GFM **`1. [ ]`** lists and **`**Status:** drafted`** opener; apply **`.sedea/centers/research-and-development/docs/development-process.md`** § 7 *What NOT to include* and the italic fallback when empty. After accepting a § 7 sketch, run **4a-bis** if the capstone todo is still missing.
-   3. **Commit when ready** — Remind the **developer** to commit; this skill does **not** run `git`.
-   4. **Continue in `coding-session`** — Layer 1 only: sets planning handoff intent (`readyForImplementation` when checks pass). Opens a **separate** **`coding-session`** run; layer 2 is one worktree-open **AskQuestion** there (**Start implementation now** or **Start with incomplete plan (executive override)**) → `outputs.developerApprovedImplementation`. See **`coding-session`** § *Implementation consent (two layers)*.
+**Next turn — AskQuestion** (`modalTitle`: *PR plan — next move*). Required options (brief `label`; put detail in `prompt` when needed):
 
-**Stop** after this block — do not spawn or run **`coding-session`** on this lane.
+| Option id | Label |
+|-----------|--------|
+| `start-coding-session` | Start coding session |
+| `revise-section` | Revise a section |
+| `prefill-sections` | Pre-fill §§ 5–8 (sketch) |
+| `commit-reminder` | Commit when ready |
+| `defer` | Defer |
+| `more-details` | More details for option _ |
+
+- **`start-coding-session`** — Run §5d when §5a passes; if not ready, explain blockers in `remainingTasks` and do **not** spawn.
+- **`revise-section`** — Developer names § *N* and feedback; one focused `StrReplace`; echo; re-offer §5c.
+- **`prefill-sections`** — Same as former option 2 (speculative § 5–8 sketch); re-offer §5c.
+- **`commit-reminder`** — Remind the developer to commit; this skill does **not** run `git`; re-offer §5c.
+- **`defer`** — No spawn; set `implementationHandoffStatus: "deferred"` when reporting completion.
+
+**Stop** after §5c AskQuestion or after §5d spawn announcement — do not run **`coding-session`** procedures on this lane.
+
+### 5d — Spawn `coding-session` (after `start-coding-session`)
+
+Run only when the developer chose **`start-coding-session`** and §5a readiness passes (or they explicitly accept starting with known blockers — still run §5d but pass `readyForImplementation: false` and list blockers in `initiatingPrompt`).
+
+1. **Resolve paths** (all absolute; never documentation placeholders):
+   - `targetPlanPath` — absolute path to the target `.plan.md` on this lane.
+   - `targetPlanSlug` — slug from filename.
+   - `parentPlanPath` / `parentPlanSlug` / `parentIndex` — from steps 1–3 when known.
+   - `ledgerParent` — parent slug from sidecar `parent:` (not a placeholder string).
+   - `repoPath` — walk up from `targetPlanPath` until **`.sedea/centers/sedea/`** exists; use the parent of **`.sedea/`** as hosting repo root.
+2. **Build `initiatingPrompt`** — one short block: §1 single concern; §3 change-scope bullets; parent `### PR list` item **N**; `readyForImplementation` and §5a gaps; non-blocking `remainingTasks`.
+3. **Emit exactly one** child-spawn line (valid JSON on the same line; new UUID per spawn):
+
+   - `skillPath`: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`
+   - `name`: `Coding session`
+   - `slug`: `coding-session-<targetPlanSlug>` (unique per dispatch)
+   - `description`: Worktree and implementation handoff after pr-plan
+   - `inputs`: `targetPlanPath`, `targetPlanSlug`, `readyForImplementation`, `repoPath`, `ledgerParent`, `upstreamSkill: "pr-plan"`; include `parentPlanPath`, `parentPlanSlug`, `parentIndex` when known
+   - Optional `warmUpRules`: merge **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** if not already loaded from skill frontmatter
+
+4. Announce that this agent is waiting for the **`coding-session`** child result; **stop** — no second spawn in the same turn.
+5. Set `implementationHandoffStatus: "spawned-coding-session"` and record `spawnCorrelationId` matching the spawn request until the child terminal arrives.
+
+### 5e — Aggregate `coding-session` child result
+
+When Mission Control delivers **`AGENT_RESULT_RESPONSE_V1`** for the spawn `correlationId`:
+
+1. Match by `correlationId` first, then `outputs.targetPlanPath` / `outputs.targetPlanSlug`.
+2. Summarize for the developer: child status, whether worktrees were created, `developerApprovedImplementation`, `planCompleteness`, and `remainingTasks`.
+3. Copy `outputs.activeLanes`, `outputs.openLedgerEntries`, and child `remainingTasks` into this lane's result when reporting upstream.
+4. Do **not** treat child `developerApprovedImplementation: true` as permission to edit code on the **`pr-plan`** lane.
+5. Re-offer §5c **AskQuestion** when the developer may revise the plan or spawn again after a failed/partial child run.
 
 ## Step 5a — Follow-up turns
 
-On revise requests, re-read the section, `StrReplace`, echo, re-offer the step 5 menu.
+On revise requests, re-read the section, `StrReplace`, echo, re-offer the step 5c **AskQuestion** menu.
 
 On **fill** requests for § 5–8, draft the requested section with explicit *sketch* caveats; offer revise or accept; executor still owns final polish. After any fill, recompute implementation readiness and update the result contract.
 
@@ -357,9 +401,11 @@ Perform exactly what was chosen. List short **numbered observations** for gaps (
 
 **Owns:** target PR plan **body** §§ 1–4; **4a-bis** append-only capstone todo; implementation readiness assessment; optional **fill** sketches for § 5–8 when explicitly chosen.
 
-**Out of scope:** parent **`### PR list`** edits; parent **`Plan:`** wiring (**`plan-reconcile`**); frontmatter `name` / `overview` / `isProject` (except **4a-bis** append); **`AGENT_RUN_REQUEST_V1`** for **`coding-session`**; running **`coding-session`** on this lane; worktrees; `git`; Master / Phase templates (**`master-plan`**, **`phase-plan`**).
+**Out of scope:** parent **`### PR list`** edits; parent **`Plan:`** wiring (**`plan-reconcile`**); frontmatter `name` / `overview` / `isProject` (except **4a-bis** append); running **`coding-session`** procedures on this lane (worktrees, `git worktree`, MCP attach, implementation edits); Master / Phase templates (**`master-plan`**, **`phase-plan`**).
 
-Stop after the step 5 handoff block.
+**In scope for spawn:** one **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** per §5d after **AskQuestion** **`start-coding-session`** with real absolute paths.
+
+Stop after the step 5c **AskQuestion** turn, after §5d spawn announcement, or after §5e child summary — per terminal stop rules below.
 
 ## Completion (spawned)
 
@@ -373,15 +419,17 @@ Required `outputs` fields:
 - `outputs.parentPlanPath`, `outputs.parentPlanSlug`, `outputs.parentIndex`
 - `outputs.parentPlanLinkStatus` — `linked` | `blocked` | `unknown`
 - `outputs.readyForImplementation`, `outputs.implementationReadinessReasons`
-- `outputs.implementationHandoffStatus` — `not-offered` | `offered` | `continue-to-coding-session` (step 5c option 4 chosen); planning menu only — not `developerApprovedImplementation`
+- `outputs.implementationHandoffStatus` — `not-offered` | `offered` | `deferred` | `spawned-coding-session` | `coding-session-terminal` (child finished); not `developerApprovedImplementation`
+- `outputs.spawnCorrelationId` — UUID from §5d when `implementationHandoffStatus` is `spawned-coding-session` or until child terminal is merged
+- `outputs.codingSessionStatus` — echo child `status` when §5e applies
 - `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`
 - `outputs.continuationOwner`: `"pr-plan-agent"`
 - `outputs.continuationStatus`:
-  - `terminal` when `readyForImplementation: true`, parent link is trusted, handoff menu is complete (or out of scope), and no blocking `remainingTasks`
-  - `active` when parent link repair, fill sketches, or implementation handoff decision remains
+  - `terminal` when handoff menu is complete, no **`coding-session`** child is open, parent link is trusted, and no blocking `remainingTasks` (or developer deferred/abandoned)
+  - `active` when parent link repair, fill sketches, **`coding-session`** child lane is open, or §5c menu not yet offered
   - `terminal` with `readyForImplementation: false` only when upstream or developer marks the PR plan deferred, abandoned, or out of scope
 
-Stop after the terminal line. Do not spawn **`coding-session`** from this skill.
+Complete §5d spawn (when chosen) + wait announcement **before** the terminal line when spawning. Stop after the terminal line. Do not emit a second **`AGENT_RUN_REQUEST_V1`** in the same turn after the terminal line (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Completion (inline)
 

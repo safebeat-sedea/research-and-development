@@ -14,7 +14,7 @@ description: >-
   `deploy-walk <N> done` / `skip` / `block`, the chat is normal collaboration — the
   agent answers questions, runs commands, debugs; the bracketing is the only
   signal that matters. State lives in the plan file, not in chat memory, so
-  walks survive multi-day gaps and session summarization. Ambiguous targets or
+  walks survive multi-day gaps and session summarization. **Cross-skill:** when another skill (for example **`coding-session`**) receives ad-hoc “step *N* confirmed” for §7, it must apply the same plan-file update rules here — or the developer should invoke **`deploy-walk <N> done`**. Ambiguous targets or
   command mappings use **AskQuestion** (not freeform guessing). Use when the user
   says `deploy-walk present <N>`, `deploy-walk <N> done [: <note>]`, `deploy-walk <N> skip: <reason>`,
   `deploy-walk <N> block: <reason>`, `deploy-walk deployed [: <note>]`, or `deploy-walk status`.

@@ -24,13 +24,13 @@ When a turn **requires a user reply** before you continue (pick a planning branc
 
 | You are on… | Signal that fired | Safe next step | Do **not** |
 |-------------|-------------------|----------------|------------|
-| **`pr-plan`** or Squad Leader planning lane | `readyForImplementation: true` | Tell developer to start **`coding-session`** on a **detached** lane — **`.sedea/centers/research-and-development/docs/development-process.md`** § *Start implementation (`coding-session` entry)* | Open worktree, edit hosting repo code, or set §8 `phase` past `not-started` here |
+| **`pr-plan`** or Squad Leader planning lane | `readyForImplementation: true` | Offer **AskQuestion** **Start coding session** → spawn **`coding-session`** (§5d), or detached start per **development-process.md** § *Start implementation (`coding-session` entry)* | Open worktree, edit hosting repo code, or set §8 `phase` past `not-started` on the **`pr-plan`** lane |
 | **`coding-session`** (detached) | `plan-ws-completeness.mjs` exit 0 or override in worktree-open gate | Proceed with worktree + implementation | Assume planning handoff alone was enough |
 | **`coding-session`** (detached) | `developerApprovedImplementation: true` | Continue ship chain; nudge **Ship recap** on leader dispatch for §8 | Assume §8 auto-updated without recap or host sync |
 | **`coding-session`** after inline **`pr-review`** | PR comment triage finished on the coding lane | Nudge **Ship recap** on the leader dispatch (`shipPhase: pr-review`) | Assume host sync updated §8 — **`pr-review` is not host-synced** (§ *§8 ship ledger and inline `pr-review`* below) |
 | Squad Leader **`plan and deliver`** dispatch | Parsed **Ship recap** or host-sync message | Refresh §8 rows; then resolution gates | Close dispatch **`resolved`** while rows `open`/`blocked` without recap — **`plan.mdc`** §8 *§8 troubleshooting* |
 
-**Lane rule:** Planning skills (**`pr-plan`**, **`master-plan`**, decomposition tree) ≠ ship skills (**`coding-session`** → **`pre-pr-review`** → **`create-pr`** → …). **`pr-plan` does not spawn `coding-session`.**
+**Lane rule:** Planning skills (**`pr-plan`**, **`master-plan`**, decomposition tree) ≠ ship skills (**`coding-session`** → **`pre-pr-review`** → **`create-pr`** → …). **`pr-plan`** may spawn **`coding-session`** on a child lane (§5d); worktrees and implementation stay on the child.
 
 ## §8 ship ledger and inline `pr-review`
 
@@ -66,13 +66,13 @@ Three different signals appear in plan-and-deliver; advancing one does **not** a
 | **`plan-ws-completeness.mjs` exit 0** | Script on PR plan path | PR plan §§ 5–8 lack blocking `_TBD_` for worktree handoff | **`coding-session`** already running; PR open |
 | **`developerApprovedImplementation`** | **`coding-session`** after worktree-open gate | Layer-2 consent to implement on a worktree | Dispatch ship ledger auto-updated (leader §8 still needs recap) |
 
-**`pr-plan` does not spawn `coding-session`.** After **`pr-plan`**, the developer starts **`coding-session`** on a **detached** lane (phrase, snapshot, or new session). Do not implement on the **`pr-plan`** lane because `readyForImplementation` is true.
+**`pr-plan` → `coding-session`:** After **AskQuestion** **Start coding session**, **`pr-plan`** emits **`AGENT_RUN_REQUEST_V1`** with absolute `targetPlanPath` and `repoPath` (§5d). The child runs **`plan-ws-completeness.mjs`** and the worktree-open gate. Detached **`coding-session`** entry (phrase, snapshot, new session) remains valid without a spawn. Do not implement on the **`pr-plan`** lane because `readyForImplementation` is true.
 
 ### Agent checklist (planning vs ship — do not conflate)
 
 | Mistake | Correct behavior |
 |--------|------------------|
-| Edit hosting repo code on the **`pr-plan`** planning lane after `readyForImplementation: true` | **Stop** — developer starts **`coding-session`** on a **detached** lane; layer 2 worktree-open gate runs there |
+| Edit hosting repo code on the **`pr-plan`** planning lane after `readyForImplementation: true` | **Stop** — spawn **`coding-session`** (§5d) or start it on a **detached** lane; layer 2 worktree-open gate runs on the **`coding-session`** lane |
 | Open a worktree because **`pr-plan`** finished §§1–4 only | Run **`plan-ws-completeness.mjs`** (or documented override in **`coding-session`** worktree-open gate) — layer 1 is not enough |
 | Set Squad Leader §8 `phase` to `worktree` / `implementing` from **`pr-plan`** outputs alone | Advance §8 only after **`coding-session`** reports `developerApprovedImplementation: true` or a parsed **Ship recap** on the leader dispatch |
 | Run **`git commit`** / **`git push`** while still on a planning skill lane | Ship cadence is **`coding-session`** (or rule **20** on an implementation lane) — see rule **20** § *AskQuestion vs git commit/push* |
