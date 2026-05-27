@@ -344,7 +344,8 @@ Per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../R
 When using the legacy split, do **not** include **AskQuestion**, **`MC_ASKQUESTION_V1`**, **`AGENT_RUN_REQUEST_V1`**, or **`AGENT_RESULT_RESPONSE_V1`** in the recap-only message.
 
 1. A **`file://`** link to the target `.plan.md` under `.sedea/operations/.../plans/...`.
-2. One-line summary: *Drafted per-PR §§ 1–4; implementation readiness: `<ready|not ready>`; §§ 5–8 remain **`_TBD_`** for **`coding-session`** unless you request a fill sketch.*
+2. One-line summary: *Drafted per-PR §§ 1–4; implementation readiness: `<ready|not ready>`.*
+3. Planning handoff note: *§§ **5–8** stay **`_TBD_`** until **`coding-session`** fills them on the implementation lane (or you choose **Pre-fill §§ 5–8 here (sketch, then coding)** below). Worktree open may report **incomplete** — that is expected; use **Start with incomplete plan** on the child lane unless you pre-filled here.*
 
 Do **not** echo the full §§ 1–4 body in chat unless the developer asked for a fill sketch in the same flow.
 
@@ -356,9 +357,9 @@ Required options (brief `label`; put detail in `prompt` when needed):
 
 | Option id | Label |
 |-----------|--------|
-| `start-coding-session` | Start coding session |
+| `start-coding-session` | Start coding session — fill §§5–8 there |
 | `revise-section` | Revise a section |
-| `prefill-sections` | Pre-fill §§ 5–8 (sketch) |
+| `prefill-sections` | Pre-fill §§5–8 here (sketch, then coding) |
 | `commit-reminder` | Commit when ready |
 | `defer` | Defer |
 | `more-details` | More details for option _ |
@@ -381,7 +382,11 @@ Run only when the developer chose **`start-coding-session`** and §5a readiness 
    - `parentPlanPath` / `parentPlanSlug` / `parentIndex` — from steps 1–3 when known.
    - `ledgerParent` — parent slug from sidecar `parent:` (not a placeholder string).
    - `repoPath` — walk up from `targetPlanPath` until **`.sedea/centers/sedea/`** exists; use the parent of **`.sedea/`** as hosting repo root.
-2. **Build `initiatingPrompt`** — one short block: §1 single concern; §3 change-scope bullets; parent `### PR list` item **N**; `readyForImplementation` and §5a gaps; non-blocking `remainingTasks`.
+2. **Build `initiatingPrompt`** — one short block with required bullets:
+   - §1 single concern; §3 change-scope bullets; parent `### PR list` item **N**; `readyForImplementation` and §5a gaps; non-blocking `remainingTasks`.
+   - `planningHandoff: sections-1-4-complete`
+   - `sections5to8Status: TBD-by-design — child owns substantive fill; do not treat as pr-plan failure`
+   - `expectedPlanCompleteness: incomplete until filled on coding-session lane or worktree-open override`
 3. **Emit exactly one** child-spawn line (valid JSON on the same line; new UUID per spawn):
 
    - `skillPath`: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`

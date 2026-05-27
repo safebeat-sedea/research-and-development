@@ -94,6 +94,15 @@ On **[Spawned implementation lane](#spawned-implementation-lane)**, **this lane*
 
 See **`pr-plan/SKILL.md`** § *Handoff to coding-session*.
 
+### Spawned from `pr-plan` (expected incomplete)
+
+When `inputs.upstreamSkill === "pr-plan"` and `inputs.readyForImplementation === true`:
+
+1. Do **not** say the PR plan is “not fully populated,” “incomplete planning,” or that **`pr-plan`** failed.
+2. Say: *Planning handoff complete (§§1–4). §§5–8 are `_TBD_` until this lane fills them.*
+3. After **`plan-ws-completeness.mjs`** → `INCOMPLETE`, treat as **expected**, not a defect — do **not** send the developer back to **`pr-plan`** to “finish planning” unless they choose **Revise PR plan first** or **Stop — I'll complete the plan first**.
+4. At the [Worktree-open gate](#worktree-open-gate) when `planCompleteness: incomplete`, recap must state this is the normal **`pr-plan`** spawn path; pair **Start with incomplete plan (executive override)** with the expected-handoff framing (not only **Stop — I'll complete the plan first**).
+
 ## Plan-anchored context (optional inputs)
 
 The developer starts **`coding-session`** on a detached lane, via mission dispatch, or as a **spawned child** of **`pr-plan`** (§5d).
@@ -139,6 +148,7 @@ Otherwise:
    ```
    - Exit **0** (`OK` / `SKIP_NOT_PER_PR`) → `planCompleteness: complete` for the worktree-open gate.
    - Exit **1** (`INCOMPLETE`) → `planCompleteness: incomplete` — **do not** create worktrees yet; offer override only in the worktree-open gate.
+   - When `inputs.upstreamSkill === "pr-plan"` and `inputs.readyForImplementation === true`, `INCOMPLETE` is **expected** (§§5–8 still `_TBD_` by design). Use [Spawned from `pr-plan` (expected incomplete)](#spawned-from-pr-plan-expected-incomplete) wording — not “plan not fully populated.”
 
 **Multi-repo:** run the script **once** on the shared plan before the worktree-open gate.
 
@@ -158,7 +168,7 @@ Otherwise:
 
 **When `planCompleteness: incomplete`**, required options (do **not** offer plain **Start implementation now** without override):
 
-- **Start with incomplete plan (executive override)**
+- **Start with incomplete plan (executive override)** — when spawned from **`pr-plan`** with `readyForImplementation: true`, treat as the **normal** handoff path (recap: §§5–8 fill on this lane).
 - **Stop — I’ll complete the plan first**
 - **Revise PR plan first**
 - **Change repo or branch settings**
@@ -189,7 +199,7 @@ Normative path when **`pr-plan`** (or another spawner) opens a **coding-session*
 
 1. **Scope guard** — Edit only files under the attached worktree root(s). Resolve hosting repo root vs worktree per **20_efficient-pr-shipping.mdc**.
 2. **Warm-up on this lane** — Follow [Session prompt structure](#session-prompt-structure) Phase 1 steps (workspace readiness, branch check, load **Project rules** from the worktree, plan file + sidecar when anchored). You may skip emitting a fenced **external** session prompt unless the developer asks for a copy.
-3. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for context; **implement** per §§ **5–8** (fill `_TBD_` where this skill owns them).
+3. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for scope context; **first implementation work** is substantive fill of §§ **5–8** (replace `_TBD_` as code paths become known), then code/tests/docs per those sections.
 4. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until an explicit **committed cut point** or a blocking stop. Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
 5. **Continuation** — Keep `outputs.continuationStatus: "active"` and `outputs.shipPhase: "implementing"` while work remains. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial` when blocked; do **not** use `continuationStatus: terminal` to mean “prompt emitted — hand off elsewhere.”
 6. **Cut point** — When implementation is ready for review, follow [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) on **this same lane**, then [Pre-PR review handoff](#pre-pr-review-handoff) after the developer authorizes spawn.

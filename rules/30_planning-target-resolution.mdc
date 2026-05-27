@@ -152,6 +152,8 @@ Snapshots should respect **coding-session** pre-worktree validation and the work
 
    Exit **1** (`INCOMPLETE`) means incomplete for worktree handoff even when the plan was marked planning-ready.
 
+   After **`pr-plan`** spawn with `readyForImplementation: true`, exit **1** (`INCOMPLETE`) is **expected** until §§5–8 are filled on the **`coding-session`** lane or the developer chooses override at the worktree-open gate (see **`coding-session/SKILL.md`** § *Spawned from pr-plan (expected incomplete)*).
+
 2. **Anchor plan** for **coding-session** matches **`plan-state.mjs resolve`** — shell **`cwd`** is **`HOSTING_ROOT`**, **`--cwd`** is the worktree when linked:
 
    ```bash
@@ -162,7 +164,9 @@ Snapshots should respect **coding-session** pre-worktree validation and the work
 
    When not in a worktree, use the PR plan path explicitly in play. Do **not** set script paths from `ROOT="$(git rev-parse --show-toplevel)"` in a hosting repo worktree alone.
 
-3. If incomplete **and** that plan is the default **coding-session** anchor, the **first** **AskQuestion** `option` must be finishing the PR plan sections; list **coding-session** only after completeness or with an explicit override label consistent with the **coding-session** skill.
+3. If incomplete **and** that plan is the default **coding-session** anchor:
+   - **Detached / snapshot** entry: the **first** **AskQuestion** `option` should be finishing the PR plan sections; list **coding-session** only after completeness or with an explicit override label consistent with the **coding-session** skill.
+   - **After `pr-plan` spawn** with `readyForImplementation: true`: do **not** imply planning failed; offer worktree-open options per **`coding-session`** (override is the normal path when §§5–8 are still `_TBD_`).
 
 When every in-scope PR plan passes completeness, normal ordering resumes.
 
