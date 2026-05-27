@@ -7,7 +7,8 @@ description: >-
   20_efficient-pr-shipping.mdc). On a **spawned child lane** with layer-2 approval,
   **implement the anchored PR plan on this lane** in that worktree; on **prompt-only**
   entry, emit a copy/paste-safe two-phase session prompt for a separate coding chat.
-  After the implementation cut point spawn **pre-pr-review**. Plan-anchored runs validate
+  After the implementation cut point run the **Pre-PR cut-point gate** (diff review, optional
+  §7 Before deploy walk), then spawn **pre-pr-review**. Plan-anchored runs validate
   per-PR plans with plan-ws-completeness.mjs (_TBD_ in body requires completion or
   explicit override incomplete plan). Use under mission dispatch, natural language, or
   after planning when handing off implementation.
@@ -73,7 +74,7 @@ warmUpRules:
 
 Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
 
-**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; ship-chain spawns (**`pre-pr-review`**, **`create-pr`**, inline **`pr-review`**) after cut points.
+**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; **Pre-PR cut-point gate** (diff review + §7 Before deploy walk) before ship-chain spawns (**`pre-pr-review`**, **`create-pr`**, inline **`pr-review`**).
 
 **Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code when this run is **prompt-only** (see [Prompt-only handoff](#prompt-only-handoff)); opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
@@ -187,7 +188,7 @@ Normative path when **`pr-plan`** (or another spawner) opens a **coding-session*
 3. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for context; **implement** per §§ **5–8** (fill `_TBD_` where this skill owns them).
 4. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until an explicit **committed cut point** or a blocking stop. Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
 5. **Continuation** — Keep `outputs.continuationStatus: "active"` and `outputs.shipPhase: "implementing"` while work remains. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial` when blocked; do **not** use `continuationStatus: terminal` to mean “prompt emitted — hand off elsewhere.”
-6. **Cut point** — When implementation is ready for review, follow [Pre-PR review handoff](#pre-pr-review-handoff) on **this same lane**.
+6. **Cut point** — When implementation is ready for review, follow [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) on **this same lane**, then [Pre-PR review handoff](#pre-pr-review-handoff) after the developer authorizes spawn.
 
 ## Deploy test plan confirmations
 
@@ -208,7 +209,7 @@ Reserved when this run is **not** a spawned implementation lane (see table above
 1. Emit a **session prompt** per [Session prompt structure](#session-prompt-structure) inside a [copy/paste-safe](#copypaste-safe-prompt-output-required) fence.
 2. Set `outputs.sessionPromptEmitted: true` and `outputs.implementationMode: "prompt-only"`.
 3. **Stop** — do not `cd` into the worktree to implement on this lane.
-4. When the developer later continues on **this** or another lane after a committed cut point, this skill owns [Pre-PR review handoff](#pre-pr-review-handoff).
+4. When the developer later continues on **this** or another lane after a committed cut point, this skill owns [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) and [Pre-PR review handoff](#pre-pr-review-handoff).
 
 Detached developers may paste the prompt into a separate Mission Control session; that session then follows the same skill as an implementation lane once layer 2 is satisfied there.
 
@@ -278,15 +279,64 @@ When the plan’s **Worktree setup** lists two or more repos, or the user asks f
 
 Cleanup when PRs merge: **`sedea_remove_worktree_folder`**, **`git worktree remove`**, **`plan-state.mjs prune-sessions`**, and **`plan-reconcile`** per **development-process** and **efficient-pr-shipping** — not repeated here.
 
+## Pre-PR cut-point gate (before review handoff)
+
+When implementation reaches an explicit **committed cut point** (or the developer signals *ready for review* / *run pre-pr-review*), **stop** — do **not** spawn **`pre-pr-review`** until this gate completes. This gate implements **20_efficient-pr-shipping.mdc** § *Review before commit* workflow layer (pause before advancing to the reviewer lane); git commit/push still follow § *Ship git consent* separately.
+
+### 1. Summarize and direct diff review
+
+1. Present a short summary: commits on the branch (`git log --oneline <baseRef>..HEAD`), touched files, and scope vs the anchored plan when present.
+2. Tell the developer to review the change in the **IDE diff** (SCM compare view) and/or `git diff <baseRef>...HEAD` in the worktree. Do **not** treat “implementation done” chat as diff review.
+3. If the tree is dirty, say uncommitted work is invisible to **`pre-pr-review`** and offer **More changes** or commit per rule **20** / rule **6** — do not spawn review while dirty.
+
+### 2. Before deploy checklist (plan-anchored)
+
+When `targetPlanPath` resolves to a PR plan:
+
+1. **Read** §7 **`### Before deploy`** (numbered `N. [ ]` / `N. [x]` lines).
+2. If the subsection is empty, only an italic *None — …* line, or every item is `[x]`, note that in one line and skip to § *Pre-PR review authorization* below.
+3. If any **`[ ]`** items remain, present them as a **numbered context list** (step number + text — not an action menu in prose).
+4. Use **AskQuestion** (required when unchecked Before-deploy items exist):
+
+| Option id (illustrative) | Label (brief) |
+|--------------------------|---------------|
+| `walk-before-deploy` | Walk Before deploy steps now |
+| `before-deploy-done` | Before deploy already satisfied |
+| `skip-before-deploy` | Skip Before deploy (executive override) |
+| `more-changes` | More implementation changes first |
+| `more-details` | More details for option _ |
+
+5. **`walk-before-deploy`** — For each unchecked step in order: present the step text and what to run or verify; wait for the developer to report outcome; apply [Deploy test plan confirmations](#deploy-test-plan-confirmations) (flip `[ ]` → `[x]` on confirm). Do **not** invoke full **`deploy-walk`** unless the developer asks — this gate is a lightweight walk on the **coding-session** lane.
+6. **`before-deploy-done`** — Proceed only when every Before-deploy line is `[x]` or the developer attests all steps passed (if still `[ ]`, offer **`walk-before-deploy`** or record override in chat before continuing).
+7. **`skip-before-deploy`** — Append a dated note under §7 or in **`## Follow-ups`** that Before deploy was skipped by executive override; do not spawn **`pre-pr-review`** in the same turn — continue to § *Pre-PR review authorization*.
+8. **`more-changes`** — Return to implementation; keep `continuationStatus: "active"`.
+
+Free-form runs without a plan anchor skip §2.
+
+### Pre-PR review authorization
+
+After diff review is offered and §2 is resolved (or skipped), use **AskQuestion** per rule **20** § *Ship git consent* — workflow layer only unless the **same turn** also needs git options:
+
+| Option id (illustrative) | Label (brief) |
+|--------------------------|---------------|
+| `proceed-pre-pr-review` | Proceed — spawn pre-pr-review |
+| `more-changes` | More changes before review |
+| `defer-review` | Defer pre-PR review |
+| `more-details` | More details for option _ |
+
+Only **`proceed-pre-pr-review`** (or the **same user message** explicitly authorizing *run pre-pr-review* / *approved cut point* per rule **20**) authorizes advancing to [Pre-PR review handoff](#pre-pr-review-handoff). A workflow pick in a **prior** turn does **not** authorize spawn.
+
+Do **not** spawn **`pre-pr-review`** in the same assistant turn as the authorization **AskQuestion** — wait for the developer’s modal selection or an explicit follow-up message.
+
 ## Pre-PR review handoff
 
-This branch owns the pre-PR review handoff. After implementation reaches an explicit committed cut point, **the coding agent** invokes this `coding-session` branch again to spawn **`pre-pr-review`** directly.
+This branch spawns **`pre-pr-review`** only **after** [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) completes and the developer authorizes review.
 
 ### Review handoff preconditions
 
 Before spawning **`pre-pr-review`**:
 
-1. The developer has reviewed the IDE diff and explicitly authorized the review cut point, or the coding agent already has committed changes under an explicit user instruction.
+1. [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) completed — developer reviewed the IDE diff (or equivalent explicit authorization this session) and chose **`proceed-pre-pr-review`** (or same-message authorization per rule **20**); plan-anchored Before-deploy handling resolved per §2 above.
 2. `git status --short` in the worktree is empty. Uncommitted edits are invisible to the committed review diff, so do not spawn the reviewer while dirty.
 3. `git log --oneline <baseRef>..HEAD` shows at least one commit.
 4. `git diff <baseRef>...HEAD` is non-empty.
@@ -339,7 +389,7 @@ When **`pre-pr-review`** returns `recommendation: "no-go"` or any `blockers`:
 When the developer says *open a PR*, *create a pull request*, or similar **before** **`pre-pr-review`** returns **`go`** and the **Create-PR handoff after go** gate:
 
 1. **Do not** call `gh pr create` or surface GitHub `pull/new/` URLs (rule **20** § *PR creation* and § *User phrases → required handoff*).
-2. State the required order: implementation → **committed cut point** → spawn **`pre-pr-review`** → on **`go`**, **AskQuestion** in **Create-PR handoff after go** → spawn **`create-pr`** child only.
+2. State the required order: implementation → **committed cut point** → [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) (diff review + optional §7 Before deploy) → spawn **`pre-pr-review`** → on **`go`**, **AskQuestion** in **Create-PR handoff after go** → spawn **`create-pr`** child only.
 3. If they only pushed and expect a PR, confirm whether **`pre-pr-review`** has run; first-push cadence does **not** replace the **`create-pr`** child lane.
 
 ### Create-PR handoff after go
@@ -521,7 +571,7 @@ Include:
 - Which PR to implement (scope, behaviour, files).
 - **Plan link:** absolute path to the `.plan.md` (e.g. `@/…/.sedea/operations/…/plans/<slug>.plan.md`). When present, the emitter must have used the **five-step** warm-up.
 - **Follow-ups** — per **development-process** *Coding session* / *Feedback collection*: maintain **`## Follow-ups`** on the PR plan; append bullets for out-of-scope ideas with optional `(target: …)` hints.
-- **Review cadence** — after implementation and an explicit committed cut point, **a coding agent** invokes **`coding-session`** review handoff so Mission Control spawns **`pre-pr-review`** in a fresh reviewer lane before treating the change as merge-ready; coordinate **`pr-review`** and rule **20** § *Commit and push cadence* (name **protocol branches** in prompts and menus).
+- **Review cadence** — after implementation and an explicit committed cut point, **a coding agent** runs the **Pre-PR cut-point gate** (summarize changes, developer reviews IDE diff, walk plan §7 **Before deploy** when items remain unchecked), then spawns **`pre-pr-review`** in a fresh reviewer lane; coordinate **`pr-review`** and rule **20** § *Review before commit* / *Commit and push cadence* (name **protocol branches** in prompts and menus).
 - **Multi-repo only:** scope guard line per repo.
 
 ## Verbatim override
@@ -555,7 +605,7 @@ Implement the scoped change described in `@<absolute-hosting-repo-root>/.sedea/o
 
 **Follow-ups discipline.** Append to `## Follow-ups` on that plan when you discover scope-adjacent items.
 
-Stop after implementation; after an explicit committed cut point, invoke **`coding-session`** review handoff so Mission Control spawns **`pre-pr-review`** in a fresh reviewer lane per **development-process**.
+Stop after implementation; after an explicit committed cut point, run the **Pre-PR cut-point gate** (diff review + §7 Before deploy when applicable), then spawn **`pre-pr-review`** in a fresh reviewer lane per **development-process**.
 ```
 
 ## Completion (spawned)
