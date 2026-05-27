@@ -223,45 +223,61 @@ Do **not** modify any other section in the same call.
 
 After writing, read the file back and confirm the section reads as intended.
 
-### 5d — Echo to chat
+### 5d — Notify draft (Turn A — information-only)
 
-Echo the drafted section so the **developer** can review without opening the file. Mirror headings and lists. Render Mermaid from **`### Sequencing`** inline as a fenced code block when present.
+**Mission Control transcript boundary:** This turn is **information-only**. Do **not** include **`MC_ASKQUESTION_V1`**, the **AskQuestion** tool, **`AGENT_RESULT_RESPONSE_V1`**, or **`AGENT_RUN_REQUEST_V1`** here.
+
+After step **5c**, end Turn A with **only**:
+
+1. A **`file://`** link to the target `.plan.md` under `.sedea/operations/.../plans/...` (resolved path from **`plan-state resolve`** or equivalent).
+2. One line: *Drafted `## <N>. PR breakdown` with **K** PR rows — open the plan to review the full section.*
+
+Do **not** mirror the full **`PR breakdown`** body in chat (no duplicated headings, tables, Mermaid fences, or numbered PR list). The plan file is the review surface.
+
+Count **K** from numbered rows under **`### PR list`** before Turn B (`K = 1` is valid on the single-PR path). If **K = 0**, treat as drafting failure — do not run Turn B; return failure or partial per **Completion (spawned)** / standalone handoff.
 
 ## Step 6 — Hand back with next-move options
 
-End with:
+Run **Turn B** and **Turn C** as **separate assistant turns**. Never combine Turn A, Turn B, and Turn C in one message.
 
-1. A **`file://`** link to the target `.plan.md` under `.sedea/operations/.../plans/...` (resolved path from **`plan-state resolve`** or equivalent).
-2. A one-line summary: *Drafted `## <N>. PR breakdown` with **K** PR rows.*
-3. **Numbered options** (adapt labels; offer **AskQuestion** when it clarifies). After drafting **K** PRs, keep **K** visible in the summary.
+### Turn B — Approval (interactive only)
 
-   1. **Spawn PR children (`new-plan`, indexed)** — For each list index **1** through **K**, this agent can emit a child-spawn request for **`new-plan`** with this plan as parent and that index (per **`new-plan`** § *Indexed child spawn*). Each run creates the child stub and wires the parent **`Plan:`** line when the flow completes.
-   2. **`pr-plan` on a new child** — After each PR plan stub exists, ignite **`pr-plan`** on that path to draft per-PR §§ 1–4 (per **`new-plan`** populator handoff).
-   3. **Revise this `PR breakdown` section** — The **developer** gives free-text feedback; you apply one focused `StrReplace` and echo the result.
-   4. **Switch to `delivery-phases`** — If the work needs a phase layer first, hand off to **`delivery-phases`**; do **not** rewrite the parent heading from inside this skill — that protocol branch owns the **`Delivery phases`** heading and list.
-   5. **Commit when ready** — Remind the **developer** to commit; this skill does **not** run `git`.
+In a **new** assistant turn after Turn A, collect the developer’s choice via **AskQuestion** or **`MC_ASKQUESTION_V1`** only.
 
-When running as a spawned downstream agent under `master-plan`, mission dispatch **does** explicitly continue:
+- When using **`MC_ASKQUESTION_V1`**, the message must contain **only** the sentinel line and JSON object — **no** prose, plan recap, or markdown fences before or between the sentinel and JSON.
+- Put every choosable path in **`options`** (`id` / `label`). Do **not** duplicate those choices as a numbered prose menu in the same turn.
 
-1. After drafting the PR list, count the numbered rows under `### PR list` as **K**. `K = 1` is valid only for the single-PR path.
-2. Present the drafted `PR breakdown` section to the developer and use **AskQuestion** before creating child PR plans. Required options:
-   - **Approve PR breakdown and spawn PR plans**
-   - **Revise PR breakdown first**
-   - **Defer child PR plan creation**
-   - **Abandon this branch**
-   - **More details for option _**
-3. Only when the developer chooses **Approve PR breakdown and spawn PR plans**, emit one child-spawn request per PR row for `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`.
-4. Each request's inputs must include `mode: "indexed-child"`, `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "pr-plan"`, `requestedPopulatorSkill: "pr-plan"`, `ledgerParent`, `upstreamSkill: "pr-breakdown"`, and `decompositionKind: "pr-breakdown"`.
-5. Record each spawned child as an open ledger entry keyed by correlation id plus `(parentPlanSlug, index)` with status `active`.
-6. Announce that this agent is waiting for **K** indexed child results and stop. Do not return terminal success upstream until every spawned `new-plan` lane has returned terminal status or the developer explicitly defers/abandons the remaining rows.
+Required **`options`** (adapt labels; keep **K** visible in the **`prompt`** when helpful):
 
-If **K = 0**, treat that as a drafting failure: do not spawn children; return failure or partial with an error explaining that no PR rows were created.
+| Option id (illustrative) | Label (brief) |
+| --- | --- |
+| `approve-spawn` | Approve PR breakdown and spawn PR plans |
+| `revise` | Revise PR breakdown first |
+| `defer` | Defer child PR plan creation |
+| `abandon` | Abandon this branch |
+| `more-details` | More details for option _ |
 
-For standalone/non-spawned use, re-offer the same structure after iteration and stop after this block — wait for the **developer**’s next message.
+**Standalone / non-spawned:** After Turn B, **stop** and wait for the developer’s next message. On **revise**, run step **6a** then repeat Turn A → Turn B. On other choices, act per the labels above without impersonating **`new-plan`** / **`pr-plan`** in the same turn.
+
+**Spawned under `master-plan`:** Turn B is mandatory before indexed child spawns. Do **not** emit **`AGENT_RESULT_RESPONSE_V1`** in Turn B.
+
+### Turn C — Act on choice (after developer replies)
+
+In a **new** assistant turn after the developer selects an option in Turn B:
+
+| Choice | Action |
+| --- | --- |
+| **Approve PR breakdown and spawn PR plans** | Emit one **`AGENT_RUN_REQUEST_V1`** per PR row **1…K** for `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`. Each request’s `inputs` must include `mode: "indexed-child"`, `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "pr-plan"`, `requestedPopulatorSkill: "pr-plan"`, `ledgerParent`, `upstreamSkill: "pr-breakdown"`, and `decompositionKind: "pr-breakdown"`. Record each spawned child in the ledger (`active`, keyed by correlation id + `(parentPlanSlug, index)`). Announce waiting for **K** indexed child results. Then emit **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: "active"` (or `partial` when appropriate) — **not** in Turn A or Turn B. |
+| **Revise PR breakdown first** | Run step **6a**, then repeat Turn A → Turn B. Do **not** spawn children or emit terminal success until re-approved. |
+| **Defer child PR plan creation** | Emit **`AGENT_RESULT_RESPONSE_V1`** with defer semantics; do not spawn. |
+| **Abandon this branch** | Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: "abandoned"` (or `partial` when work remains documented). |
+| **More details for option _** | Elaborate in prose (information-only), then run Turn B again. |
+
+Do not return terminal **success** upstream until every spawned **`new-plan`** lane has returned terminal status or the developer explicitly defers/abandons the remaining rows (step **6b**).
 
 ## Step 6a — Follow-up turns
 
-When the **developer** asks to revise the **`PR breakdown`** block, re-read that section, apply edits via `StrReplace`, echo the result, and return to the step 6 menu pattern.
+When the **developer** asks to revise the **`PR breakdown`** block, re-read that section, apply edits via `StrReplace`, then repeat **Turn A** (link + one-line **K** summary only) and **Turn B** — do **not** combine a full section echo with **`MC_ASKQUESTION_V1`** in one message.
 
 When the **developer** chooses spawn or populate children in standalone use, emit child-spawn requests for **`new-plan`** / **`pr-plan`** instead of impersonating those skills’ full procedures in the same turn. Stop after spawning if the result is needed for the next step.
 
@@ -284,7 +300,7 @@ Match the discipline in **`master-plan`**, **`delivery-phases`**, and **`phase-p
 
 ## Scope guard
 
-**Owns:** the parent plan’s dual-title **`PR breakdown`** section (heading + set-level body); **step 3.5** may insert **`### Decomposition assessment`** above that heading when missing; echo for review.
+**Owns:** the parent plan’s dual-title **`PR breakdown`** section (heading + set-level body); **step 3.5** may insert **`### Decomposition assessment`** above that heading when missing; **step 5d** Turn A notifies the developer (link + one-line **K** summary — not a full chat mirror).
 
 **Out of scope:** renaming child plans after **`new-plan`** creates them; per-PR §§ 1–4 inline (**`pr-plan`** owns the body); later per-PR sections and worktrees (**`coding-session`**, **`plan-reconcile`** per **`development-process.md`**); edits outside the dual-title block (except the assessment insert in **3.5**); `git` / commit automation; **`Delivery phases`** list body (**`delivery-phases`**); roadmap topics and PR plans (step 1 stops).
 
@@ -304,7 +320,7 @@ Required `outputs` fields:
 - `outputs.continuationOwner`: `"pr-breakdown-agent"`
 - `outputs.continuationStatus` — `active` while approval, child creation, or population remains; `terminal` when all PR rows are closed, deferred, abandoned, or out of scope
 
-Complete the step 6 handoff block (or announce spawn wait) **before** the terminal line. Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*).
+Emit **`AGENT_RESULT_RESPONSE_V1`** only in **step 6 Turn C** (after the developer responds to Turn B), or when announcing spawn wait / defer / abandon — **never** in the same turn as Turn A or Turn B. Stop after the terminal line in that turn. Do not emit another `AGENT_RUN_REQUEST_V1` or run the next protocol step in the same turn as the terminal line (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Completion (inline)
 
