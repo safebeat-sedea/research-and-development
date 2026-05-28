@@ -240,7 +240,59 @@ One slug per invocation; print the script JSON response for a paper trail.
 
 On non-zero exit, stop and surface the error.
 
-### 5. End state — no plans-repo shortcut
+### 5. Post-ship workspace cleanup
+
+Run after §§1–4 when archive/reconcile work for this pass is done (or when the developer explicitly requests workspace cleanup on a reconcile lane). **Destructive git** runs only after **AskQuestion** approval in this subsection.
+
+**Detect (read-only):**
+
+```bash
+cd "$HOSTING_ROOT"
+OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" detect-stale-workspaces [--slug <slug>] --json
+```
+
+Each candidate includes `worktreePath`, `repo`, `branch`, `mergedPr` (when sidecar **`prs[]`** exists), and `reason`.
+
+**Dry-run git plan:**
+
+```bash
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
+  --operations-user-id "$OPS_ID" --dry-run [--slug <slug>]
+```
+
+Present the JSON **`actions`** list to the developer (information-only turn when the report is long).
+
+**AskQuestion** (required before **`--apply`**):
+
+| Option id (illustrative) | Label (brief) |
+|--------------------------|---------------|
+| `cleanup-apply` | Run workspace cleanup (worktree + merged branch + pull main) |
+| `cleanup-skip` | Skip git cleanup this pass |
+| `cleanup-dry-run-only` | Dry-run only — no git mutations |
+| `more-details` | More details for option _ |
+
+Only **`cleanup-apply`** authorizes **`--apply`**.
+
+**Apply (after MCP detach):**
+
+1. For **each** candidate **`worktreePath`**, invoke MCP **`sedea_remove_worktree_folder`** with `{ "path": "<absolute-worktree-root>" }` **before** git removal (rule **20** § *Detach merged worktrees*).
+2. Run:
+
+```bash
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
+  --operations-user-id "$OPS_ID" --apply [--slug <slug>]
+```
+
+The script runs **`git worktree remove`**, deletes branches merged into **`origin/main`** (or **`--default-branch`**), **`git pull origin <defaultBranch>`** on **`HOSTING_ROOT`**, and **`plan-state.mjs prune-sessions --all`**.
+
+3. Summarise **`cleanedWorktrees`**, **`deletedBranches`**, **`mainPullStatus`**, and any **`errors`** from the script JSON.
+
+**coding-session** lanes use **`detect-stale-workspaces`** only and route here — they do **not** run **`--apply`**.
+
+### 6. End state — no plans-repo shortcut
 
 **Do not** run a separate **plans-only** git commit flow from this skill (operations changes belong to your normal hosting / center git process unless the user asked you to commit).
 
@@ -254,11 +306,11 @@ Mutations are under **`.sedea/operations/`** (and possibly center git elsewhere)
 - Runs **`list-candidates`** (read).
 - Triages **`## Follow-ups`** on plans about to be archived and on reconcile-auto-archived plans; can append to other plans’ **`## Follow-ups`** with optional **Elaborate first** passes.
 - Runs **`archive`** per selected slug (skipping **`postponed:`**).
+- Runs **§5 Post-ship workspace cleanup** when approved (`detect-stale-workspaces`, **`post-reconcile-workspace-cleanup.mjs`**, MCP detach, **`prune-sessions`**).
 
 **Out of scope**
 
 - Creating worktrees (**`coding-session`**).
-- Removing worktrees or closing windows (hosting repo scripts / user).
 - Editing plan frontmatter or sidecar YAML directly — **`plan-state.mjs`** is the sole writer for those; step 3.5 only edits **`## Follow-ups`** markdown bodies.
 - Promoting routed bullets into **Changes** / **Caveats** / **Delivery phases** — planning work the user does later.
 - Pushing fixes to individual PRs. If a flagged plan needs an amend, tell the user; do not silently **`gh`**-mutate from here.
@@ -283,6 +335,9 @@ When spawned by `create-pr`, end with a child result containing:
 - `outputs.remainingTasks`
 - `outputs.activeLanes`
 - `outputs.openLedgerEntries`
+- `outputs.cleanedWorktrees` — when §5 cleanup ran
+- `outputs.deletedBranches` — when §5 cleanup ran
+- `outputs.mainPullStatus` — when §5 cleanup ran
 - `outputs.continuationOwner: "plan-reconcile-agent"`
 - `outputs.continuationStatus`
 
@@ -335,8 +390,6 @@ Normally spawned after deploy or on developer request. If run inline, use the sa
 ## Extensions
 
 Maintenance subcommands and future UX — **not** part of the default reconcile flow (§§1–4). Run only when the developer explicitly requests them or dry-run output shows they are needed.
-
-- **Stale worktree prune.** Today other flows own this. If UX merges here, add **`prune-sessions`** behind an explicit **`AskQuestion`** gate.
 
 - **`shippedPrs` frontmatter** — **`reconcile`** / **`archive`** write **`shippedPrs`** from sidecar **`prs[]`** at archive time. **`list-candidates`** prefers that field over body-regex hits when present (adjust step 2 commentary when this field is populated).
 

@@ -562,7 +562,7 @@ Step-by-step walk of the PR plan **`## 7. Deploy test plan`**; flips capstone to
 
 ##### plan-reconcile
 
-Archive candidates, follow-ups triage, merge/deploy gates. Often developer-triggered after merge; separate from deploy-walk completion. See **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/plan-reconcile/SKILL.md`**.
+Archive candidates, follow-ups triage, merge/deploy gates. Often developer-triggered after merge; separate from deploy-walk completion. **Post-ship workspace cleanup** (worktree remove, merged-branch delete, pull `main` on the hosting repo) is owned here via **`plan-reconcile/SKILL.md`** §5 — **`coding-session`** only runs **`plan-state.mjs detect-stale-workspaces`** and routes to reconcile. See **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/plan-reconcile/SKILL.md`**.
 
 ##### Leader-lane ship recap (detached lanes)
 

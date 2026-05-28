@@ -353,7 +353,19 @@ When the plan’s **Worktree setup** lists two or more repos, or the user asks f
 
 5. **Prompt-only:** **Stop** after prompts. **Spawned lane:** continue implementation per repo scope before cut point.
 
-Cleanup when PRs merge: **`sedea_remove_worktree_folder`**, **`git worktree remove`**, **`plan-state.mjs prune-sessions`**, and **`plan-reconcile`** per **development-process** and **efficient-pr-shipping** — not repeated here.
+## Stale worktree detection (detect-only)
+
+Post-ship **worktree removal**, **branch delete**, and **`main` sync** are owned by **`plan-reconcile`** (§ *Post-ship workspace cleanup* in **`plan-reconcile/SKILL.md`**) and **20_efficient-pr-shipping.mdc** § *Detach merged worktrees* — **not** on this lane.
+
+| Rule | Behavior |
+|------|----------|
+| **Forbidden** | Proactive **AskQuestion** or chat offers to **`sedea_remove_worktree_folder`**, **`git worktree remove`**, delete branch, or run full cleanup as routine session wrap-up |
+| **Forbidden** | Destructive git cleanup on the **coding-session** lane |
+| **When to detect** | After **`prState: merged`** and deploy verification **`done`**, or when the developer returns post-merge on this lane with a plan anchor |
+| **How** | From **`HOSTING_ROOT`**: `node …/plan-state.mjs --operations-user-id "$OPS_ID" detect-stale-workspaces --slug <slug> --json` |
+| **If empty** | One line: no stale worktree paths on disk for this plan — **no** cleanup menu |
+| **If stale** | Short recap (path, branch, **`mergedPr`** when **`prs[]`** exists) then **AskQuestion**: start **`plan-reconcile`** now · defer · **More details for option _** — **not** remove-worktree options |
+| **Defer** | Developer may run **`plan-reconcile`** later; do not run cleanup here |
 
 ## Pre-PR cut-point gate (before review handoff)
 

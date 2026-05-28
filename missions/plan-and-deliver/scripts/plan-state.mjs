@@ -619,6 +619,90 @@ async function cmdPruneSessions(flags) {
   log(`prune-sessions: updated ${touched} sidecar${touched === 1 ? '' : 's'}`);
 }
 
+// ---------- subcommand: detect-stale-workspaces ----------
+
+// `detect-stale-workspaces [--slug <slug>] [--json]`
+// Read-only: list sidecar worktrees[] whose path still exists on disk.
+// When prs[] is present, sets mergedPr true only if every linked PR is MERGED.
+async function cmdDetectStaleWorkspaces(flags) {
+  await ensureSedeaContext();
+  const asJson = flags.json === true;
+  const slugFilter = typeof flags.slug === 'string' ? flags.slug : null;
+
+  let plans = await listAllPlans();
+  if (slugFilter) {
+    const one = await findPlanBySlug(slugFilter);
+    if (!one) die(`detect-stale-workspaces: no plan with slug "${slugFilter}"`);
+    plans = [one];
+  }
+
+  const candidates = [];
+  for (const plan of plans) {
+    const { data } = await readSidecarPlain(plan.planPath);
+    if (data.worktrees.length === 0) continue;
+
+    let mergedPr = null;
+    if (data.prs.length > 0) {
+      let hasError = false;
+      const states = [];
+      for (const pr of data.prs) {
+        const { fullRepo, error } = await resolveFullRepoForReconcile(
+          pr,
+          data.worktrees,
+          SEDEA_REPO_ROOT,
+        );
+        if (!fullRepo) {
+          hasError = true;
+          break;
+        }
+        const res = await ghPrView(fullRepo, pr.number);
+        if (res.state === 'ERROR') {
+          hasError = true;
+          break;
+        }
+        states.push(res.state);
+      }
+      if (!hasError) mergedPr = states.every((s) => s === 'MERGED');
+      else mergedPr = false;
+    }
+
+    for (const wt of data.worktrees) {
+      const wtPath = path.resolve(wt.path);
+      if (!pathExistsSync(wtPath)) continue;
+
+      let branch = null;
+      const br = await spawnGitOutput(wtPath, ['branch', '--show-current']);
+      if (br.ok && br.stdout) branch = br.stdout;
+
+      const reasons = ['worktree_path_still_present'];
+      if (mergedPr === true) reasons.push('linked_prs_merged');
+      if (plan.isArchived) reasons.push('plan_archived');
+
+      candidates.push({
+        slug: plan.slug,
+        planPath: plan.planPath,
+        planArchived: plan.isArchived === true,
+        worktreePath: wtPath,
+        repo: wt.repo,
+        branch,
+        mergedPr,
+        reason: reasons.join('; '),
+      });
+    }
+  }
+
+  if (asJson) {
+    process.stdout.write(`${JSON.stringify({ candidates }, null, 2)}\n`);
+    return;
+  }
+  log(`== detect-stale-workspaces (${candidates.length} candidate(s)) ==`);
+  for (const c of candidates) {
+    log(
+      `  ${c.slug}: ${c.repo}:${c.worktreePath} branch=${c.branch || '?'} mergedPr=${c.mergedPr} (${c.reason})`,
+    );
+  }
+}
+
 function pathTargeted(candidate, target) {
   if (candidate === target) return true;
   return candidate.startsWith(target + path.sep);
@@ -1772,6 +1856,11 @@ Subcommands:
   prune-sessions --path <abs> | --all
       Remove stale worktrees/session entries. Data-only, never touches git.
 
+  detect-stale-workspaces [--slug <slug>] [--json]
+      Read-only: emit worktrees[] paths that still exist on disk (optional
+      mergedPr when sidecar prs[] is present). Used by coding-session
+      (detect-only) and plan-reconcile pre-cleanup.
+
   reconcile [--dry-run] [--prune-worktrees]
       For every active plan with prs[]: gh pr view each entry; if all merged,
       set frontmatter archived: true on the plan and note it under the parent
@@ -1855,6 +1944,9 @@ async function main() {
       break;
     case 'prune-sessions':
       await cmdPruneSessions(flags);
+      break;
+    case 'detect-stale-workspaces':
+      await cmdDetectStaleWorkspaces(flags);
       break;
     case 'reconcile':
       await cmdReconcile(flags);
