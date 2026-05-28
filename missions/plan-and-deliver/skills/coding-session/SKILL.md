@@ -306,7 +306,7 @@ Normative path when **`pr-plan`** (or another spawner) opens a **coding-session*
 
 ## Deploy test plan confirmations
 
-When the developer **confirms** a numbered step in the anchored PR plan’s **`## N. Deploy test plan`** (§7 **`### Before deploy`** or **`### After deploy`**), treat chat as **not** the system of record — same contract as **`deploy-walk`**: state lives in the plan file.
+When the developer **confirms** a numbered step in the anchored PR plan’s **`## N. Deploy test plan`** (§7 **`### Before deploy`** or **`### After deploy`**), treat chat as **not** the system of record — same contract as **`deploy-walk`**: state lives in the plan file. Prefer spawning **`deploy-walk`** for checklist walks — it auto-runs agent-executable steps; use this inline path only for ad-hoc confirmations on the coding lane.
 
 1. **Resolve `targetPlanPath`** — from spawn `inputs`, `plan-state.mjs resolve --cwd "<worktreePath>"`, or an explicit `@path` in the message. If multiple plans could apply, use **AskQuestion** once for **which plan** or **which step number** — not whether to persist.
 2. **Same-turn file edit** — before the reply ends, patch the matching §7 line: flip `[ ]` → `[x]` for that step number. Optionally append a short dated note on the line or under §7 (for example `— confirmed YYYY-MM-DD`).
@@ -513,7 +513,7 @@ When `targetPlanPath` resolves to a PR plan:
 - `deployWalkScope: "before-deploy-only"` — walk only **`### Before deploy`** while `**Status:**` stays `drafted`; do **not** advance to **`### After deploy`** (post-merge)
 - `ledgerParent`, `upstreamSkill: "coding-session"`
 
-**`initiatingPrompt`** must state: pre-merge Before deploy only; PR not merged; return when every Before-deploy box is `[x]` or explicitly skipped/blocked per deploy-walk rules.
+**`initiatingPrompt`** must state: pre-merge Before deploy only; PR not merged; run agent-executable Before-deploy steps automatically (no approval); return when every Before-deploy box is `[x]` or explicitly skipped/blocked per deploy-walk rules.
 
 3. Announce that **coding-session** is waiting for the **deploy-walk** child result; **stop** — do not spawn **`pre-pr-review`** in the same turn.
 4. When the child returns, copy deploy status into coding-session `outputs` and continue to [Pre-PR review authorization](#pre-pr-review-authorization) only if Before deploy is satisfied or documented skip.

@@ -1,10 +1,12 @@
 ---
 name: deploy-walk
 description: >-
-  Walk through a PR plan's `## N. Deploy test plan` section one step at a time —
-  present each `[ ]` step in detail (verbatim text + the *because* + expected
-  outcome + commands / cross-references), wait for the user's report, flip
-  `[ ]` → `[x]` and append a dated resolution note, advance to the next step.
+  Walk through a PR plan's `## N. Deploy test plan` section one step at a time.
+  **Agent-executable** steps (tests, repo scripts, curl/log checks the agent can
+  run in the worktree or with available env) run **without approval** — on pass,
+  flip `[ ]` → `[x]` with a dated note and advance. **Manual** steps are presented
+  in detail for the developer (verbatim text, *because*, expected outcome, commands);
+  the agent assists until the developer confirms, then flips the box.
   Three-state lifecycle (`drafted` → `deployed` → `done`) is recorded in a
   `**Status:**` line at the top of § N so the auto-routing of `deploy-walk present <N>`
   knows whether to land in `### Before deploy` or `### After deploy` without
@@ -84,7 +86,14 @@ warmUpRules:
 
 # Deploy walk-through
 
-This skill drives the **per-step deploy verification loop** for a PR plan's `## N. Deploy test plan` section (the per-PR template's § 7, or § 6 in legacy 7-section per-PR plans). Each numbered step in `### Before deploy` and `### After deploy` is a **GFM task list checkbox** (`1. [ ] ...`); the **developer** works through the list one box at a time, **a coding agent** provides the per-step context, the **developer** reports the outcome, the agent flips the box and appends a dated resolution note.
+This skill drives the **per-step deploy verification loop** for a PR plan's `## N. Deploy test plan` section (the per-PR template's § 7, or § 6 in legacy 7-section per-PR plans). Each numbered step in `### Before deploy` and `### After deploy` is a **GFM task list checkbox** (`1. [ ] ...`).
+
+| Step kind | Who runs it | On success |
+|-----------|-------------|------------|
+| **Agent-executable** | **Deploy-walk agent** — no approval modal before run | Agent runs commands, flips `[ ]` → `[x]` with dated note (command + outcome), advances to the next step |
+| **Manual** | **Developer** — agent presents context and assists | Developer reports; agent flips on `deploy-walk <N> done` / skip / block |
+
+See [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
 
 ## Structured choice (Mission Control)
 
@@ -132,19 +141,77 @@ When `upstreamSkill` is **`coding-session`** and `deployWalkScope` is **`before-
 
 Use `worktreePath` / `branchName` from spawn inputs for command context in step presentations. PR merge fields (`prUrl`, `mergeSha`, …) are optional and usually absent.
 
-**`initiatingPrompt`** from the parent should state pre-merge Before deploy only; return when Before deploy is satisfied.
+**`initiatingPrompt`** from the parent should state pre-merge Before deploy only; auto-run agent-executable steps; return when Before deploy is satisfied.
 
-The skill is **loose mode by design**. Between `deploy-walk present <N>` (which presents step N) and `deploy-walk <N> done` / `skip` / `block` (which closes step N), the chat is **normal collaboration** — the **developer** can ask any question, request the agent run a command, paste log output, debug, take a break, switch tasks. The bracketing tokens (`deploy-walk present <N>` / `deploy-walk <N> done`) are the only signals this skill cares about; everything in between is whatever the **developer** needs.
+On lane start, run [Spawned walk bootstrap](#spawned-walk-bootstrap) — do not wait for `deploy-walk present 1`.
+
+The skill is **loose mode by design** on **manual** steps. Between `deploy-walk present <N>` (manual presentation) and `deploy-walk <N> done` / `skip` / `block`, the chat is **normal collaboration** — the **developer** can ask questions, paste logs, debug. **Agent-executable** steps do **not** wait for `deploy-walk present <N>` — the agent runs them, updates the plan, and continues.
 
 **State lives in the plan file, not in chat memory.** The skill re-reads the plan on every command. A walk that started yesterday, was interrupted by 30 other turns, and resumed today still works — the agent finds the same `[ ]` boxes and the same `**Status:**` line.
 
-The procedure below is a hard contract — do **not** skip steps, infer state from chat memory, or auto-advance to the next step without the **developer** explicitly invoking `deploy-walk present <next>`.
+The procedure below is a hard contract — do **not** skip steps, infer state from chat memory, or mark a step `[x]` without a passing run (agent-executable) or developer resolution (manual). Do **not** skip **manual** steps without developer `done` / `skip` / `block`.
+
+## Agent-executable vs manual steps
+
+Classify each unchecked step **before** acting. When classification is ambiguous, use **AskQuestion** once (recap + modal) — do **not** guess credentials, environments, or subjective UI checks.
+
+### Agent-executable (auto-run — no approval)
+
+Run **without** an **AskQuestion** approval gate. Use `worktreePath` from spawn inputs when present; otherwise resolve cwd from plan anchor or chat.
+
+| Examples | Notes |
+|----------|--------|
+| Unit / integration tests (`npm test`, `pytest`, `go test`, `cargo test`, …) | Run in the worktree; exit 0 = pass |
+| Repo scripts (`./scripts/verify-*.sh`, `make test`, documented package scripts) | Read script first when non-obvious |
+| `curl` / `wget` / HTTP checks to **localhost**, staging URLs, or endpoints documented in the step when credentials/env are already available in the session | Do **not** invent secrets; if env vars are missing, treat as manual or **block** |
+| File / config assertions (`test -f`, grep, read expected artifact) | |
+| `git` read-only checks relevant to the step (branch, diff stat) | No `git commit` / `git push` from this skill |
+| Lint / typecheck / build smoke named in the step | |
+
+**On pass:** apply `deploy-walk <N> done: <note>` semantics in the same turn — note must cite the command (or script) and outcome (e.g. *exit 0*, *HTTP 200*, *all tests passed*).
+
+**On fail:** do **not** flip the box. Either **`deploy-walk <N> block: <reason>`** with stderr/exit code, or present the failure and assist debug (manual collaboration) until the developer chooses done / skip / block.
+
+**Auto-advance:** after marking step N done, immediately process step N+1 in the **same assistant turn** when it is also agent-executable. Stop the chain when the next step is **manual**, **blocked**, sub-section complete, or a lifecycle gate applies (see [Spawned walk bootstrap](#spawned-walk-bootstrap)).
+
+### Manual (developer-led)
+
+| Examples | Agent behavior |
+|----------|----------------|
+| Browser / UI verification, visual review, product sign-off | Present per [Step presentation contract](#step-4--step-presentation-contract); wait for developer |
+| Production dashboard, on-call judgment, “confirm with teammate” | Same |
+| Steps requiring credentials, VPN, or hardware the agent cannot access | Same — offer assistance (commands to run, what to look for) |
+| Subjective “feels right in staging” without automatable assertion | Same |
+
+**No auto-run** and **no auto-flip** until the developer invokes `deploy-walk <N> done`, `skip`, or `block`, or free-form equivalent confirmed in one line.
+
+### Spawned walk bootstrap
+
+When spawned by **`coding-session`** or **`create-pr`** (first turn on the lane after inputs validate):
+
+1. Resolve plan (Step 1) and read § N (Step 2).
+2. Run [Autonomous agent-executable pass](#autonomous-agent-executable-pass) from the first unchecked step in the active sub-section.
+3. Stop on the first **manual** step with full presentation, on **block**, or when the spawn scope is satisfied (`before-deploy-only` Before complete, or full walk terminal rules).
+
+Do **not** wait for the developer to send `deploy-walk present 1` first when agent-executable steps are queued at the front of the checklist.
+
+## Autonomous agent-executable pass
+
+Repeat until stop condition:
+
+1. Re-read the plan; find the lowest-numbered `[ ]` in the active sub-section (respect `deployWalkScope` and `**Status:**` routing).
+2. If none remain, run sub-section / lifecycle completion branches (Before complete → `deploy-walk deployed` hint or terminal; After complete → closure gate).
+3. Classify the step ([Agent-executable vs manual steps](#agent-executable-vs-manual-steps)).
+4. **Agent-executable:** run it → on pass, `StrReplace` flip + note → continue loop in the **same turn**.
+5. **Manual:** present step N per [Step presentation contract](#step-4--step-presentation-contract) and **stop** — wait for developer message.
+
+**Forbidden:** **AskQuestion** “may I run this test?” before an agent-executable step. **Forbidden:** mark manual steps done without developer resolution.
 
 ## Trigger
 
 | Command | Action |
 |---|---|
-| `deploy-walk present <N>` | Present step N of the active sub-section in detail. Sub-section is auto-resolved from the **`**Status:**`** line: `drafted` → `### Before deploy`; `deployed` → `### After deploy`; `done` → all-checked summary. |
+| `deploy-walk present <N>` | Process step N: if **agent-executable**, run → flip on pass → auto-advance while the next steps are also agent-executable; if **manual**, present in detail. Sub-section auto-resolved from **`**Status:**`**: `drafted` → `### Before deploy`; `deployed` → `### After deploy`; `done` → all-checked summary. |
 | `deploy-walk present before <N>` / `deploy-walk present after <N>` | Same, with the sub-section forced explicitly. Always works regardless of status — the explicit out-of-order escape hatch. |
 | `deploy-walk present <slug> <N>` (or with `before` / `after`) | Same, with the target plan named explicitly. Use when chat context spans multiple PR plans. |
 | `deploy-walk <N> done` | Flip step N's `[ ]` → `[x]`, append `*(YYYY-MM-DD: done.)*`, advance hint to step N+1. |
@@ -157,7 +224,9 @@ The procedure below is a hard contract — do **not** skip steps, infer state fr
 
 Free-form English equivalents (e.g. *"step 3 done — staging green"*, *"actually skip step 4, the regression suite covers it"*) are interpreted by the agent into one of the canonical commands above; the agent confirms the interpretation in one line *before* applying the edit. If the interpretation is ambiguous, use **AskQuestion** with concrete options instead of guessing.
 
-The agent **never auto-advances**. After `deploy-walk <N> done`, the confirmation reply names the next step but waits for the **developer** to invoke `deploy-walk present <next>` explicitly.
+**Auto-advance (agent-executable only):** after `deploy-walk <N> done` from an agent run, continue to step N+1 in the same turn when N+1 is agent-executable.
+
+**Manual steps:** after `deploy-walk <N> done` from the developer, the confirmation names the next step. If N+1 is agent-executable, run [Autonomous agent-executable pass](#autonomous-agent-executable-pass) immediately (do not wait for `deploy-walk present <next>`). If N+1 is manual, wait for `deploy-walk present <next>` or developer continuation.
 
 ## Step 1 — Resolve the target plan
 
@@ -200,15 +269,17 @@ If the Deploy test plan section uses **dash bullets** (`- ...`) instead of numbe
 
 ## Step 3 — Branch by command and execute
 
-Each command has its own contract. Execute the matching branch, then stop and wait for the next user message.
+Each command has its own contract. After agent-executable auto-runs, you may chain multiple steps in one turn. Stop and wait for the next user message when a **manual** step is presented, the walk is **blocked**, or a lifecycle **AskQuestion** gate applies.
 
-### `deploy-walk present <N>` — present step N
+### `deploy-walk present <N>` — process step N
 
 Find the Nth numbered item in the active sub-section (regex `^N\. \[[ x]\] `). Then:
 
-- If the box is already `[x]`, reply: *"Step N is already checked: \"{verbatim step line}\". To re-walk it explicitly, reply `deploy-walk present before <N>` or `deploy-walk present after <N>`. Otherwise, reply `deploy-walk present <N+1>` to continue."*
-- If the box is `[ ]` and has a prior `*(YYYY-MM-DD: Blocked — {reason})*` annotation, surface it: *"Previously blocked: {reason} (YYYY-MM-DD). Has the blocker cleared?"* Then continue with the regular presentation.
-- If the box is `[ ]` and clean, present per § *Step 4 — Step presentation contract*.
+- If the box is already `[x]`, reply: *"Step N is already checked: \"{verbatim step line}\". To re-walk it explicitly, reply `deploy-walk present before <N>` or `deploy-walk present after <N>`. Otherwise, reply `deploy-walk present <N+1>` to continue."* If N+1 is `[ ]` and agent-executable, you may run [Autonomous agent-executable pass](#autonomous-agent-executable-pass) from N+1 without waiting.
+- If the box is `[ ]` and has a prior `*(YYYY-MM-DD: Blocked — {reason})*` annotation, surface it: *"Previously blocked: {reason} (YYYY-MM-DD). Has the blocker cleared?"* Then classify — re-run if agent-executable and developer cleared the blocker; else present as manual.
+- If the box is `[ ]` and clean, **classify**:
+  - **Agent-executable** — run per [Agent-executable vs manual steps](#agent-executable-vs-manual-steps); on pass flip and auto-advance; on fail block or assist.
+  - **Manual** — present per § *Step 4 — Step presentation contract* and stop.
 
 ### `deploy-walk <N> done` / `deploy-walk <N> done: <note>` — flip box, advance hint
 
@@ -228,7 +299,8 @@ After the edit, **check whether step N was the last `[ ]` in the active sub-sect
   - **Leave status deployed**
   - **More details for option _**
   Only **Approve deploy checklist closure** authorizes the Status `deployed → done` flip and the **Frontmatter capstone** `deploy-test-plan-verified` `pending → done` mutation. Do not treat the final step's `done` command as approval for the larger deploy lifecycle closeout.
-- Otherwise, append the next-step hint: *"Marked {Before or After}-deploy step N done. Next: step N+1 — \"{verbatim next unchecked step line}\". Reply `deploy-walk present <N+1>` when ready."*
+- Otherwise, if step N+1 is **agent-executable**, continue [Autonomous agent-executable pass](#autonomous-agent-executable-pass) in the same turn (no `deploy-walk present` wait).
+- If step N+1 is **manual**, append: *"Marked {Before or After}-deploy step N done. Next (manual): step N+1 — \"{verbatim next unchecked step line}\". Reply `deploy-walk present <N+1>` when ready, or report results for agent-assisted commands."*
 
 ### `deploy-walk <N> skip: <reason>` — strike + flip
 
@@ -285,7 +357,9 @@ Where `{X}` is the count of `[x]` boxes (including skipped) in `### Before deplo
 
 ## Step 4 — Step presentation contract
 
-When `deploy-walk present <N>` lands a clean `[ ]` step, present it with this structure. **Plan path:** show the absolute path you resolved in Step 1 (from **`plan-state resolve`** output, an explicit path the **developer** supplied, or the read tool path). Do **not** use `~/.cursor/plans/` or other non-**`.sedea/operations/`** locations for hosting repo plan IO.
+Use this structure for **manual** steps only (or when an agent-executable run **failed** and you are handing back to the developer). Do **not** present first and wait when the step is agent-executable and runnable — run it per [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
+
+When presenting a manual step, use this structure. **Plan path:** show the absolute path you resolved in Step 1 (from **`plan-state resolve`** output, an explicit path the **developer** supplied, or the read tool path). Do **not** use `~/.cursor/plans/` or other non-**`.sedea/operations/`** locations for hosting repo plan IO.
 
 Use a **blockquote** or plain lines for the presentation shell — **do not** put `{slug}`, paths, or `{state}` inside raw `<…>` angle brackets (Markdown/HTML will eat them). Template:
 
@@ -314,9 +388,9 @@ Use a **blockquote** or plain lines for the presentation shell — **do not** pu
 >
 > ---
 >
-> Ask me anything. When you're done, reply `deploy-walk <N> done`, `deploy-walk <N> done: <note>`, `deploy-walk <N> skip: <reason>`, or `deploy-walk <N> block: <reason>`.
+> **Manual step** — run the verification yourself (or paste results). When done, reply `deploy-walk <N> done`, `deploy-walk <N> done: <note>`, `deploy-walk <N> skip: <reason>`, or `deploy-walk <N> block: <reason>`. Ask me anything while you work.
 
-If a sub-section ("Why" or "Cross-references") has nothing to say, omit it rather than emit a placeholder. If "Expected outcome" is genuinely ambiguous (the step itself is loose), use **AskQuestion** to clarify what counts as success before the **developer** runs anything.
+If a sub-section ("Why" or "Cross-references") has nothing to say, omit it rather than emit a placeholder. If "Expected outcome" is genuinely ambiguous for a **manual** step, use **AskQuestion** to clarify what counts as success before the **developer** runs anything. For **agent-executable** ambiguity (missing env, unclear pass criteria), use **AskQuestion** to classify *agent-run* vs *manual* — not to approve a run you already know is agent-executable.
 
 The presentation should be **detail-oriented**, not minimalist. Long presentations are fine; lazy ones aren't.
 
@@ -411,12 +485,14 @@ No blocking — the **developer** is in control.
 7. **User wants to revert a `[x]` to `[ ]`.** Not a built-in command. If they ask, do the inverse `StrReplace` manually (flip `[x]` → `[ ]` and trim the trailing `*(...)*` note). Surface this as an unusual case — usually the right move is a fresh `deploy-walk <N> done` with a new note explaining what changed.
 8. **Deploy walk on a non-PR plan (Master Plan, Phase plan, etc.).** Master Plans and Phase plans don't have `## N. Deploy test plan` sections — they have dual-title decomposition sections. If the user runs **deploy-walk** against one, stop with: *"Plan `{slug}` is a Master Plan, Phase plan, or Roadmap topic (pick which), which doesn't have a `## N. Deploy test plan` section. **deploy-walk** only walks PR plans (per-PR template § 7 / § 6). Did you mean a child PR plan?"*
 9. **Roll-back.** Out of scope for v1. If a deploy fails and the user wants to flip status back to `drafted`, they edit the Status line manually.
+10. **Long agent-executable chains.** If more than ~5 agent-executable steps remain, you may stop after a batch with a one-line recap (*"Steps 1–5 auto-passed; step 6 is manual — presenting now."*) and continue on the next developer message — do not silently skip steps.
 
 ## Scope guard
 
 This skill walks **one PR plan's `## N. Deploy test plan` section at a time**. It does **not**:
 
-- Run shell commands on the user's behalf (curl, psql, `gh`, kubectl). The skill **describes** the command in the step presentation; the **developer** runs it. The agent can be asked to run a command in the loose-mode collaboration window between `deploy-walk present <N>` and `deploy-walk <N> done` — that's the agent in its general-purpose mode, not this skill.
+- Run **manual** steps without developer resolution — present, assist, wait for `done` / `skip` / `block`.
+- Run destructive or irreversible production changes (deploy to prod, delete data, rotate secrets) unless the step text explicitly requires it **and** the developer chose that path in the same message — prefer **block** + AskQuestion when unsure.
 - **`git commit`**, **`git push`**, or any other write to the **hosting** git tree on behalf of the **developer** unless they explicitly ask in the same message. Plan body edits are normal **`StrReplace`** on the **`.plan.md`** file; syncing **`.sedea/operations/`** (or the hosting repo) to version control follows the **developer**'s workflow and hosting repo docs — this skill does **not** prescribe a monorepo-specific plan-commit command.
 - Reconcile / archive the plan when it reaches `done`, or auto-run **`plan-reconcile`**. **`plan-reconcile`** is never auto-invoked from this skill. The `done` flip + frontmatter `deploy-test-plan-verified` → `done` close the **deploy checklist only**; archival still depends on merge + explicit **plan-reconcile** (see **development-process** cadence).
 - Spawn child plans, edit other plans, or modify the parent plan's PR list / scope. Those are **`master-plan`**, **`pr-breakdown`**, **`phase-plan`**, etc.
@@ -451,7 +527,7 @@ Set `continuationStatus`:
 - `active` when any deploy step is blocked; include the blocked step and reason.
 - `partial` status with `continuationStatus: "active"` when plan format prevents reliable verification.
 
-Stop after each command's confirmation reply. Do not auto-advance, do not auto-invoke other skills, do not commit.
+Stop when a **manual** step is presented and awaiting developer input, when the walk is **blocked**, when spawn scope is **terminal**, or when a lifecycle **AskQuestion** gate applies. You **may** process multiple **agent-executable** steps in one turn before stopping. Do not auto-invoke other skills; do not commit hosting-repo git from this lane.
 
 ## Squad Leader bubble-up (detached lanes)
 
