@@ -108,6 +108,7 @@ The table above chooses **how to author** a PRD. This table chooses **which miss
 | **High complexity** Master Plan (score **> 20**) | Omit §6 spawn routes until score **≤ 20**; Squad Leader never spawns **`delivery-phases`** / **`pr-breakdown`** |
 | Branch/PR/chat titles | **`.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`** — benefit verbs only; never the forbidden busy-work prefix |
 | **`create prd`** while already on **`plan and deliver`** §1–2 | §1 option **2** → **`ad-hoc-prd`**, or finish **`prd`** first then new **`plan and deliver`** + `@path` — § *PRD intake — plan and deliver §2 vs prd mission* |
+| Squad Leader collects **title only**, spawns **`author-prd`**, child invents scope | **`prd/plan.mdc`** §**2.5** intake on Squad Leader; §3 handoff includes **`prdDescription`** + **`sourceMaterials`** |
 
 ### Agents and roles
 
