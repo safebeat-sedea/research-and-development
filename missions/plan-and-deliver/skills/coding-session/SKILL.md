@@ -535,7 +535,7 @@ When Mission Control delivers the **`pre-pr-review`** result:
 
 When **`pre-pr-review`** returns `recommendation: "no-go"`, any `blockers`, or non-empty `flags`:
 
-1. Present the review summary to the developer: blockers, `Must`, `Should`, `Defer`, and any proposed follow-ups for the PR plan. **Recommend** fixing relevant findings before PR creation or re-review (same wording as [Review result aggregation](#review-result-aggregation) step 2).
+1. Present the review summary to the developer: blockers, `Must`, `Should`, `Defer`, and any proposed follow-ups for the PR plan. **Recommend** fixing relevant findings before PR creation or re-review (same wording as [Review result aggregation](#review-result-aggregation) step 2). Treat **`Defer`** items tagged **`[G §7 After deploy — post-merge]`** (or equivalent) as **post-merge / deploy-walk** — do not promote them to `Must` or `Should`, and do not block PR creation on them.
 2. Use **AskQuestion** before making any code or plan edits (`modalTitle`: *Pre-PR review — address findings*). Required options **in this order**:
 
 | Option id | Label (brief) | Agent action |
