@@ -530,7 +530,7 @@ After **`pr-plan`** handoff (or an approved per-PR plan), implementation runs on
 
 #### Coding Session
 
-Each PR is delivered through the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). This stage spins up a worktree and attaches the Sedea workbench when applicable. **Mission Control spawn** from **`pr-plan`** (or another spawner) defaults to **implementation on the child lane** in that worktree after the worktree-open gate — not an orchestrator-only stop that tells the developer to paste a prompt elsewhere. **Detached** or **`promptOnly`** entry may still emit a copy-safe prompt for **a separate coding agent** session. The active lane coordinates the **ship chain** (§ *Ship chain* below) after an explicit committed implementation cut point.
+Each PR is delivered through the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). This stage spins up a worktree and attaches the Sedea workbench when applicable. **Mission Control spawn** from **`pr-plan`** (or another spawner) defaults to **implementation on the child lane** in that worktree after the worktree-open gate — not an orchestrator-only stop that tells the developer to paste a prompt elsewhere. **Detached** or **`promptOnly`** entry may still emit a copy-safe prompt for **a separate coding agent** session. The active lane coordinates the **ship chain** (§ *Ship chain* below): **developer reviews uncommitted implementation first**, then **commit** after approval, then **Before deploy** via spawned **`deploy-walk`**, then **`pre-pr-review`** — **no commit** before developer implementation review.
 
 **In-loop feedback** during implementation: **a coding agent** maintains **`## Follow-ups`** on the PR plan for scope-adjacent items (Strategy #6). **`pre-pr-review`** returns **proposed** follow-ups only; **`coding-session`** appends after developer approval. **`pr-review`** follow-ups follow the same approval pattern when required. § *Plan Updates* below drains routed bullets.
 
@@ -540,25 +540,28 @@ After **`pr-plan`** handoff and **`coding-session`** implementation, the happy p
 
 | Order | Branch | Role (one line) |
 |------:|--------|-----------------|
-| 1 | **`pre-pr-review`** | Fresh reviewer lane; go/no-go before merge-ready |
-| 2 | **`create-pr`** | **Only** branch that may run **`gh pr create`** (rule **20**) |
-| 3 | **`pr-review`** | Triage open PR comments (often **inline** in **`coding-session`**) |
-| 4 | **`deploy-walk`** | Walk §7 deploy checklist after merge when applicable (see **Entry points** below) |
-| 5 | **`plan-reconcile`** | Merge-driven archive + follow-ups triage (separate cadence after merge/deploy) |
+| 1 | **`coding-session`** (implementation) | Worktree + implement §§ 5–8 — **no commit** until developer approves |
+| 2 | **`coding-session`** (ship gates) | Developer implementation review → commit → spawn Before deploy **`deploy-walk`** |
+| 3 | **`pre-pr-review`** | Fresh reviewer lane on committed diff; go/no-go before merge-ready |
+| 4 | **`create-pr`** | **Only** branch that may run **`gh pr create`** (rule **20**) |
+| 5 | **`pr-review`** | Triage open PR comments (often **inline** in **`coding-session`**) |
+| 6 | **`deploy-walk`** (After deploy) | Post-merge §7 **After deploy** + lifecycle to `done` (see **Entry points** below) |
+| 7 | **`plan-reconcile`** | Merge-driven archive + follow-ups triage (separate cadence after merge/deploy) |
 
 **`deploy-walk` entry points (canonical)**
 
 | How it starts | Typical lane | When |
 |---------------|--------------|------|
+| **`coding-session` chain** — spawn after commit with `deployWalkScope: before-deploy-only` | Spawned **`deploy-walk`** child (`upstreamSkill: coding-session`) | Pre-merge; §7 **`### Before deploy`** has unchecked items |
 | **Developer phrase** — `deploy-walk present <N>`, `deploy-walk status`, step done/skip/block | Detached (developer or snapshot) | PR merged or target env ready; plan §7 exists |
-| **`create-pr` chain** — **AskQuestion** **Start deploy verification now** after merge | Spawned **`deploy-walk`** child | PR `merged`; `autoDeployAfterMerge` not `false` (**`create-pr/SKILL.md`** § *Spawn deploy-walk after merge*) |
+| **`create-pr` chain** — **AskQuestion** **Start deploy verification now** after merge | Spawned **`deploy-walk`** child (`upstreamSkill: create-pr`) | PR `merged`; full §7 walk including After deploy (**`create-pr/SKILL.md`** § *Spawn deploy-walk after merge*) |
 | **Mission / skill dispatch** — invoke **`deploy-walk/SKILL.md`** with plan anchor | Detached | Same as developer phrase when inputs are supplied |
 
-**Ordering:** Run **`deploy-walk`** after the PR is **merged** and §7 is walkable. Finishing deploy-walk (or capstone todo **done**) does **not** run **`plan-reconcile`** — start **`plan-reconcile`** separately when linked PRs are merged and you want archive/follow-up triage (**`plan-reconcile/SKILL.md`** § *When to trigger*).
+**Ordering:** **Before deploy** runs from **`coding-session`** after implementation approval and commit (pre-PR). **After deploy** runs after merge (typically **`create-pr`** spawn). Finishing deploy-walk (or capstone todo **done**) does **not** run **`plan-reconcile`** — start **`plan-reconcile`** separately when linked PRs are merged and you want archive/follow-up triage (**`plan-reconcile/SKILL.md`** § *When to trigger*).
 
 ##### pre-pr-review
 
-Spawned from **`coding-session`** after a committed cut point. Reviews diff + PR plan + repo rules; returns **`recommendation: go`** or blockers. Non-blockers are **`outputs.proposedFollowUps`** — **`coding-session`** presents them; plan **`## Follow-ups`** edits only after developer approval. **Pre-merge scope only:** score §7 **`### Before deploy`**; treat **`### After deploy`** as post-merge (**`deploy-walk`**) — do not flag unchecked After-deploy lines as blockers or “do this before PR”. See **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pre-pr-review/SKILL.md`** § *Pre-PR phase boundary*.
+Spawned from **`coding-session`** after developer implementation approval, **commit**, and **Before deploy** **`deploy-walk`** (or documented skip). Reviews the **committed** diff + PR plan + repo rules; returns **`recommendation: go`** or blockers. Non-blockers are **`outputs.proposedFollowUps`** — **`coding-session`** presents them; plan **`## Follow-ups`** edits only after developer approval. **Pre-merge scope only:** score §7 **`### Before deploy`** against what was walked or skipped; treat **`### After deploy`** as post-merge (**`deploy-walk`** after merge) — do not flag unchecked After-deploy lines as blockers or “do this before PR”. See **`pre-pr-review/SKILL.md`** § *Pre-PR phase boundary*.
 
 ##### create-pr
 

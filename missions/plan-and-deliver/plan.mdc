@@ -469,13 +469,14 @@ Related (optional):
 | Order | Protocol branch | Typical invoker | Skill |
 |------:|-----------------|-----------------|-------|
 | 1 | `coding-session` | Developer phrase, snapshot, or post–**pr-plan** handoff | `skills/coding-session/SKILL.md` |
-| 2 | `pre-pr-review` | **coding-session** (spawn) after committed cut point | `skills/pre-pr-review/SKILL.md` |
-| 3 | `create-pr` | **coding-session** after pre-PR **go** | `skills/create-pr/SKILL.md` |
-| 4 | `pr-review` | **coding-session** (inline) after PR exists | `skills/pr-review/SKILL.md` |
-| 5 | `deploy-walk` | Developer phrase, **`create-pr`** after merge (**AskQuestion**), or detached dispatch | `skills/deploy-walk/SKILL.md` — **development-process.md** § *deploy-walk entry points* |
-| 6 | `plan-reconcile` | Developer / **`create-pr`** after deploy done (not auto from deploy-walk) | `skills/plan-reconcile/SKILL.md` |
+| 2 | `deploy-walk` (Before deploy) | **coding-session** (spawn) after implementation approval + commit | `skills/deploy-walk/SKILL.md` — `deployWalkScope: before-deploy-only` |
+| 3 | `pre-pr-review` | **coding-session** (spawn) after Before deploy walk or skip | `skills/pre-pr-review/SKILL.md` |
+| 4 | `create-pr` | **coding-session** after pre-PR **go** | `skills/create-pr/SKILL.md` |
+| 5 | `pr-review` | **coding-session** (inline) after PR exists | `skills/pr-review/SKILL.md` |
+| 6 | `deploy-walk` (After deploy) | Developer phrase, **`create-pr`** after merge (**AskQuestion**), or detached dispatch | `skills/deploy-walk/SKILL.md` — **development-process.md** § *deploy-walk entry points* |
+| 7 | `plan-reconcile` | Developer / **`create-pr`** after deploy done (not auto from deploy-walk) | `skills/plan-reconcile/SKILL.md` |
 
-**`deploy-walk` entry points:** developer phrase on a detached lane; **`create-pr`** spawns after merge when the developer chooses **Start deploy verification now**; or direct skill dispatch with plan inputs. Finishing deploy-walk does **not** run **`plan-reconcile`**.
+**`deploy-walk` entry points:** **coding-session** spawns Before deploy pre-merge; developer phrase on a detached lane; **`create-pr`** spawns After deploy post-merge when the developer chooses **Start deploy verification now**; or direct skill dispatch with plan inputs. Finishing deploy-walk does **not** run **`plan-reconcile`**.
 
 **Start `coding-session`:** Detached lane only — not a Squad Leader spawn from §§1–7. Entry paths, required inputs, and anti-patterns: **`.sedea/centers/research-and-development/docs/development-process.md`** § *Start implementation (`coding-session` entry)*.
 

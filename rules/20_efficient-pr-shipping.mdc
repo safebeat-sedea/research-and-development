@@ -92,7 +92,7 @@ After implementing changes, **stop**. Do not `git add`, `git commit`, or `git pu
 
 - Present a summary of what changed and ask for next steps using `AskQuestion`. 
 - This applies to **all** workflows: feature PRs, PR comment fixes, and any other code changes.
-- The exceptions are creating branches and worktrees (fine without confirmation), and explicit `pre-pr-review` cut-point confirmation. The coding agent must not silently commit; after an explicit committed cut point, `coding-session` spawns the `pre-pr-review` reviewer lane.
+- The exceptions are creating branches and worktrees (fine without confirmation). The coding agent must not silently commit. After developer approves implementation, `coding-session` commits (with explicit consent), runs **Before deploy** via spawned **`deploy-walk`** when applicable, then spawns the `pre-pr-review` reviewer lane.
 
 **Sedea git gate (same message):** This section is a **workflow** pause — it does **not** replace [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](../../sedea/rules/6_git-commit-push-gate.mdc). Agents must satisfy **both** layers in § *Ship git consent (workflow + Sedea gate)* below.
 
@@ -121,7 +121,8 @@ Planning-tree picks use [`.sedea/centers/research-and-development/rules/30_plann
 | Developer signal (this turn or **AskQuestion** pick) | May continue workflow / spawn next skill? | May run **`git commit`**? | May run **`git push`**? |
 |------------------------------------------------------|----------------------------------------|---------------------------|-------------------------|
 | *Proceed*, *next stage*, *looks good*, *run pre-pr-review*, *approved cut point* (workflow only) | **Yes** | **No** — unless the **same user message** also says *commit* (or equivalent) | **No** — unless the **same message** says *push* or *commit and push* |
-| *Committed cut point* / *ready for pre-PR* (implementation already committed or cut point names existing commit) | **Yes** — e.g. spawn **`pre-pr-review`** per **`coding-session`** | **No** — unless the **same message** authorizes a **new** *commit* | **No** — until the **same message** says *push* |
+| *Approve implementation* / *ready for pre-PR* (workflow only — not yet committed) | **Yes** — advance to commit gate per **`coding-session`** | **No** — unless the **same message** also says *commit* | **No** |
+| *Committed* / *ready for pre-PR review* (after implementation approval + commit + Before deploy when applicable) | **Yes** — e.g. spawn **`pre-pr-review`** per **`coding-session`** | **No** — unless the **same message** authorizes a **new** *commit* | **No** — until the **same message** says *push* |
 | *commit*, *land the branch*, *create a commit* in **same user message** | **Yes** | **Yes** (if there are changes to commit; skip if tree clean per cadence) | **No** — unless the message also says *push* |
 | *push*, *commit and push*, *publish the branch* in **same user message** | **Yes** | **Yes** when commit is included or already done | **Yes** |
 
@@ -170,7 +171,7 @@ When the user or task says "open a PR", "push and open a PR", or "create a pull 
 
 | User says (paraphrase OK) | Current lane | Required action |
 |---------------------------|--------------|-----------------|
-| *Open a PR* / *create the pull request* | **`coding-session`** before **`pre-pr-review`** **go** | **Do not** call `gh pr create`. Explain ship order: committed cut point → **`pre-pr-review`** → **Create-PR handoff after go** → spawn **`create-pr`**. |
+| *Open a PR* / *create the pull request* | **`coding-session`** before **`pre-pr-review`** **go** | **Do not** call `gh pr create`. Explain ship order: implementation review → commit → Before deploy **`deploy-walk`** → **`pre-pr-review`** → **Create-PR handoff after go** → spawn **`create-pr`**. |
 | *Open a PR* / *create the pull request* | **`coding-session`** after **`pre-pr-review`** **go** + developer approved PR creation | Spawn **`create-pr`** via **`AGENT_RUN_REQUEST_V1`** (§ *Create-PR handoff after go* in [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md)) — still **no** `gh pr create` on this lane. |
 | *Open a PR* | Planning, Squad Leader, **`pre-pr-review`**, **`pr-review`**, **`master-plan`**, … | Prepare context; emit **`create-pr`** session prompt or tell developer to run **`coding-session`** ship chain — **never** `gh pr create` here. |
 | *Push and open a PR* | **`coding-session`** | Run § *Commit and push cadence* (same-message *commit* / *push*) **first** when changes exist; then pre-PR / **`create-pr`** handoff — not one combined `gh pr create` step. |
@@ -230,7 +231,7 @@ Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)**
 
 Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation in this cadence (`HOSTING_ROOT`, `WORKTREE_ROOT`, `OPS_ID`).
 
-1. **Commit** (step 1). **Skip this step if `git status --short` is empty** — typical after the committed cut point reviewed by `pre-pr-review`. Do not amend the previous commit and do not pass `--allow-empty`; just proceed to step 2.
+1. **Commit** (step 1). **Skip this step if `git status --short` is empty** — typical when the branch is already committed after **`pre-pr-review`** **go**. Do not amend the previous commit and do not pass `--allow-empty`; just proceed to step 2.
 2. Push to remote.
 3. **PR comment reconciliation (`pr-review` → this cadence).** This step is **only** [`pr-review`](../missions/plan-and-deliver/skills/pr-review/SKILL.md) **Step 5 — GitHub only** (not Steps 1–4). When this coding session already ran that skill’s Steps 1–4 (per-comment dispositions in the Step 4 report) and **GitHub** reply / resolve / minimize / summary from Step 5 has **not** run yet, the **commit and push cadence is incomplete** until Step 5 runs — **same agent turn**, immediately after the push succeeds (so the summary can cite `git rev-parse --short HEAD` in the **worktree**). Execute from **`HOSTING_ROOT`**: `cd "$HOSTING_ROOT" && python3 .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py` (two-step `PR_REVIEW_INPUT` per that skill). If thread IDs or PR identity are missing from context, re-run that skill’s **Step 1** script array for the same PR, then Step 5. If there was no `pr-review` triage in this chat, **skip step 3 entirely** — do not run the script.
 4. **Link the PR to its plan sidecar.** After push (and after step 3 when applicable), attempt to upsert the PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. Run with **`cd "$HOSTING_ROOT"`** and **`--operations-user-id` before the subcommand** (`WORKTREE_ROOT` = hosting repo worktree where commit/push ran):
@@ -434,7 +435,7 @@ Do not conflate **pre-PR review** with **PR-surface review**:
 
 | Role | Session | When | Skill / surface |
 |------|---------|------|-----------------|
-| **Pre-PR reviewer agent** | **Fresh** child lane — no coding-session transcript carry-over | After committed cut point, before **`create-pr`** | [`pre-pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pre-pr-review/SKILL.md) |
+| **Pre-PR reviewer agent** | **Fresh** child lane — no coding-session transcript carry-over | After implementation approval, commit, and Before deploy **`deploy-walk`** (when applicable), before **`create-pr`** | [`pre-pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pre-pr-review/SKILL.md) |
 | **Reviewer agent** | GitHub PR diff + description (Sedea or third-party) | After PR is open | [`pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pr-review/SKILL.md) for comment triage; not a substitute for pre-PR |
 
 Full definitions: [`.sedea/centers/research-and-development/docs/development-process.md`](../docs/development-process.md) § *Agents and roles*.
