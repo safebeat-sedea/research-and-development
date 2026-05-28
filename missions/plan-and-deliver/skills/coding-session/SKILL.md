@@ -8,8 +8,8 @@ description: >-
   **`WORKTREE_ROOT`** before implementation.   On a **spawned child lane** with layer-2 approval (or **pr-plan** spawn auto-authorize),
   **implement the anchored PR plan on this lane** in that worktree; on **prompt-only**
   entry, emit a copy/paste-safe two-phase session prompt for a separate coding chat.
-  After implementation, run the **ship chain** (developer review → commit → Before deploy
-  **deploy-walk** spawn → **pre-pr-review** spawn). Plan-anchored runs validate
+  After implementation, run the **ship chain** (one cut-point modal: approve + commit +
+  Before deploy **deploy-walk** spawn → **pre-pr-review** spawn). Plan-anchored runs validate
   per-PR plans with plan-ws-completeness.mjs (_TBD_ in body requires completion or
   explicit override incomplete plan). Use under mission dispatch, natural language, or
   after planning when handing off implementation.
@@ -87,7 +87,7 @@ warmUpRules:
 
 Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
 
-**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory worktree bootstrap** (`scripts/bootstrap-worktree-dev.sh`), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) (developer review before commit → commit → Before deploy **`deploy-walk`** spawn → **`pre-pr-review`** → **`create-pr`**).
+**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory worktree bootstrap** (`scripts/bootstrap-worktree-dev.sh`), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** → **`pre-pr-review`** → **`create-pr`**).
 
 **Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code when this run is **prompt-only** (see [Prompt-only handoff](#prompt-only-handoff)); opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
@@ -99,7 +99,7 @@ On **[Spawned implementation lane](#spawned-implementation-lane)**, **this lane*
 
 ### Spawned lane — sentinel-first (binding)
 
-On spawned **`coding-session`** lanes the **AskQuestion tool** is usually **unavailable**. Before the [Worktree-open gate](#worktree-open-gate), [Worktree-open gate (pr-plan spawn handoff)](#worktree-open-gate-pr-plan-spawn-handoff), and [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) gates — **unless** [Auto-authorize implementation (pr-plan spawn)](#auto-authorize-implementation-pr-plan-spawn) applies (no modal; proceed to worktrees):
+On spawned **`coding-session`** lanes the **AskQuestion tool** is usually **unavailable**. Before the [Worktree-open gate](#worktree-open-gate), [Worktree-open gate (pr-plan spawn handoff)](#worktree-open-gate-pr-plan-spawn-handoff), and [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — **unless** [Auto-authorize implementation (pr-plan spawn)](#auto-authorize-implementation-pr-plan-spawn) applies (no modal; proceed to worktrees):
 
 1. **Self-check:** the assistant message **starts** with **`MC_PHASED_RESPONSE_V1`** (or sentinel-only **`MC_ASKQUESTION_V1`**) — **no** recap prose before the sentinel.
 2. Put required recap lines in **`display.markdown`** only (see pr-plan spawn handoff recap below).
@@ -300,9 +300,9 @@ Normative path when **`pr-plan`** (or another spawner) opens a **coding-session*
 2. **Bootstrap gate** — Generic flow step 4 must have completed successfully (`outputs.bootstrapStatus: success`) before hosting-repo edits or substantive §§ **5–8** fill. On bootstrap failure, stop per [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory); do not advance `shipPhase` past `worktree`.
 3. **Warm-up on this lane** — Follow [Session prompt structure](#session-prompt-structure) Phase 1 steps (workspace readiness, branch check, load **Project rules** from the worktree, plan file + sidecar when anchored). You may skip emitting a fenced **external** session prompt unless the developer asks for a copy.
 4. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for scope context; **first implementation work** is substantive fill of §§ **5–8** (replace `_TBD_` as code paths become known), then code/tests/docs per those sections.
-5. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until **implementation ready for developer review** or a blocking stop. **Do not** `git commit` or `git push` during implementation — see **20_efficient-pr-shipping.mdc** § *Review before commit* and [Developer implementation review gate](#developer-implementation-review-gate-before-commit). Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
+5. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until **implementation ready for developer review** or a blocking stop. **Do not** `git commit` or `git push` during implementation — see **20_efficient-pr-shipping.mdc** § *Review before commit* and [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy). Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
 6. **Continuation** — Keep `outputs.continuationStatus: "active"` and `outputs.shipPhase: "implementing"` while work remains. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial` when blocked; do **not** use `continuationStatus: terminal` to mean “prompt emitted — hand off elsewhere.”
-7. **Ship chain** — When implementation is ready for developer review, follow [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) on **this same lane** (developer review → commit → Before deploy **`deploy-walk`** spawn → **`pre-pr-review`** → **`create-pr`** when authorized). **Do not** skip Before deploy or open a PR before that order completes.
+7. **Ship chain** — When implementation is ready for developer review, follow [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) on **this same lane** ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal for approve + commit + Before deploy spawn when applicable → **`pre-pr-review`** → **`create-pr`** when authorized). **Do not** skip Before deploy or open a PR before that order completes.
 
 ## Deploy test plan confirmations
 
@@ -446,65 +446,109 @@ Normative order on the **spawned implementation lane** — **do not** skip steps
 
 ```mermaid
 flowchart LR
-  IMPL[Implement — no commit] --> DEVREV[Developer implementation review]
-  DEVREV --> COMMIT[Commit authorization]
-  COMMIT --> BDW[Spawn deploy-walk — Before deploy only]
+  IMPL[Implement — no commit] --> CUT[Ship cut-point gate]
+  CUT --> BDW[Spawn deploy-walk — Before deploy only]
   BDW --> PPR[Spawn pre-pr-review]
   PPR --> CPR[Create-PR handoff after go]
 ```
 
 | Step | Section | Commit required? |
 |------|---------|------------------|
-| 1 | [Developer implementation review gate](#developer-implementation-review-gate-before-commit) | **No** — review working tree (dirty OK) |
-| 2 | [Commit authorization gate](#commit-authorization-gate) | **Yes** — after developer approves implementation |
-| 3 | [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) | **Yes** — committed, clean tree |
-| 4 | [Pre-PR review handoff](#pre-pr-review-handoff) | **Yes** — Before deploy resolved or skipped |
-| 5 | [Create-PR handoff after go](#create-pr-handoff-after-go) | After **`pre-pr-review`** **go** |
+| 1 | [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) | **No** for review — combined modal covers approve + commit + Before deploy spawn |
+| 2 | [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) | **Yes** — after cut-point **Act** (commit when needed, then spawn) |
+| 3 | [Pre-PR review handoff](#pre-pr-review-handoff) | **Yes** — Before deploy resolved or skipped |
+| 4 | [Create-PR handoff after go](#create-pr-handoff-after-go) | After **`pre-pr-review`** **go** |
 
-**Forbidden on this lane:** `git commit` before step 2 approval; spawn **`pre-pr-review`** while the tree is dirty; spawn **`create-pr`** before steps 3–4 complete; treat inline Before-deploy chat on this lane as a substitute for step 3 **`deploy-walk`** spawn when §7 has unchecked Before-deploy items.
+**Forbidden on this lane:** `git commit` before ship cut-point approval; spawn **`pre-pr-review`** while the tree is dirty; spawn **`create-pr`** before steps 2–3 complete; treat inline Before-deploy chat on this lane as a substitute for step 2 **`deploy-walk`** spawn when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → spawn Before deploy when [Combined authorization](#combined-authorization) applies.
 
-## Developer implementation review gate (before commit)
+## Ship cut-point gate (approve, commit, Before deploy)
 
-When implementation is **ready for developer review** (or the developer signals *ready for review* / *review my changes*), **stop** implementation edits and open this gate. This implements **20_efficient-pr-shipping.mdc** § *Review before commit* — **developer code review comes before any commit**.
+When implementation is **ready for developer review** (or the developer signals *ready for review* / *review my changes*), **stop** implementation edits and open this gate. This implements **20_efficient-pr-shipping.mdc** § *Review before commit* — **developer code review comes before any commit** — and combines what were separate approve, commit, and Before deploy spawn modals into **one** structured choice when plan-anchored and §7 has work to walk.
 
 ### Summarize and direct diff review
 
 1. Present a short summary: `git status --short` (call out **uncommitted** vs committed), files touched, and scope vs the anchored plan when present. If there are **no commits yet** on the branch, say so — review is against the **working tree** and/or `git diff` / IDE SCM view.
-2. Tell the developer to review in the **IDE diff** (SCM: working tree, staged, and unstaged) and/or `git diff` / `git diff --cached` as appropriate. Do **not** treat “implementation done” chat as diff review.
-3. **Do not** run `git commit`, `git push`, spawn **`pre-pr-review`**, spawn **`deploy-walk`**, or spawn **`create-pr`** in this gate.
+2. When plan-anchored, **read** §7 **`### Before deploy`** and note in the recap: empty / all `[x]` / *N* unchecked Before-deploy steps (list step numbers when ≤5).
+3. Tell the developer to review in the **IDE diff** (SCM: working tree, staged, and unstaged) and/or `git diff` / `git diff --cached` as appropriate. Do **not** treat “implementation done” chat as diff review.
+4. **Do not** run `git commit`, `git push`, spawn **`deploy-walk`**, spawn **`pre-pr-review`**, or spawn **`create-pr`** in the same assistant turn as this gate's modal.
 
-### Implementation review authorization
+### Combined authorization
 
-Use **AskQuestion** (`modalTitle`: *Coding session — approve implementation*):
+Use **one** **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *Coding session — approve, commit, Before deploy*) — recap + modal in one message per rule **2**. **Do not** chain separate modals for approve, then commit, then spawn when this subsection applies.
 
-| Option id (illustrative) | Label (brief) |
-|--------------------------|---------------|
-| `approve-implementation` | Approve implementation — proceed to commit |
+**When to use the combined modal (normative):** plan-anchored run **and** §7 **`### Before deploy`** has at least one **`[ ]`** item (not empty, not only *None — …*, not all `[x]`).
+
+| Option id | Label (brief) | Authorizes on **next** turn ([Act after pick](#act-after-ship-cut-point-pick)) |
+|-----------|---------------|--------------------------------------------------------------------------------|
+| `commit-only` | Approve, commit, spawn Before deploy walk | Implementation approved · **`git commit`** when tree dirty · spawn **`deploy-walk`** (`before-deploy-only`) |
+| `commit-push` | Approve, commit + push, spawn Before deploy walk | Same + **`git push`** when dirty tree committed |
+| `commit-only-skip-before-deploy` | Approve, commit, skip Before deploy | Implementation approved · **`git commit`** when dirty · documented skip (note under §7 or **`## Follow-ups`**) · **no** deploy-walk spawn |
+| `more-changes` | More implementation changes first | Return to [Spawned implementation lane](#spawned-implementation-lane) step 5 |
+| `defer` | Defer ship chain | Keep `continuationStatus: active`; no commit, no spawn |
+| `more-details` | More details for option _ | Elaborate; re-ask combined modal |
+
+Option ids **`commit-only`** and **`commit-push`** satisfy rule **6** git layer **on the pick turn** — run commit/push on the **developer's response turn** only, not in the same assistant turn as the modal.
+
+**When Before deploy is already satisfied** (empty, *None*, or all `[x]`) but the tree is dirty, use **one** modal (`modalTitle`: *Coding session — approve and commit*) with **`commit-only`** / **`commit-push`** / **`more-changes`** / **`defer`** / **`more-details`** — then [Pre-PR review authorization](#pre-pr-review-authorization), not deploy-walk spawn.
+
+**When the tree is clean** and Before-deploy items remain, use **one** modal with:
+
+| Option id | Label (brief) |
+|-----------|---------------|
+| `spawn-before-deploy-walk` | Approve, spawn Before deploy walk (already committed) |
+| `skip-before-deploy` | Skip Before deploy (executive override) |
 | `more-changes` | More implementation changes first |
 | `defer` | Defer ship chain |
 | `more-details` | More details for option _ |
 
-Only **`approve-implementation`** authorizes [Commit authorization gate](#commit-authorization-gate). **`more-changes`** returns to [Spawned implementation lane](#spawned-implementation-lane) step 5.
+**Free-form** (no plan anchor): combined approve + commit modal only — **`commit-only`** / **`commit-push`** / **`more-changes`** / **`defer`** / **`more-details`** — then [Pre-PR review authorization](#pre-pr-review-authorization).
 
-Do **not** use option labels that say *run pre-pr-review* or *create PR* here — those belong in later gates.
+Do **not** use option labels that say *run pre-pr-review* or *create PR* here — those belong in [Pre-PR review authorization](#pre-pr-review-authorization).
 
-## Commit authorization gate
+### Spawned lane — ship cut-point sentinel (binding)
 
-Run **only** after **`approve-implementation`** in the prior gate (or the **same user message** explicitly approves implementation **and** authorizes *commit* per rule **20**).
+When the **AskQuestion tool** is unavailable, emit **`MC_PHASED_RESPONSE_V1`** (recap in `display.markdown`, options in `askQuestion`) — same option ids as the combined modal. Example shape (replace `<recap>` with diff summary + Before-deploy count):
 
-1. If `git status --short` is empty and there is nothing to commit, note a clean tree and skip to [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) when plan-anchored, or [Pre-PR review authorization](#pre-pr-review-authorization) when free-form with existing commits.
-2. Otherwise use **AskQuestion** per rule **20** § *Ship git consent* with git layer options (`commit-only`, `commit-push` only when the **same turn** also needs push — pre-PR review typically needs **commit-only** first).
-3. Run **`git commit`** only after explicit commit consent on **this turn**. **Do not** push unless the same turn authorizes push.
-4. After commit, verify `git status --short` is empty before advancing. If still dirty, stop and offer more changes or a follow-up commit — do not spawn **`pre-pr-review`** while dirty.
+```
+MC_PHASED_RESPONSE_V1
+{"version":1,"display":{"markdown":"<recap>"},"askQuestion":{"modalTitle":"Coding session — approve, commit, Before deploy","questions":[{"id":"ship-cut-point","prompt":"Approve implementation, commit if needed, and start Before deploy walk?","allowMultiple":false,"options":[{"id":"commit-only","label":"Approve, commit, spawn Before deploy walk"},{"id":"commit-push","label":"Approve, commit + push, spawn Before deploy walk"},{"id":"commit-only-skip-before-deploy","label":"Approve, commit, skip Before deploy"},{"id":"more-changes","label":"More implementation changes first"},{"id":"defer","label":"Defer ship chain"},{"id":"more-details","label":"More details for option _"}]}]}}
+```
+
+Omit **`commit-only-skip-before-deploy`** when Before deploy is already satisfied; omit commit options when the tree is clean and use `spawn-before-deploy-walk` instead.
+
+### Act after ship cut-point pick
+
+Run on the **developer's response turn** after a cut-point pick — **not** in the same assistant turn as the modal (same rule as [Pre-PR review authorization](#pre-pr-review-authorization)).
+
+| Pick | Actions (in order) |
+|------|---------------------|
+| **`commit-only`** / **`commit-push`** (Before deploy unchecked) | 1. **`git commit`** if `git status --short` is non-empty · 2. Verify clean tree · 3. [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) spawn (no second modal) · 4. Stop — wait for **`deploy-walk`** child |
+| **`commit-only-skip-before-deploy`** | 1. **`git commit`** if dirty · 2. Append dated skip note under §7 or **`## Follow-ups`** · 3. [Pre-PR review authorization](#pre-pr-review-authorization) |
+| **`commit-only`** / **`commit-push`** (Before deploy satisfied or free-form) | 1. **`git commit`** if dirty · 2. Verify clean · 3. [Pre-PR review authorization](#pre-pr-review-authorization) |
+| **`spawn-before-deploy-walk`** | [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) spawn · stop for child |
+| **`skip-before-deploy`** | Dated skip note · [Pre-PR review authorization](#pre-pr-review-authorization) |
+
+If commit fails or tree stays dirty after commit, stop with `partial` — do not spawn **`deploy-walk`** or **`pre-pr-review`**.
+
+**Same user message** may authorize the combined path in prose (*approve, commit, and run Before deploy*) — treat as **`commit-only`** when Before deploy applies, per rule **20**.
+
+## Commit execution (internal)
+
+**Not a separate AskQuestion gate.** Runs only inside [Act after ship cut-point pick](#act-after-ship-cut-point-pick) when the pick id is **`commit-only`** or **`commit-push`**.
+
+1. Skip **`git commit`** when `git status --short` is empty.
+2. Use the commit message style from recent branch history and plan scope.
+3. **`commit-push`** also runs **`git push`** after a successful commit on the **same response turn**.
+4. Verify `git status --short` is empty before spawn or pre-PR authorization.
 
 ## Before deploy deploy-walk handoff
 
-Run **after** [Commit authorization gate](#commit-authorization-gate) succeeds (committed, clean tree). **Do not** spawn **`pre-pr-review`** or **`create-pr`** until this step completes or is skipped.
+Run from [Act after ship cut-point pick](#act-after-ship-cut-point-pick) when the cut-point pick authorizes spawn (**`commit-only`**, **`commit-push`**, or **`spawn-before-deploy-walk`**) — **no second AskQuestion** for spawn on that path. **Do not** spawn **`pre-pr-review`** or **`create-pr`** until this step completes or is skipped via **`commit-only-skip-before-deploy`** / **`skip-before-deploy`**.
 
 When `targetPlanPath` resolves to a PR plan:
 
 1. **Read** §7 **`### Before deploy`**. If empty, only *None — …*, or every item is `[x]`, note in one line and continue to [Pre-PR review authorization](#pre-pr-review-authorization).
-2. When any **`[ ]`** Before-deploy items remain, **spawn** `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/deploy-walk/SKILL.md` on a **child lane** (do **not** only walk inline on this lane unless the developer explicitly declines the spawn and chooses defer/skip below).
+2. When any **`[ ]`** Before-deploy items remain, **spawn** `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/deploy-walk/SKILL.md` on a **child lane** (do **not** only walk inline on this lane unless the developer explicitly chose skip on the cut-point modal).
 
 **Spawn inputs (required):**
 
@@ -518,19 +562,7 @@ When `targetPlanPath` resolves to a PR plan:
 3. Announce that **coding-session** is waiting for the **deploy-walk** child result; **stop** — do not spawn **`pre-pr-review`** in the same turn.
 4. When the child returns, copy deploy status into coding-session `outputs` and continue to [Pre-PR review authorization](#pre-pr-review-authorization) only if Before deploy is satisfied or documented skip.
 
-**Skip spawn** (go straight to pre-PR authorization) only when:
-
-- Free-form run without plan anchor, or
-- Developer chose **Skip Before deploy** via **AskQuestion** before spawn (`skip-before-deploy`) with a dated note under §7 or **`## Follow-ups`**.
-
-| Option id (illustrative) | Label (brief) |
-|--------------------------|---------------|
-| `spawn-before-deploy-walk` | Spawn deploy-walk — Before deploy |
-| `skip-before-deploy` | Skip Before deploy (executive override) |
-| `more-changes` | More implementation changes first |
-| `more-details` | More details for option _ |
-
-Use this **AskQuestion** when Before-deploy items remain and spawn is not yet authorized.
+**Legacy / exceptional second modal:** use a separate **AskQuestion** for spawn **only** when the developer returns mid-chain without a prior cut-point pick (for example after *more-changes* and a new review pass) and Before-deploy items remain — same options as [Combined authorization](#combined-authorization) spawn rows (`spawn-before-deploy-walk`, `skip-before-deploy`, …). **Do not** use this when the combined cut-point modal already ran in the same review pass.
 
 ## Pre-PR review authorization
 
@@ -549,13 +581,13 @@ Do **not** spawn **`pre-pr-review`** in the same assistant turn as the authoriza
 
 ## Pre-PR review handoff
 
-This branch spawns **`pre-pr-review`** only **after** [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) steps 1–3 complete and [Pre-PR review authorization](#pre-pr-review-authorization) approves spawn.
+This branch spawns **`pre-pr-review`** only **after** [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) cut-point **Act**, [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) (or skip), and [Pre-PR review authorization](#pre-pr-review-authorization) approve spawn.
 
 ### Review handoff preconditions
 
 Before spawning **`pre-pr-review`**:
 
-1. [Developer implementation review gate](#developer-implementation-review-gate-before-commit) completed — developer approved implementation; [Commit authorization gate](#commit-authorization-gate) completed — at least one commit on the branch when there were changes to land.
+1. [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) completed — developer approved implementation via combined modal or equivalent; [Commit execution](#commit-execution-internal) completed when the tree was dirty — at least one commit on the branch when there were changes to land.
 2. [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) completed or skipped — **do not** spawn **`pre-pr-review`** while unchecked Before-deploy items remain without spawn/skip documentation.
 3. [Pre-PR review authorization](#pre-pr-review-authorization) — developer chose **`proceed-pre-pr-review`** (or same-message authorization per rule **20**).
 4. `git status --short` in the worktree is empty. Uncommitted edits are invisible to the committed review diff, so do not spawn the reviewer while dirty.
@@ -609,7 +641,7 @@ When **`pre-pr-review`** returns `recommendation: "no-go"`, any `blockers`, or n
 
 3. Do not interpret the reviewer handback itself as approval. No source edits, plan edits, commits, pushes, or new review spawn occur until the developer chooses an approval option.
 4. **`fix-now-session`**, **`apply-must`**, and **`apply-must-should`** authorize implementation on **this lane** only — not a detached session prompt or a new Mission Control dispatch for coding.
-5. After approved fixes are implemented, restart from [Developer implementation review gate](#developer-implementation-review-gate-before-commit) (commit again after approval, then Before deploy if needed, then **`pre-pr-review`**). The loop repeats until **`pre-pr-review`** returns `go` or the developer explicitly defers/abandons.
+5. After approved fixes are implemented, restart from [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) (combined approve + commit + Before deploy when applicable, then **`pre-pr-review`**). The loop repeats until **`pre-pr-review`** returns `go` or the developer explicitly defers/abandons.
 6. Track each loop pass in outputs as `reviewLoopCount` and keep `continuationStatus: "active"` while approval, fixes, implementation review, commit, Before deploy, or re-review remains open.
 
 ### User requests to open a PR (before `create-pr` spawn)
@@ -617,7 +649,7 @@ When **`pre-pr-review`** returns `recommendation: "no-go"`, any `blockers`, or n
 When the developer says *open a PR*, *create a pull request*, or similar **before** **`pre-pr-review`** returns **`go`** and the **Create-PR handoff after go** gate:
 
 1. **Do not** call `gh pr create` or surface GitHub `pull/new/` URLs (rule **20** § *PR creation* and § *User phrases → required handoff*).
-2. State the required order: implementation → [Developer implementation review gate](#developer-implementation-review-gate-before-commit) → commit → [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) → spawn **`pre-pr-review`** → on **`go`**, **Create-PR handoff after go** → spawn **`create-pr`** only.
+2. State the required order: implementation → [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) (approve, commit, Before deploy **`deploy-walk`** in one modal when applicable) → spawn **`pre-pr-review`** → on **`go`**, **Create-PR handoff after go** → spawn **`create-pr`** only.
 3. If they only pushed and expect a PR, confirm whether **`pre-pr-review`** has run; first-push cadence does **not** replace the **`create-pr`** child lane.
 
 ### Create-PR handoff after go
@@ -802,7 +834,7 @@ Include:
 - Which PR to implement (scope, behaviour, files).
 - **Plan link:** absolute path to the `.plan.md` (e.g. `@/…/.sedea/operations/…/plans/<slug>.plan.md`). When present, the emitter must have used the **five-step** warm-up.
 - **Follow-ups** — per **development-process** *Coding session* / *Feedback collection*: maintain **`## Follow-ups`** on the PR plan; append bullets for out-of-scope ideas with optional `(target: …)` hints.
-- **Review cadence** — after implementation, **developer reviews uncommitted changes first**, then **commit** after approval, then spawn **`deploy-walk`** for §7 **Before deploy** when needed, then **`pre-pr-review`**, then **`create-pr`**; no commit before developer implementation review; coordinate **`pr-review`** and rule **20** § *Review before commit* / *Commit and push cadence*.
+- **Review cadence** — after implementation, one [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) modal (approve + commit + Before deploy **`deploy-walk`** spawn when §7 has unchecked items), then **`pre-pr-review`**, then **`create-pr`**; no commit before cut-point approval; coordinate **`pr-review`** and rule **20** § *Review before commit* / *Commit and push cadence*.
 - **Multi-repo only:** scope guard line per repo.
 
 ## Verbatim override
@@ -836,7 +868,7 @@ Implement the scoped change described in `@<absolute-hosting-repo-root>/.sedea/o
 
 **Follow-ups discipline.** Append to `## Follow-ups` on that plan when you discover scope-adjacent items.
 
-Stop after implementation; run the **ship chain** (developer review → commit → Before deploy **`deploy-walk`** when applicable → **`pre-pr-review`**) per **development-process** — **no commit** before developer approves the implementation diff.
+Stop after implementation; run the **ship chain** ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) → Before deploy **`deploy-walk`** when applicable → **`pre-pr-review`**) per **development-process** — **no commit** before cut-point approval.
 ```
 
 ## Completion (spawned)

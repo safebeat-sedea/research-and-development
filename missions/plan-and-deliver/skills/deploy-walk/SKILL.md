@@ -43,7 +43,7 @@ inputs:
     required: false
   branchName:
     type: string
-    description: Branch that produced the PR.
+    description: Feature branch that produced the PR (worktree or post-merge verification).
     required: false
   mergeSha:
     type: string
@@ -64,10 +64,6 @@ inputs:
   worktreePath:
     type: string
     description: Absolute worktree path (required when spawned from coding-session).
-    required: false
-  branchName:
-    type: string
-    description: Feature branch name in the worktree.
     required: false
   deployWalkScope:
     type: string

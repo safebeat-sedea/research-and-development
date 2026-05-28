@@ -530,7 +530,7 @@ After **`pr-plan`** handoff (or an approved per-PR plan), implementation runs on
 
 #### Coding Session
 
-Each PR is delivered through the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). This stage spins up a worktree and attaches the Sedea workbench when applicable. **Mission Control spawn** from **`pr-plan`** (or another spawner) defaults to **implementation on the child lane** in that worktree after the worktree-open gate — not an orchestrator-only stop that tells the developer to paste a prompt elsewhere. **Detached** or **`promptOnly`** entry may still emit a copy-safe prompt for **a separate coding agent** session. The active lane coordinates the **ship chain** (§ *Ship chain* below): **developer reviews uncommitted implementation first**, then **commit** after approval, then **Before deploy** via spawned **`deploy-walk`**, then **`pre-pr-review`** — **no commit** before developer implementation review.
+Each PR is delivered through the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). This stage spins up a worktree and attaches the Sedea workbench when applicable. **Mission Control spawn** from **`pr-plan`** (or another spawner) defaults to **implementation on the child lane** in that worktree after the worktree-open gate — not an orchestrator-only stop that tells the developer to paste a prompt elsewhere. **Detached** or **`promptOnly`** entry may still emit a copy-safe prompt for **a separate coding agent** session. The active lane coordinates the **ship chain** (§ *Ship chain* below): after implementation, **one cut-point modal** covers approve + commit + Before deploy **`deploy-walk`** spawn when §7 has unchecked items — **no commit** before that pick.
 
 **In-loop feedback** during implementation: **a coding agent** maintains **`## Follow-ups`** on the PR plan for scope-adjacent items (Strategy #6). **`pre-pr-review`** returns **proposed** follow-ups only; **`coding-session`** appends after developer approval. **`pr-review`** follow-ups follow the same approval pattern when required. § *Plan Updates* below drains routed bullets.
 
@@ -541,7 +541,7 @@ After **`pr-plan`** handoff and **`coding-session`** implementation, the happy p
 | Order | Branch | Role (one line) |
 |------:|--------|-----------------|
 | 1 | **`coding-session`** (implementation) | Worktree + implement §§ 5–8 — **no commit** until developer approves |
-| 2 | **`coding-session`** (ship gates) | Developer implementation review → commit → spawn Before deploy **`deploy-walk`** |
+| 2 | **`coding-session`** (ship gates) | One cut-point modal — approve + commit + spawn Before deploy **`deploy-walk`** when §7 applies |
 | 3 | **`pre-pr-review`** | Fresh reviewer lane on committed diff; go/no-go before merge-ready |
 | 4 | **`create-pr`** | **Only** branch that may run **`gh pr create`** (rule **20**) |
 | 5 | **`pr-review`** | Triage open PR comments (often **inline** in **`coding-session`**) |
