@@ -10,17 +10,19 @@ alwaysApply: false
 ```mermaid
 flowchart TD
     A[Infer command] --> B[Resolve target]
-    B --> C[Author PRD agent]
-    C --> D[Review result]
-    D -->|needs revision| C
-    D -->|approved or partial| E[Finalize result]
+    B --> C[Collect PRD source intake]
+    C --> D[Author PRD agent]
+    D --> E[Review result]
+    E -->|needs revision| D
+    E -->|approved or partial| F[Finalize result]
 ```
 
 1. **Intent routing** — Infer whether the user wants to create a new PRD or manage an existing PRD from the opening command phrase.
-2. **Target resolution** — Resolve the PRD title, user-private docs path, source references, and update target before any document mutation.
-3. **Author-owned intake** — Delegate evidence gathering, section policy, drafting, and completeness checks to the Author PRD agent so one lane owns PRD correctness.
-4. **Approval control** — Keep user approval, accepted partial status, retry decisions, and dispatch resolution with the Squad Leader.
-5. **Document management** — Create or update the PRD artifact and report remaining gaps, open decisions, and recommended planning handoff.
+2. **Target resolution** — Resolve the PRD title, user-private docs path, and update target before source intake.
+3. **Squad Leader intake** — Collect title, description, and supporting materials via structured choice on the leader lane before spawning **author-prd**.
+4. **Author-owned drafting** — Delegate evidence extension, section policy, drafting, and completeness checks to the Author PRD agent so one lane owns PRD correctness.
+5. **Approval control** — Keep user approval, accepted partial status, retry decisions, and dispatch resolution with the Squad Leader.
+6. **Document management** — Create or update the PRD artifact and report remaining gaps, open decisions, and recommended planning handoff.
 
 ## Protocol
 
@@ -33,8 +35,9 @@ flowchart TD
     CMD[Opening command] --> INTENT{Intent}
     INTENT -->|create prd| TARGET[Resolve new PRD target]
     INTENT -->|manage prd| EXISTING[Resolve existing PRD]
-    TARGET --> AUTHOR[author-prd skill]
-    EXISTING --> AUTHOR
+    TARGET --> INTAKE[Collect PRD source intake]
+    EXISTING --> INTAKE
+    INTAKE --> AUTHOR[author-prd skill]
     AUTHOR --> REVIEW{Leader review}
     REVIEW -->|needs revision| AUTHOR
     REVIEW -->|approved or accepted partial| FINAL[Report PRD result]
@@ -56,19 +59,47 @@ flowchart TD
 ### 2. Resolve PRD target
 
 - `type`: Branching logic.
-- `intent`: Resolve the document target and user-private docs path before gathering or writing content.
+- `intent`: Resolve intent label, document target path, and any seed text from the opening message — **not** full product intake (that is step **2.5**).
 - `inputs`: Intent from step 1, opening message remainder, current Sedea user context (`operationsUserId`), and any user-supplied follow-up answers.
-- `expected output`: Structured PRD target containing `prdTitle`, `targetPath` under `.sedea/operations/<operationsUserId>/docs/` for new PRDs, initial `sourceRefs`, `updateMode`, and optional `planningHandoff`.
+- `expected output`: Structured PRD target containing optional seed `prdTitle`, `targetPath` under `.sedea/operations/<operationsUserId>/docs/` for new PRDs, partial `sourceMaterials` from the opening message only, `updateMode`, and optional `planningHandoff`.
 - `next-step resolution`:
-  - `create-prd` with title resolved -> derive `targetPath` under `.sedea/operations/<operationsUserId>/docs/` and continue to step 3.
-  - `create-prd` with title missing -> ask for the missing title, then resume this step.
-  - `manage-prd` with readable target path or URL resolved -> continue to step 3.
-  - `manage-prd` without a readable target -> ask for the existing PRD path, URL, or pasted body.
+  - `create-prd` -> derive `targetPath` under `.sedea/operations/<operationsUserId>/docs/` when title is known; **always continue to step 2.5** before step 3.
+  - `manage-prd` with readable target path or URL resolved -> continue to step **2.5**.
+  - `manage-prd` without a readable target -> ask for the existing PRD path, URL, or pasted body via `AskQuestion`, then continue to step **2.5**.
 - `branch predicates`:
-  - Remainder after `create prd` is non-empty -> treat it as initial `prdTitle`.
+  - Remainder after `create prd` is non-empty -> treat it as initial `prdTitle` seed only.
   - Remainder after `manage prd` is a path, URL, or `@path` -> treat it as initial existing target.
   - New PRD creation always writes under `.sedea/operations/<operationsUserId>/docs/`; do not create PRD documents under `.sedea/operations/joint/docs/`.
-- `default/fallback behavior`: Use `AskQuestion` for missing title or target reference. Do not write files until these fields are resolved.
+- `default/fallback behavior`: Do **not** spawn **author-prd** from this step. Do **not** treat title alone as sufficient intake.
+
+### 2.5. Collect PRD source intake (Squad Leader)
+
+- `type`: Branching logic.
+- `intent`: Gather structured product context on the **Squad Leader** lane before delegating to **author-prd**.
+- `inputs`: Intent from step 1, `prdTitle` seed, `targetPath` or manage target, `operationsUserId`, and any opening-message seeds.
+- `expected output`: Intake bundle containing:
+  - `prdTitle` (required)
+  - `prdDescription` (required) — problem, users, goals, or scope summary in the user's words
+  - `sourceMaterials` (array) — each entry: `kind` (`path` | `url` | `paste` | `note`), `ref`, optional `summary`
+  - optional `sectionPolicy`, `planningHandoff`
+- `next-step resolution`: Intake complete and user confirms summary -> step 3. User defers -> pause. User revises a field -> re-ask that field only.
+- `branch predicates`:
+  - **`create-prd`:** Use `AskQuestion` or `MC_PHASED_RESPONSE_V1` per `.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`. Collect **at minimum** title, description, and supporting materials. Supporting materials may be empty only when the user explicitly selects a **no sources yet** option (not silent skip).
+  - **`manage-prd`:** Confirm target; use `AskQuestion` for update intent and **new or changed** sources before spawn.
+- `forbidden`: Emit `AGENT_RUN_REQUEST_V1` while `prdDescription` is missing or while the user has not confirmed the intake summary.
+- `default/fallback behavior`: After collection, present an **information-only** intake summary (title, description excerpt, source list), then **AskQuestion** only: proceed to Author PRD, revise intake, or **More details for option _**.
+
+**Suggested intake fields (`create-prd`)** — separate modals or one phased form as the host allows:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| Title | yes | May pre-fill from step 2 |
+| Description / problem statement | yes | Multi-line; not inferred by the leader |
+| Supporting paths (`@path`) | no* | Workspace files |
+| URLs | no* | Designs, tickets, docs |
+| Pasted notes / constraints | no* | Free text |
+| Related PRDs or plans | no* | Paths or links |
+| *Sources | | At least one source **or** explicit **no sources yet** |
 
 ### 3. Author PRD via agent
 
@@ -78,7 +109,7 @@ flowchart TD
 - `target agent role`: Author PRD agent.
 - `assigned skill`: `.sedea/centers/research-and-development/missions/prd/skills/author-prd/SKILL.md`.
 - `required rule context`: Sedea center always-apply rules, this mission plan, `.sedea/centers/research-and-development/docs/development-process.md`, and the `author-prd` skill.
-- `inputs`: Resolved PRD target, initial source references or notes from step 2, existing PRD body when updating, current Sedea user context, and requested output path.
+- `inputs`: Full intake bundle from step **2.5** (`prdTitle`, `prdDescription`, `sourceMaterials`, optional `sectionPolicy`, `planningHandoff`), `targetPath`, `operation`, `existingPrdBody` when updating, and `operationsUserId`. Do **not** pass title-only `inputs`.
 - `expected output`: One parseable **`AGENT_RESULT_RESPONSE_V1`** line (sentinel + JSON on the same line; `version`: 1; same `correlationId` as the spawn request). Top-level `status` plus `outputs` per the skill **`## Completion (spawned)`**: `outputs.prdPath`, `outputs.prdTitle`, `outputs.sectionPolicy`, `outputs.completedSections`, `outputs.missingMandatorySections`, `outputs.missingImportantSections`, `outputs.openQuestions`, `outputs.sourceLedger`, `outputs.planningReadiness`, `outputs.recommendedNextAction`. See **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Agent session closure*.
 - `next-step resolution`:
   - Child result `success` with readable PRD path -> continue to step 4.
@@ -86,10 +117,11 @@ flowchart TD
   - Child result `partial` without a usable PRD -> ask whether to retry the Author PRD agent with revised inputs, switch target, or abandon.
   - Child result `failure`, `aborted`, or `abandoned` -> stop and ask whether to retry, revise inputs, or abandon this PRD.
 - `handover procedure`:
-  1. Compile the child `inputs` from step 2 (`prdTitle`, `operation`, `targetPath`, `sourceMaterials`, `sectionPolicy`, `existingPrdBody`, `operationsUserId`).
-  2. Emit exactly one **`AGENT_RUN_REQUEST_V1`** line for **author-prd** (include `warmUpRules` for this mission plan and **development-process** when not already on the skill).
-  3. Announce that the Squad Leader is waiting because the Author PRD agent owns the intake loop and review requires its generated or updated PRD artifact.
-  4. Stop protocol execution until Mission Control delivers **`AGENT_RESULT_RESPONSE_V1`** for the same `correlationId`; parse `status`, `summary`, and `outputs` per **author-prd** **`## Completion (spawned)`** before step 4.
+  1. Compile the child `inputs` from step **2.5** (`prdTitle`, `prdDescription`, `operation`, `targetPath`, `sourceMaterials`, `sectionPolicy`, `existingPrdBody`, `operationsUserId`). `prdDescription` is required.
+  2. Set `initiatingPrompt` with the user's description and a numbered source list; instruct the child to **extend** the source ledger via its evidence loop and **not** invent product scope from title alone.
+  3. Emit exactly one **`AGENT_RUN_REQUEST_V1`** line for **author-prd** (include `warmUpRules` for this mission plan and **development-process** when not already on the skill).
+  4. Announce that the Squad Leader is waiting because the Author PRD agent owns drafting and gap-filling; review requires its generated or updated PRD artifact.
+  5. Stop protocol execution until Mission Control delivers **`AGENT_RESULT_RESPONSE_V1`** for the same `correlationId`; parse `status`, `summary`, and `outputs` per **author-prd** **`## Completion (spawned)`** before step 4.
 
 ### 4. Review PRD completeness
 

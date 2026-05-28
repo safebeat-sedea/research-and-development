@@ -6,6 +6,10 @@ inputs:
     type: string
     description: Human-friendly PRD title.
     required: true
+  prdDescription:
+    type: string
+    description: Problem, users, goals, or scope summary collected by the Squad Leader before spawn.
+    required: true
   operation:
     type: string
     description: Either create or manage.
@@ -16,7 +20,7 @@ inputs:
     required: false
   sourceMaterials:
     type: array
-    description: Optional seed materials from the opening command or Squad Leader handoff; author-prd collects the full source ledger from the user.
+    description: Seed materials from Squad Leader intake (step 2.5); author-prd extends the ledger for remaining gaps.
     required: false
     default: []
   sectionPolicy:
@@ -46,6 +50,7 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
 ## Inputs
 
 - `prdTitle`
+- `prdDescription` — required when spawned from the **prd** mission Squad Leader
 - `operation`: `create` or `manage`
 - `targetPath` when supplied
 - `sourceMaterials` (optional seed materials)
@@ -59,8 +64,12 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
    - `create` drafts a new PRD.
    - `manage` updates or reviews an existing PRD.
    - `create` always resolves output under `.sedea/operations/<operationsUserId>/docs/`; do not create PRDs under `.sedea/operations/joint/docs/`.
+1b. **Leader intake guard** (spawned from **prd** mission only):
+   - If `prdDescription` is missing or empty → end with `failure` and ask the Squad Leader to complete **plan.mdc** step **2.5** (do not draft).
+   - When `sourceMaterials` is empty and the user did not explicitly choose **no sources yet** on the leader lane → run step 3 (evidence loop) before drafting; **do not** infer goals, requirements, or acceptance criteria from `prdTitle` alone.
+   - Treat `prdDescription` and leader `sourceMaterials` as authoritative seeds; ask only for gaps mandatory sections still lack.
 2. Initialize a source ledger:
-   - start from any documents, URLs, notes, paths, excerpts, screenshots, thoughts, or related artifacts already present in the opening command or Squad Leader handoff.
+   - start from `prdDescription`, `sourceMaterials`, and any documents, URLs, notes, paths, excerpts, screenshots, thoughts, or related artifacts from the Squad Leader handoff.
    - leave the ledger empty when no seed materials were supplied.
    - preserve attribution so claims can be traced back to sources.
    - list unreadable or unavailable seed sources as blockers or caveats.
