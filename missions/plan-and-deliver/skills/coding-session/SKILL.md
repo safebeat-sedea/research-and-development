@@ -441,24 +441,31 @@ Spawn `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/
 When Mission Control delivers the **`pre-pr-review`** result:
 
 1. Copy `blockers`, `flags`, `proposedFollowUps`, `followUpsAppended`, `codingAgentHandback`, `requiresDeveloperApproval`, `remainingTasks`, `activeLanes`, and `openLedgerEntries` into the coding-session result.
-2. If recommendation is `go`, **coding-session** presents the approval gate in **Create-PR handoff after go** because it owns the implementation context, worktree path, branch, diff summary, PR plan path, and reviewer result. Do not make **`pre-pr-review`** spawn `create-pr`.
-3. If recommendation is `no-go`, keep the implementation lane active and route back to coding-session fix work **only after developer approval**; do not proceed to PR creation.
-4. If review failed, was aborted, or was abandoned, keep the ledger entry blocked until the developer retries, defers, or abandons the review.
+2. When `recommendation` is `no-go`, `blockers` is non-empty, or `flags` is non-empty, **immediately recommend** addressing pre-PR review findings before PR creation or another review pass — include one explicit sentence in the recap (for example: *Pre-PR review found issues; fix the relevant items on this lane before opening a PR.*). Do not deliver a findings-only recap without that recommendation.
+3. If recommendation is `go`, **coding-session** presents the approval gate in **Create-PR handoff after go** because it owns the implementation context, worktree path, branch, diff summary, PR plan path, and reviewer result. Do not make **`pre-pr-review`** spawn `create-pr`.
+4. If recommendation is `no-go`, keep the implementation lane active, open [Review feedback approval gate](#review-feedback-approval-gate) on **this lane** in the **same session**, and route fix work **only after developer approval**; do not proceed to PR creation and do not suggest a new coding chat or prompt-only handoff for the fix pass.
+5. If review failed, was aborted, or was abandoned, keep the ledger entry blocked until the developer retries, defers, or abandons the review.
 
 ### Review feedback approval gate
 
-When **`pre-pr-review`** returns `recommendation: "no-go"` or any `blockers`:
+When **`pre-pr-review`** returns `recommendation: "no-go"`, any `blockers`, or non-empty `flags`:
 
-1. Present the review summary to the developer: blockers, `Must`, `Should`, `Defer`, and any proposed follow-ups for the PR plan.
-2. Use **AskQuestion** before making any code or plan edits. Required options:
-   - **Apply Must fixes** — coding-session may edit only blocker / `Must` items.
-   - **Apply Must + Should fixes** — coding-session may edit blocker / `Must` and `Should` items.
-   - **Revise review scope** — clarify or challenge reviewer findings before code edits.
-   - **Defer / abandon review fixes** — keep ledger blocked or mark the PR plan deferred/abandoned per developer choice.
-   - **More details for option _**
+1. Present the review summary to the developer: blockers, `Must`, `Should`, `Defer`, and any proposed follow-ups for the PR plan. **Recommend** fixing relevant findings before PR creation or re-review (same wording as [Review result aggregation](#review-result-aggregation) step 2).
+2. Use **AskQuestion** before making any code or plan edits (`modalTitle`: *Pre-PR review — address findings*). Required options **in this order**:
+
+| Option id | Label (brief) | Agent action |
+|-----------|---------------|--------------|
+| `fix-now-session` | Fix relevant findings now (this session) | Continue on **this coding-session lane** in the attached worktree; implement reviewer `Must` items and any `Should` items the developer affirms before edits; keep `continuationStatus: "active"` |
+| `apply-must` | Apply Must fixes only | Edit only blocker / `Must` items on this lane |
+| `apply-must-should` | Apply Must + Should fixes | Edit blocker / `Must` and `Should` items on this lane |
+| `revise-scope` | Revise review scope | Clarify or challenge findings before code edits |
+| `defer` | Defer / abandon review fixes | Keep ledger blocked or mark the PR plan deferred/abandoned per developer choice |
+| `more-details` | More details for option _ | Elaborate; ask again |
+
 3. Do not interpret the reviewer handback itself as approval. No source edits, plan edits, commits, pushes, or new review spawn occur until the developer chooses an approval option.
-4. After approved fixes are implemented, require a new explicit committed cut point and spawn **`pre-pr-review`** again. The loop repeats until **`pre-pr-review`** returns `go` or the developer explicitly defers/abandons.
-5. Track each loop pass in outputs as `reviewLoopCount` and keep `continuationStatus: "active"` while approval, fixes, commit cut point, or re-review remains open.
+4. **`fix-now-session`**, **`apply-must`**, and **`apply-must-should`** authorize implementation on **this lane** only — not a detached session prompt or a new Mission Control dispatch for coding.
+5. After approved fixes are implemented, require a new explicit committed cut point and spawn **`pre-pr-review`** again. The loop repeats until **`pre-pr-review`** returns `go` or the developer explicitly defers/abandons.
+6. Track each loop pass in outputs as `reviewLoopCount` and keep `continuationStatus: "active"` while approval, fixes, commit cut point, or re-review remains open.
 
 ### User requests to open a PR (before `create-pr` spawn)
 
