@@ -4,7 +4,8 @@ description: >-
   **Coding session** protocol branch: create a git worktree + branch from origin/main,
   record worktrees and session focus in the plan sidecar via plan-state.mjs, attach the
   worktree in the same Sedea workbench (Mission Control sedea_add_worktree_folder per
-  20_efficient-pr-shipping.mdc). On a **spawned child lane** with layer-2 approval,
+  20_efficient-pr-shipping.mdc), then run **`scripts/bootstrap-worktree-dev.sh`** on
+  **`WORKTREE_ROOT`** before implementation. On a **spawned child lane** with layer-2 approval,
   **implement the anchored PR plan on this lane** in that worktree; on **prompt-only**
   entry, emit a copy/paste-safe two-phase session prompt for a separate coding chat.
   After the implementation cut point run the **Pre-PR cut-point gate** (diff review, optional
@@ -80,7 +81,7 @@ warmUpRules:
 
 Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
 
-**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; **Pre-PR cut-point gate** (diff review + §7 Before deploy walk) before ship-chain spawns (**`pre-pr-review`**, **`create-pr`**, inline **`pr-review`**).
+**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory worktree bootstrap** (`scripts/bootstrap-worktree-dev.sh`), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; **Pre-PR cut-point gate** (diff review + §7 Before deploy walk) before ship-chain spawns (**`pre-pr-review`**, **`create-pr`**, inline **`pr-review`**).
 
 **Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code when this run is **prompt-only** (see [Prompt-only handoff](#prompt-only-handoff)); opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
@@ -260,11 +261,12 @@ After [Pre-worktree validation](#pre-worktree-validation-plan-completeness), an 
 Normative path when **`pr-plan`** (or another spawner) opens a **coding-session** child lane and layer 2 is satisfied.
 
 1. **Scope guard** — Edit only files under the attached worktree root(s). Resolve hosting repo root vs worktree per **20_efficient-pr-shipping.mdc**.
-2. **Warm-up on this lane** — Follow [Session prompt structure](#session-prompt-structure) Phase 1 steps (workspace readiness, branch check, load **Project rules** from the worktree, plan file + sidecar when anchored). You may skip emitting a fenced **external** session prompt unless the developer asks for a copy.
-3. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for scope context; **first implementation work** is substantive fill of §§ **5–8** (replace `_TBD_` as code paths become known), then code/tests/docs per those sections.
-4. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until an explicit **committed cut point** or a blocking stop. Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
-5. **Continuation** — Keep `outputs.continuationStatus: "active"` and `outputs.shipPhase: "implementing"` while work remains. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial` when blocked; do **not** use `continuationStatus: terminal` to mean “prompt emitted — hand off elsewhere.”
-6. **Cut point** — When implementation is ready for review, follow [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) on **this same lane**, then [Pre-PR review handoff](#pre-pr-review-handoff) after the developer authorizes spawn.
+2. **Bootstrap gate** — Generic flow step 4 must have completed successfully (`outputs.bootstrapStatus: success`) before hosting-repo edits or substantive §§ **5–8** fill. On bootstrap failure, stop per [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory); do not advance `shipPhase` past `worktree`.
+3. **Warm-up on this lane** — Follow [Session prompt structure](#session-prompt-structure) Phase 1 steps (workspace readiness, branch check, load **Project rules** from the worktree, plan file + sidecar when anchored). You may skip emitting a fenced **external** session prompt unless the developer asks for a copy.
+4. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for scope context; **first implementation work** is substantive fill of §§ **5–8** (replace `_TBD_` as code paths become known), then code/tests/docs per those sections.
+5. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until an explicit **committed cut point** or a blocking stop. Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
+6. **Continuation** — Keep `outputs.continuationStatus: "active"` and `outputs.shipPhase: "implementing"` while work remains. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial` when blocked; do **not** use `continuationStatus: terminal` to mean “prompt emitted — hand off elsewhere.”
+7. **Cut point** — When implementation is ready for review, follow [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) on **this same lane**, then [Pre-PR review handoff](#pre-pr-review-handoff) after the developer authorizes spawn.
 
 ## Deploy test plan confirmations
 
@@ -282,9 +284,10 @@ When the developer **confirms** a numbered step in the anchored PR plan’s **`#
 
 Reserved when this run is **not** a spawned implementation lane (see table above).
 
-1. Emit a **session prompt** per [Session prompt structure](#session-prompt-structure) inside a [copy/paste-safe](#copypaste-safe-prompt-output-required) fence.
-2. Set `outputs.sessionPromptEmitted: true` and `outputs.implementationMode: "prompt-only"`.
-3. **Stop** — do not `cd` into the worktree to implement on this lane.
+1. Complete Generic flow steps 1–4 (including [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory)) on this lane before emitting the external prompt.
+2. Emit a **session prompt** per [Session prompt structure](#session-prompt-structure) inside a [copy/paste-safe](#copypaste-safe-prompt-output-required) fence. State that bootstrap already ran (or document failure and that the external agent must not implement until bootstrap succeeds).
+3. Set `outputs.sessionPromptEmitted: true` and `outputs.implementationMode: "prompt-only"`.
+4. **Stop** — do not `cd` into the worktree to implement on this lane (bootstrap may still run in step 1 above).
 4. When the developer later continues on **this** or another lane after a committed cut point, this skill owns [Pre-PR cut-point gate](#pre-pr-cut-point-gate-before-review-handoff) and [Pre-PR review handoff](#pre-pr-review-handoff).
 
 Detached developers may paste the prompt into a separate Mission Control session; that session then follows the same skill as an implementation lane once layer 2 is satisfied there.
@@ -334,9 +337,41 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
 
    This MCP attach is mandatory before post-setup work. If the MCP call fails, stop with `partial`; report the worktree path and the attach error, and keep `continuationStatus: "active"` so the Squad Leader does not close the implementation lane.
 
-4. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach):
-   - **Spawned implementation lane** → continue with [Spawned implementation lane](#spawned-implementation-lane) (steps 1–6 there).
+4. **Worktree bootstrap (mandatory)** — see [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory). Run before step 5 on every fresh worktree for this session (including **prompt-only** handoff, so the external coding agent starts on a dev-ready tree).
+
+5. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach):
+   - **Spawned implementation lane** → continue with [Spawned implementation lane](#spawned-implementation-lane) (steps 1–7 there).
    - **Prompt-only handoff** → [Prompt-only handoff](#prompt-only-handoff).
+
+## Worktree bootstrap (mandatory)
+
+After Generic flow step 3 (`sedea_add_worktree_folder`) succeeds, prepare **`WORKTREE_ROOT`** for implementation **before** spawned-lane edits, §§ **5–8** fill, or emitting a **prompt-only** session prompt.
+
+**Resolve paths**
+
+- **`HOSTING_ROOT`** — hosting repo that contains `.sedea/centers/sedea/` (see **20_efficient-pr-shipping.mdc** § *Hosting repo cwd for scripts*). Use spawn `inputs.repoPath` when it points at that root.
+- **`WORKTREE_ROOT`** — absolute path from step 1 (`git worktree add`) / sidecar `worktrees[].path`.
+
+**Command** (from **`HOSTING_ROOT`**):
+
+```bash
+./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"
+```
+
+The script is idempotent — safe to re-run after partial failure. See `scripts/bootstrap-worktree-dev.sh --help` for **`--skip-*`** flags.
+
+**`--skip-*` flags** — Use only when the developer attests the worktree is already partially set up (for example submodules initialized but vscode compile pending). Record which flags were used in chat and in `outputs.bootstrapSkipFlags` when present.
+
+**Success** — Set `outputs.bootstrapStatus: success`, then continue to Generic flow step 5 and spawned-lane work. Set `outputs.shipPhase: worktree` on the first terminal line that reports setup complete (before `implementing`).
+
+**Failure** — When the script exits non-zero or required smoke checks fail:
+
+1. Capture stderr/stdout tail in `outputs.bootstrapFailureReason` (short string).
+2. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial`, `outputs.bootstrapStatus: failed`, `outputs.shipPhase: worktree`, `outputs.developerApprovedImplementation: true` (layer 2 already granted), `outputs.continuationStatus: active`.
+3. **Do not** advance `shipPhase` to `implementing`, spawn **`pre-pr-review`**, or make hosting-repo implementation edits until bootstrap succeeds or the developer chooses **Defer** / **Change repo** at a new gate.
+4. Offer re-run: same command (idempotent) or documented **`--skip-*`** only after developer attestation.
+
+**Missing script** — When `./scripts/bootstrap-worktree-dev.sh` is absent on the worktree branch (for example PR **1** not merged), stop with `partial`, `bootstrapStatus: failed`, `bootstrapFailureReason` naming the missing path, `shipPhase: worktree`.
 
 ## Multi-repo flow (shared branch name)
 
@@ -349,9 +384,11 @@ When the plan’s **Worktree setup** lists two or more repos, or the user asks f
 
 3. **`plan-state.mjs set-worktrees`** with one JSON entry per repo; **`set-session --focus`** to the workspace file **or** primary worktree path per your team convention (must stay consistent with **`resolve --cwd`** expectations in **planning-target-resolution**).
 
-4. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach) (spawned lane implements each repo’s scope in turn, or prompt-only emits **one session prompt per repo** with per-repo scope guards).
+4. **Attach each worktree** with **`sedea_add_worktree_folder`**, then run [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) **once per `WORKTREE_ROOT`** before implementation or prompt emission for that repo.
 
-5. **Prompt-only:** **Stop** after prompts. **Spawned lane:** continue implementation per repo scope before cut point.
+5. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach) (spawned lane implements each repo’s scope in turn, or prompt-only emits **one session prompt per repo** with per-repo scope guards).
+
+6. **Prompt-only:** **Stop** after prompts. **Spawned lane:** continue implementation per repo scope before cut point.
 
 Cleanup when PRs merge: **`sedea_remove_worktree_folder`**, **`git worktree remove`**, **`plan-state.mjs prune-sessions`**, and **`plan-reconcile`** per **development-process** and **efficient-pr-shipping** — not repeated here.
 
@@ -521,6 +558,9 @@ When this skill runs as a spawned child, end with a child result containing at l
 - `outputs.developerApprovedImplementation` — layer 2; `true` only after an authorizing worktree-open choice; never inherit from **`pr-plan`**
 - `outputs.repoPaths`
 - `outputs.worktrees` (array of `{repo, path, branch, attached}`)
+- `outputs.bootstrapStatus` — `success` \| `failed` \| omitted when bootstrap not run
+- `outputs.bootstrapFailureReason` — when `bootstrapStatus: failed`
+- `outputs.bootstrapSkipFlags` — optional array of `--skip-*` flags used with developer attestation
 - `outputs.branchName`
 - `outputs.sessionPromptEmitted`
 - `outputs.implementationMode` — `spawned-lane` \| `prompt-only`
@@ -562,7 +602,7 @@ Set `outputs.continuationStatus` as follows:
 - `active` when PR merge, deploy-walk, deploy checklist, or deploy capstone todo remains.
 - `active` when worktrees exist but Mission Control attach or prompt emission still needs repair.
 - `terminal` only for **prompt-only** runs when worktree/prompt setup is complete and no implementation is tracked on this dispatch, or when explicitly abandoned with no active work.
-- `partial` status with `continuationStatus: "active"` when readiness, repo selection, dirty tree, base branch, sidecar write, or MCP attach blocks setup.
+- `partial` status with `continuationStatus: "active"` when readiness, repo selection, dirty tree, base branch, sidecar write, MCP attach, or **worktree bootstrap** blocks setup (`bootstrapStatus: failed`; cap `shipPhase` at `worktree`).
 
 Do not propose dispatch resolution from this skill; the Squad Leader closes the ledger after coding, review, PR, and deploy verification report terminal status.
 

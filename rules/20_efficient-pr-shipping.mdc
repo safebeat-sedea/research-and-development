@@ -190,6 +190,14 @@ git worktree add <path> -b <branch> origin/main
 
 **Attach the worktree in Sedea.** In Mission Control chat, invoke the MCP tool **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` and, if you want a custom explorer label, an optional `"name"` field. Use an **absolute** `path` (resolve with `git worktree list`, or `cd` into the worktree and expand to a full path); relative paths are unreliable. Mission Control mirrors the tool into the workbench so the folder appears as a workspace root.
 
+**Bootstrap the worktree (mandatory for coding-session).** After attach, from **`HOSTING_ROOT`** run:
+
+```bash
+./scripts/bootstrap-worktree-dev.sh "<absolute-worktree-root>"
+```
+
+Submodules, native extensions, and vscode compile run per `scripts/bootstrap-worktree-dev.sh --help`. The script is idempotent. **`coding-session`** owns this step in [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Worktree bootstrap (mandatory)* — on failure, ship phase stays at `worktree` and the lane reports `partial` until bootstrap succeeds. Use **`--skip-*`** only when the developer attests partial setup.
+
 **Detach merged worktrees from the workbench.** After a PR merges and you retire a worktree, invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree.
 
 Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetch origin main:main`) fails with `fatal: refusing to fetch into branch 'refs/heads/main'` when `main` is already checked out in the current worktree.
@@ -197,7 +205,7 @@ Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetc
 - For each **independent** PR, emit a `git worktree add … -b <branch> origin/main` command. These can be created and worked on immediately.
 - For each **dependent** PR, emit the command but comment that it should be created only after the predecessor merges.
 - Include cleanup for after PRs merge: for each retired worktree, **`sedea_remove_worktree_folder`** with that worktree's **absolute** path (Mission Control first), then **`git worktree remove`** and **`git worktree prune`**.
-- In the **Worktree setup** narrative, after each `git worktree add`, tell the Squad Leader to invoke **`sedea_add_worktree_folder`** with that worktree's **absolute** path before spawning the **coding-session** agent.
+- In the **Worktree setup** narrative, after each `git worktree add`, tell the Squad Leader to invoke **`sedea_add_worktree_folder`** with that worktree's **absolute** path, then run **`./scripts/bootstrap-worktree-dev.sh "<absolute-worktree-root>"`** from **`HOSTING_ROOT`** (or let **coding-session** run bootstrap after attach on the child lane) before spawning implementation.
 
 ### Dirty hosting repo before `git worktree add`
 
