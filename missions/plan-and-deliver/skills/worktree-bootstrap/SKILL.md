@@ -1,0 +1,131 @@
+---
+name: worktree-bootstrap
+description: >-
+  Run scripts/bootstrap-worktree-dev.sh on a fresh git worktree after Mission
+  Control attach. Spawned by coding-session while the parent lane continues
+  implementation in parallel. Does not commit, spawn deploy-walk, or run the ship
+  chain on the parent — those wait for bootstrap success. Does not implement product code on
+  open PRs, or edit plan files unless the spawner requests a skip attestation path.
+inputs:
+  worktreePath:
+    type: string
+    description: Absolute path to the git worktree root (WORKTREE_ROOT).
+    required: true
+  hostingRoot:
+    type: string
+    description: Absolute path to the hosting repo that contains scripts/bootstrap-worktree-dev.sh (HOSTING_ROOT).
+    required: true
+  targetPlanPath:
+    type: string
+    description: Absolute or workspace-relative PR plan path when plan-anchored.
+    required: false
+  targetPlanSlug:
+    type: string
+    description: PR plan slug when plan-anchored.
+    required: false
+  branchName:
+    type: string
+    description: Feature branch name in the worktree.
+    required: false
+  bootstrapSkipFlags:
+    type: array
+    description: >-
+      Optional --skip-* flags (for example --skip-electron) only when the developer
+      attested partial setup on the parent lane before spawn.
+    required: false
+    default: []
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from coding-session.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Skill that spawned this lane — usually coding-session.
+    required: false
+warmUpRules:
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
+  - ".cursor/rules/dot-sedea.mdc"
+---
+
+# Worktree bootstrap
+
+This skill runs **`./scripts/bootstrap-worktree-dev.sh`** on **`WORKTREE_ROOT`** from **`HOSTING_ROOT`**. It prepares a fresh worktree (submodules, native extensions, vscode compile, smoke checks) so **`coding-session`** can implement in that tree.
+
+Spawn bootstrap (`AGENT_RUN_REQUEST_V1`) is **not** developer approval for worktrees — layer 2 **`developerApprovedImplementation`** stays on the parent **`coding-session`** lane.
+
+## Structured choice (Mission Control)
+
+This skill does not own approval modals. When the script fails and a retry path needs a developer pick, use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act*.
+
+## Step 1 — Validate inputs
+
+Required:
+
+- `worktreePath` — absolute worktree directory (exists, is a git worktree).
+- `hostingRoot` — absolute hosting repo root containing `scripts/bootstrap-worktree-dev.sh`.
+
+If either path is missing or the script is absent at `hostingRoot`, stop with `failure` and `outputs.bootstrapStatus: failed`, `outputs.bootstrapFailureReason` naming the gap.
+
+## Step 2 — Run bootstrap
+
+From **`HOSTING_ROOT`**:
+
+```bash
+./scripts/bootstrap-worktree-dev.sh "<absolute-worktree-path>" [optional --skip-* flags]
+```
+
+Append each entry in `bootstrapSkipFlags` only when the parent documented developer attestation. The script is idempotent — safe to re-run after partial failure.
+
+**Forbidden on this lane:** `git worktree add` / `remove`, `sedea_add_worktree_folder`, hosting-repo product edits, `gh pr create`, spawning other plan-and-deliver skills.
+
+## Step 3 — Report outcome
+
+| Outcome | `outputs.bootstrapStatus` | Terminal `status` |
+|---------|---------------------------|-------------------|
+| Script exit 0 | `success` | `success` |
+| Script exit non-zero | `failed` | `partial` |
+| Missing script | `failed` | `partial` |
+
+Capture a short stderr/stdout tail in `outputs.bootstrapFailureReason` when `failed`.
+
+Set `outputs.continuationOwner: "worktree-bootstrap-agent"`. Set `outputs.continuationStatus: terminal` on `success`; `active` on `partial` when retry remains.
+
+## Spawned result contract
+
+When spawned by **`coding-session`**, populate at least:
+
+- `outputs.worktreePath`
+- `outputs.hostingRoot`
+- `outputs.targetPlanPath`, `outputs.targetPlanSlug` (echo when supplied)
+- `outputs.branchName` (echo when supplied)
+- `outputs.bootstrapStatus` — `success` | `failed`
+- `outputs.bootstrapFailureReason` — when failed
+- `outputs.bootstrapSkipFlags` — array used, or `[]`
+- `outputs.ledgerParent`, `outputs.upstreamSkill`
+- `outputs.continuationOwner`, `outputs.continuationStatus`
+
+## Mission Control section 8 sync (spawned terminal)
+
+When `targetPlanPath` is set, include on every terminal **`AGENT_RESULT_RESPONSE_V1`**:
+
+| Field | Rule |
+|-------|------|
+| `targetPlanPath` | Absolute PR plan path — **required** when plan-anchored |
+| `shipPhase` | `worktree` |
+| `rowStatus` | `open` while bootstrap failed or parent still blocked; `closed` only when parent has moved past worktree setup (parent owns final row closure) |
+
+## Completion (spawned)
+
+### Host protocol line (required)
+
+Emit **exactly one** line: `AGENT_RESULT_RESPONSE_V1` immediately followed by valid JSON on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status`, `summary`, `outputs`, `errors` (`[]` when none). Populate `outputs` from **Spawned result contract** and **Mission Control section 8 sync**. Re-emit an **updated** line after user-requested follow-up on this lane (same `correlationId`). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
+
+Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` on this lane (see **`../README.md`** § *Terminal stop (normative)*).
+
+## Completion (inline)
+
+Report the same `outputs` semantics in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section.
+
+Normally spawned from **`coding-session`**. If run inline (rare), use the spawned contract fields in prose only.

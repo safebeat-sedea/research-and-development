@@ -4,8 +4,9 @@ description: >-
   **Coding session** protocol branch: create a git worktree + branch from origin/main,
   record worktrees and session focus in the plan sidecar via plan-state.mjs, attach the
   worktree in the same Sedea workbench (Mission Control sedea_add_worktree_folder per
-  20_efficient-pr-shipping.mdc), then run **`scripts/bootstrap-worktree-dev.sh`** on
-  **`WORKTREE_ROOT`** before implementation.   On a **spawned child lane** with layer-2 approval (or **pr-plan** spawn auto-authorize),
+  20_efficient-pr-shipping.mdc), then spawn **`worktree-bootstrap`** on a child lane (or run
+  **`scripts/bootstrap-worktree-dev.sh`** inline when spawn is unavailable) before implementation.
+  On a **spawned child lane** with layer-2 approval (or **pr-plan** spawn auto-authorize),
   **implement the anchored PR plan on this lane** in that worktree; on **prompt-only**
   entry, emit a copy/paste-safe two-phase session prompt for a separate coding chat.
   After implementation, run the **ship chain** (one cut-point modal: approve + commit +
@@ -87,7 +88,7 @@ warmUpRules:
 
 Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
 
-**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory worktree bootstrap** (`scripts/bootstrap-worktree-dev.sh`), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** → **`pre-pr-review`** → **`create-pr`**).
+**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory worktree bootstrap** (spawn **`worktree-bootstrap`** child or inline `scripts/bootstrap-worktree-dev.sh`), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** → **`pre-pr-review`** → **`create-pr`**).
 
 **Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code when this run is **prompt-only** (see [Prompt-only handoff](#prompt-only-handoff)); opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
@@ -297,16 +298,18 @@ After [Pre-worktree validation](#pre-worktree-validation-plan-completeness), an 
 Normative path when **`pr-plan`** (or another spawner) opens a **coding-session** child lane and layer 2 is satisfied.
 
 1. **Scope guard** — Edit only files under the attached worktree root(s). Resolve hosting repo root vs worktree per **20_efficient-pr-shipping.mdc**.
-2. **Bootstrap gate** — Generic flow step 4 must have completed successfully (`outputs.bootstrapStatus: success`) before hosting-repo edits or substantive §§ **5–8** fill. On bootstrap failure, stop per [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory); do not advance `shipPhase` past `worktree`.
+2. **Bootstrap vs ship chain** — [Worktree bootstrap handoff](#worktree-bootstrap-handoff) may run on a child lane **in parallel** with implementation on this lane. **No limit** on worktree edits, plan §§ **5–8** fill, tests, or `npm` while `outputs.bootstrapStatus` is `pending`. **Forbidden until `outputs.bootstrapStatus: success`:** `git commit`, `git push`, [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy), spawn **`deploy-walk`** (Before deploy), spawn **`pre-pr-review`**, spawn **`create-pr`**, and inline Before-deploy deploy verification that substitutes for [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff). On bootstrap failure, keep implementing if useful; retry bootstrap per [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) — do not open the ship chain until bootstrap succeeds.
 3. **Warm-up on this lane** — Follow [Session prompt structure](#session-prompt-structure) Phase 1 steps (workspace readiness, branch check, load **Project rules** from the worktree, plan file + sidecar when anchored). You may skip emitting a fenced **external** session prompt unless the developer asks for a copy.
 4. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for scope context; **first implementation work** is substantive fill of §§ **5–8** (replace `_TBD_` as code paths become known), then code/tests/docs per those sections.
-5. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until **implementation ready for developer review** or a blocking stop. **Do not** `git commit` or `git push` during implementation — see **20_efficient-pr-shipping.mdc** § *Review before commit* and [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy). Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
+5. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until **implementation ready for developer review** or a blocking stop. **Do not** `git commit` or `git push` during implementation — see **20_efficient-pr-shipping.mdc** § *Review before commit* and [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) (ship cut-point also requires `outputs.bootstrapStatus: success`). Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
 6. **Continuation** — Keep `outputs.continuationStatus: "active"` and `outputs.shipPhase: "implementing"` while work remains. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial` when blocked; do **not** use `continuationStatus: terminal` to mean “prompt emitted — hand off elsewhere.”
 7. **Ship chain** — When implementation is ready for developer review, follow [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) on **this same lane** ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal for approve + commit + Before deploy spawn when applicable → **`pre-pr-review`** → **`create-pr`** when authorized). **Do not** skip Before deploy or open a PR before that order completes.
 
 ## Deploy test plan confirmations
 
 When the developer **confirms** a numbered step in the anchored PR plan’s **`## N. Deploy test plan`** (§7 **`### Before deploy`** or **`### After deploy`**), treat chat as **not** the system of record — same contract as **`deploy-walk`**: state lives in the plan file. Prefer spawning **`deploy-walk`** for checklist walks — it auto-runs agent-executable steps; use this inline path only for ad-hoc confirmations on the coding lane.
+
+**Before deploy + bootstrap:** Do **not** spawn **`deploy-walk`** (Before deploy) or flip **`### Before deploy`** checkboxes via this inline path until `outputs.bootstrapStatus: success`. **After deploy** confirmations may proceed when the PR is merged per normal rules.
 
 1. **Resolve `targetPlanPath`** — from spawn `inputs`, `plan-state.mjs resolve --cwd "<worktreePath>"`, or an explicit `@path` in the message. If multiple plans could apply, use **AskQuestion** once for **which plan** or **which step number** — not whether to persist.
 2. **Same-turn file edit** — before the reply ends, patch the matching §7 line: flip `[ ]` → `[x]` for that step number. Optionally append a short dated note on the line or under §7 (for example `— confirmed YYYY-MM-DD`).
@@ -320,8 +323,8 @@ When the developer **confirms** a numbered step in the anchored PR plan’s **`#
 
 Reserved when this run is **not** a spawned implementation lane (see table above).
 
-1. Complete Generic flow steps 1–4 (including [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory)) on this lane before emitting the external prompt.
-2. Emit a **session prompt** per [Session prompt structure](#session-prompt-structure) inside a [copy/paste-safe](#copypaste-safe-prompt-output-required) fence. State that bootstrap already ran (or document failure and that the external agent must not implement until bootstrap succeeds).
+1. Complete Generic flow steps 1–4 (including [Worktree bootstrap handoff](#worktree-bootstrap-handoff) — wait for **`worktree-bootstrap`** child success or inline bootstrap) before emitting the external prompt.
+2. Emit a **session prompt** per [Session prompt structure](#session-prompt-structure) inside a [copy/paste-safe](#copypaste-safe-prompt-output-required) fence. State that bootstrap completed (`outputs.bootstrapStatus: success`) or document failure and that the external agent must not implement until bootstrap succeeds.
 3. Set `outputs.sessionPromptEmitted: true` and `outputs.implementationMode: "prompt-only"`.
 4. **Stop** — do not `cd` into the worktree to implement on this lane (bootstrap may still run in step 1 above).
 4. When the developer later continues on **this** or another lane after implementation review, this skill owns [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) from the appropriate step.
@@ -373,7 +376,7 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
 
    This MCP attach is mandatory before post-setup work. If the MCP call fails, stop with `partial`; report the worktree path and the attach error, and keep `continuationStatus: "active"` so the Squad Leader does not close the implementation lane.
 
-4. **Worktree bootstrap (mandatory)** — see [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory). Run before step 5 on every fresh worktree for this session (including **prompt-only** handoff, so the external coding agent starts on a dev-ready tree).
+4. **Worktree bootstrap (mandatory)** — see [Worktree bootstrap handoff](#worktree-bootstrap-handoff). Spawn **`worktree-bootstrap`** on a child lane (default) or run inline when spawn is unavailable. **Spawned implementation lane:** continue to step 5 **without waiting** for the child — implement in parallel. **Prompt-only:** wait for `outputs.bootstrapStatus: success` before emitting the external prompt.
 
 5. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach):
    - **Spawned implementation lane** → continue with [Spawned implementation lane](#spawned-implementation-lane) (steps 1–7 there).
@@ -381,33 +384,79 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
 
 ## Worktree bootstrap (mandatory)
 
-After Generic flow step 3 (`sedea_add_worktree_folder`) succeeds, prepare **`WORKTREE_ROOT`** for implementation **before** spawned-lane edits, §§ **5–8** fill, or emitting a **prompt-only** session prompt.
+After Generic flow step 3 (`sedea_add_worktree_folder`) succeeds, prepare **`WORKTREE_ROOT`** for **commit**, **Before deploy** **`deploy-walk`**, and the rest of the [ship chain](#ship-chain-after-implementation-coding-session-lane). Implementation on this lane may proceed **in parallel** with bootstrap — do **not** wait for the child before editing the worktree.
 
 **Resolve paths**
 
 - **`HOSTING_ROOT`** — hosting repo that contains `.sedea/centers/sedea/` (see **20_efficient-pr-shipping.mdc** § *Hosting repo cwd for scripts*). Use spawn `inputs.repoPath` when it points at that root.
 - **`WORKTREE_ROOT`** — absolute path from step 1 (`git worktree add`) / sidecar `worktrees[].path`.
 
-**Command** (from **`HOSTING_ROOT`**):
+**Default:** [Worktree bootstrap handoff](#worktree-bootstrap-handoff) — spawn **`worktree-bootstrap`** on a **child lane** while this lane continues implementation.
+
+**Inline fallback** — When the host rejects spawn, Mission Control is unavailable, or the developer explicitly requests inline bootstrap on a **detached** lane, run from **`HOSTING_ROOT`**:
 
 ```bash
 ./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"
 ```
 
-The script is idempotent — safe to re-run after partial failure. See `scripts/bootstrap-worktree-dev.sh --help` for **`--skip-*`** flags.
+The script is idempotent. See `scripts/bootstrap-worktree-dev.sh --help` for **`--skip-*`** flags.
 
-**`--skip-*` flags** — Use only when the developer attests the worktree is already partially set up (for example submodules initialized but vscode compile pending). Record which flags were used in chat and in `outputs.bootstrapSkipFlags` when present.
+**`--skip-*` flags** — Use only when the developer attests partial setup. Record flags in chat, spawn `inputs.bootstrapSkipFlags`, and `outputs.bootstrapSkipFlags`.
 
-**Success** — Set `outputs.bootstrapStatus: success`, then continue to Generic flow step 5 and spawned-lane work. Set `outputs.shipPhase: worktree` on the first terminal line that reports setup complete (before `implementing`).
+**Success** — Set `outputs.bootstrapStatus: success`, clear `outputs.bootstrapLaneCorrelationId` when inline, then continue to Generic flow step 5. Set `outputs.shipPhase: worktree` on the first terminal line that reports setup complete (before `implementing`).
 
-**Failure** — When the script exits non-zero or required smoke checks fail:
+**Failure** — When bootstrap fails (child or inline):
 
-1. Capture stderr/stdout tail in `outputs.bootstrapFailureReason` (short string).
-2. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial`, `outputs.bootstrapStatus: failed`, `outputs.shipPhase: worktree`, `outputs.developerApprovedImplementation: true` (layer 2 already granted), `outputs.continuationStatus: active`.
-3. **Do not** advance `shipPhase` to `implementing`, spawn **`pre-pr-review`**, or make hosting-repo implementation edits until bootstrap succeeds or the developer chooses **Defer** / **Change repo** at a new gate.
-4. Offer re-run: same command (idempotent) or documented **`--skip-*`** only after developer attestation.
+1. Capture stderr/stdout tail in `outputs.bootstrapFailureReason`.
+2. Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: partial`, `outputs.bootstrapStatus: failed`, `outputs.shipPhase: worktree`, `outputs.developerApprovedImplementation: true`, `outputs.continuationStatus: active`.
+3. **Do not** advance into the ship chain (`git commit`, [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy), Before deploy **`deploy-walk`**, **`pre-pr-review`**, **`create-pr`**) until bootstrap succeeds. Implementation edits may continue.
+4. Offer re-run: spawn **`worktree-bootstrap`** again (new `correlationId`) or inline idempotent script; **`--skip-*`** only after developer attestation.
 
-**Missing script** — When `./scripts/bootstrap-worktree-dev.sh` is absent on the worktree branch (for example PR **1** not merged), stop with `partial`, `bootstrapStatus: failed`, `bootstrapFailureReason` naming the missing path, `shipPhase: worktree`.
+**Missing script** — Stop with `partial`, `bootstrapStatus: failed`, `bootstrapFailureReason` naming the missing path, `shipPhase: worktree`.
+
+## Worktree bootstrap handoff
+
+Run after attach succeeds (Generic flow step 3 or multi-repo step 4). **Normative default** — spawn a child and **continue implementing on this lane** without waiting for the script to finish.
+
+1. **Spawn** `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md` on a **child lane** with **required** `inputs`:
+
+| Input | Value |
+|-------|--------|
+| `worktreePath` | Absolute **`WORKTREE_ROOT`** |
+| `hostingRoot` | Absolute **`HOSTING_ROOT`** |
+| `targetPlanPath` / `targetPlanSlug` | When plan-anchored |
+| `branchName` | Feature branch when known |
+| `bootstrapSkipFlags` | Array of attested `--skip-*` tokens, or omit |
+| `ledgerParent` | When known |
+| `upstreamSkill` | `"coding-session"` |
+
+**`initiatingPrompt`** must state: run full bootstrap unless `bootstrapSkipFlags` supplied; return `bootstrapStatus: success` or `failed` with log tail; parent lane continues implementation in parallel.
+
+2. Set `outputs.bootstrapLaneCorrelationId` to the spawn UUID; set `outputs.bootstrapStatus: pending` until the child returns (or `success` immediately after inline fallback).
+
+3. **Continue on this lane** — Proceed to [Spawned implementation lane](#spawned-implementation-lane) (or keep coding if already started). One line: bootstrap running on a child lane; implementation continues here.
+
+4. **Blocked until `outputs.bootstrapStatus: success`:** `git commit`, `git push`, [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy), [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff), spawn **`pre-pr-review`**, spawn **`create-pr`**. **Not blocked:** worktree edits, plan §§ **5–8** fill, tests, local `npm` / compile in the worktree.
+
+5. **Multi-repo** — Emit one spawn per **`WORKTREE_ROOT`** (unique `slug` per repo). Implement per repo in parallel with each repo’s bootstrap child. Before **ship chain** steps for a repo, that repo’s `outputs.bootstrapStatus` must be `success`; aggregate failures into `outputs.bootstrapFailureReason`.
+
+### Bootstrap result aggregation
+
+When Mission Control delivers the **worktree-bootstrap** result:
+
+1. Match by `correlationId` → `outputs.bootstrapLaneCorrelationId` (multi-repo: match each pending id).
+2. Copy `outputs.bootstrapStatus`, `outputs.bootstrapFailureReason`, `outputs.bootstrapSkipFlags` from the child.
+3. **`success`** — Continue to Generic flow step 5 ([Spawned implementation lane](#spawned-implementation-lane) or [Prompt-only handoff](#prompt-only-handoff)).
+4. **`failed`** / `partial` child — Keep `continuationStatus: active`, `shipPhase: worktree`; offer re-spawn or inline retry per [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) **Failure**.
+5. **`aborted`** / **`abandoned`** — Treat as failed unless the developer explicitly defers or retries.
+
+### Inline bootstrap (fallback only)
+
+When spawn is impossible or the developer chose inline on a detached lane:
+
+1. Run `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"` from **`HOSTING_ROOT`** on **this** lane.
+2. Apply success/failure rules from [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) without `bootstrapLaneCorrelationId`.
+3. Continue to step 5 in the same session turn when the script succeeds.
 
 ## Multi-repo flow (shared branch name)
 
@@ -420,7 +469,7 @@ When the plan’s **Worktree setup** lists two or more repos, or the user asks f
 
 3. **`plan-state.mjs set-worktrees`** with one JSON entry per repo; **`set-session --focus`** to the workspace file **or** primary worktree path per your team convention (must stay consistent with **`resolve --cwd`** expectations in **planning-target-resolution**).
 
-4. **Attach each worktree** with **`sedea_add_worktree_folder`**, then run [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) **once per `WORKTREE_ROOT`** before implementation or prompt emission for that repo.
+4. **Attach each worktree** with **`sedea_add_worktree_folder`**, then [Worktree bootstrap handoff](#worktree-bootstrap-handoff) **once per `WORKTREE_ROOT`** (one child spawn per repo). **Spawned lane:** implement in parallel per repo. **Prompt-only:** wait for each repo’s `bootstrapStatus: success` before that repo’s prompt.
 
 5. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach) (spawned lane implements each repo’s scope in turn, or prompt-only emits **one session prompt per repo** with per-repo scope guards).
 
@@ -459,9 +508,11 @@ flowchart LR
 | 3 | [Pre-PR review handoff](#pre-pr-review-handoff) | **Yes** — Before deploy resolved or skipped |
 | 4 | [Create-PR handoff after go](#create-pr-handoff-after-go) | After **`pre-pr-review`** **go** |
 
-**Forbidden on this lane:** `git commit` before ship cut-point approval; spawn **`pre-pr-review`** while the tree is dirty; spawn **`create-pr`** before steps 2–3 complete; treat inline Before-deploy chat on this lane as a substitute for step 2 **`deploy-walk`** spawn when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → spawn Before deploy when [Combined authorization](#combined-authorization) applies.
+**Forbidden on this lane:** `git commit` before ship cut-point approval; **`git commit`**, Before deploy **`deploy-walk`**, or ship cut-point while `outputs.bootstrapStatus` is `pending` or `failed`; spawn **`pre-pr-review`** while the tree is dirty; spawn **`create-pr`** before steps 2–3 complete; treat inline Before-deploy chat on this lane as a substitute for step 2 **`deploy-walk`** spawn when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → spawn Before deploy when [Combined authorization](#combined-authorization) applies.
 
 ## Ship cut-point gate (approve, commit, Before deploy)
+
+**Precondition:** `outputs.bootstrapStatus: success` (or bootstrap not required on this run). If bootstrap is `pending` or `failed`, finish or retry [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) before opening this gate.
 
 When implementation is **ready for developer review** (or the developer signals *ready for review* / *review my changes*), **stop** implementation edits and open this gate. This implements **20_efficient-pr-shipping.mdc** § *Review before commit* — **developer code review comes before any commit** — and combines what were separate approve, commit, and Before deploy spawn modals into **one** structured choice when plan-anchored and §7 has work to walk.
 
@@ -542,6 +593,8 @@ If commit fails or tree stays dirty after commit, stop with `partial` — do not
 4. Verify `git status --short` is empty before spawn or pre-PR authorization.
 
 ## Before deploy deploy-walk handoff
+
+**Precondition:** `outputs.bootstrapStatus: success`. **Do not** spawn Before deploy **`deploy-walk`** while bootstrap is `pending` or `failed`.
 
 Run from [Act after ship cut-point pick](#act-after-ship-cut-point-pick) when the cut-point pick authorizes spawn (**`commit-only`**, **`commit-push`**, or **`spawn-before-deploy-walk`**) — **no second AskQuestion** for spawn on that path. **Do not** spawn **`pre-pr-review`** or **`create-pr`** until this step completes or is skipped via **`commit-only-skip-before-deploy`** / **`skip-before-deploy`**.
 
@@ -800,7 +853,8 @@ When this skill runs as a spawned child, end with a child result containing at l
 - `outputs.developerApprovedImplementation` — layer 2; `true` only after an authorizing worktree-open choice; never inherit from **`pr-plan`**
 - `outputs.repoPaths`
 - `outputs.worktrees` (array of `{repo, path, branch, attached}`)
-- `outputs.bootstrapStatus` — `success` \| `failed` \| omitted when bootstrap not run
+- `outputs.bootstrapStatus` — `success` \| `failed` \| `pending` \| omitted when bootstrap not run
+- `outputs.bootstrapLaneCorrelationId` — spawn UUID while `bootstrapStatus: pending`; clear on success
 - `outputs.bootstrapFailureReason` — when `bootstrapStatus: failed`
 - `outputs.bootstrapSkipFlags` — optional array of `--skip-*` flags used with developer attestation
 - `outputs.branchName`

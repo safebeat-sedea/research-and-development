@@ -34,7 +34,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 | **`phase-plan`** | §4f echo / §5c link | §5b / §5c | §5b spawn / §5d follow-up |
 | **`new-plan`** | stub + parent link | populator gate § indexed handoff | populator spawn |
 
-**Ship and ops skills:** **`coding-session`** (worktree-open, pre-PR, create-PR handoffs), **`deploy-walk`**, **`plan-reconcile`**, **`create-pr`**, **`pre-pr-review`** — structured choice for gates; recap for status, diff, or dry-run report only. Prefer **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** when recap and modal belong in one message.
+**Ship and ops skills:** **`coding-session`** (worktree-open, bootstrap spawn, pre-PR, create-PR handoffs), **`worktree-bootstrap`**, **`deploy-walk`**, **`plan-reconcile`**, **`create-pr`**, **`pre-pr-review`** — structured choice for gates; recap for status, diff, or dry-run report only. Prefer **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** when recap and modal belong in one message.
 
 **Lane pick (no resolved target):** emit *Where we are now in the plan tree* snapshot, then structured choice per **30_planning-target-resolution** § *Sedea input channel* (phased or split — not prose menus).
 
@@ -72,6 +72,7 @@ These skills run on **detached** or **nested** lanes (often **not** the Squad Le
 | Skill | Typical spawner | Outputs section | §8 ship phase hints |
 |-------|-----------------|-----------------|---------------------|
 | `coding-session` | Developer / mission dispatch; **`pr-plan`** spawn (default **spawned-lane** implement) | `## Implementation handoff result` (+ **`## Completion (inline)`** if same-lane) | Layer 2: `developerApprovedImplementation` after worktree-open gate; `shipPhase: implementing` when spawned child codes on lane (not prompt-only stop) |
+| `worktree-bootstrap` | **`coding-session`** after worktree attach | `## Spawned result contract` | `worktree`; `bootstrapStatus` |
 | `pre-pr-review` | `coding-session` | Step 8 — Report and result | `pre-pr-review`; `recommendation: go` |
 | `create-pr` | `coding-session` | `## Result contract` (+ lifecycle sections) | `pr-open`; `prUrl`, `prNumber` |
 | `deploy-walk` | **`coding-session`** (Before deploy, pre-merge), developer phrase, **`create-pr`** after merge, or detached dispatch | `## Spawned result contract` | `deploy-walk`; entry points in **development-process.md** § *Ship chain* |
