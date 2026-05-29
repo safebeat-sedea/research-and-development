@@ -94,22 +94,22 @@ These skills run on **detached** or **nested** lanes (often **not** the Squad Le
 | `worktree-bootstrap` | **`coding-session`** after worktree attach | `## Spawned result contract` | `worktree`; `bootstrapStatus` |
 | `pre-pr-review` | `coding-session` | Step 8 — Report and result | `pre-pr-review`; `recommendation: go` |
 
-The Squad Leader **§8** ship ledger does **not** auto-update when detached ship work finishes — post **Ship recap — plan and deliver** on the leader dispatch (or forward `AGENT_RESULT_RESPONSE_V1` as `child-output`). See **`../plan.mdc`** §8 and **development-process.md** § *Leader-lane ship recap*.
+The Squad Leader **§8** ship ledger updates via Mission Control **host sync** when ship child lanes emit terminals with required **`outputs`**. See **`../plan.mdc`** §8 *Mission Control host sync* and **development-process.md** § *Leader-lane §8 host sync*.
 
-### Leader-lane ship recap
+### §8 terminal contract (ship skills)
 
-When a ship skill finishes a milestone on a **detached** lane, nudge the developer to paste the **Ship recap — plan and deliver** block on the **plan and deliver** Squad Leader dispatch (fields: `targetPlanPath`, `shipPhase`, `rowStatus`, optional `remainingTasks`, `prUrl`, `prNumber`). Full enum, natural-language mapping, and template: **`../plan.mdc`** §8 *Leader-lane ship recap*. Per-skill field hints: § *Squad Leader bubble-up* in each ship `SKILL.md` below.
+When a ship skill finishes a milestone on a **detached** lane, the terminal **`AGENT_RESULT_RESPONSE_V1`** **must** include **`targetPlanPath`**, **`shipPhase`**, and **`rowStatus`** (host may infer phase when documented). **Do not** nudge manual recap on the leader dispatch. Field hints: § *Mission Control section 8 sync* in each ship `SKILL.md`.
 
 ## Inline-only (no spawn)
 
 | Skill | Invoker | Result section | §8 ship ledger |
 |-------|---------|------------------|----------------|
-| `pr-review` | Active **`coding-session`** agent on its lane | `## Inline result for coding-session` | Leader **Ship recap** after triage — fields via **`coding-session`** § *Squad Leader bubble-up* (`shipPhase: pr-review`) |
-| `create-pr` | Active **`coding-session`** agent on its lane | `## Completion (inline)` | `pr-open` via **`coding-session`** terminal or manual **Ship recap** (`prUrl`, `prNumber`) — no separate child terminal |
-| `deploy-walk` | Active **`coding-session`** agent on its lane (Before deploy after commit, After deploy after merge, or deploy phrases) | `## Completion (inline)` | `deploy-walk` via **`coding-session`** terminal or manual **Ship recap** — no separate child terminal |
-| `plan-reconcile` | Active **`coding-session`** agent on its lane (after deploy, stale worktree pick, or *plan reconcile* phrase) | `## Completion (inline)` | `reconcile` / `done` via **`coding-session`** terminal or manual **Ship recap** — no separate child terminal |
+| `pr-review` | Active **`coding-session`** agent on its lane | `## Inline result for coding-session` | **`coding-session`** re-emit with `shipPhase: pr-review` — host sync |
+| `create-pr` | Active **`coding-session`** agent on its lane | `## Completion (inline)` | `pr-open` via **`coding-session`** terminal re-emit — no separate child terminal |
+| `deploy-walk` | Active **`coding-session`** agent on its lane (Before deploy after commit, After deploy after merge, or deploy phrases) | `## Completion (inline)` | `deploy-walk` via **`coding-session`** terminal re-emit — no separate child terminal |
+| `plan-reconcile` | Active **`coding-session`** agent on its lane (after deploy, stale worktree pick, or *plan reconcile* phrase) | `## Completion (inline)` | `reconcile` / `done` via **`coding-session`** terminal re-emit — no separate child terminal |
 
-**`pr-review`**, **`create-pr`**, **`deploy-walk`**, and **`plan-reconcile`** return through **`coding-session`** on the coding lane. Update §8 on the **plan and deliver** leader dispatch with the recap template (**`../plan.mdc`** §8).
+**`pr-review`**, **`create-pr`**, **`deploy-walk`**, and **`plan-reconcile`** return through **`coding-session`** on the coding lane. §8 updates on the leader dispatch via **`coding-session`** terminal re-emit and host sync only (**`../plan.mdc`** §8).
 
 ## Upstream ship-complete notification (spawn chain)
 
@@ -118,7 +118,7 @@ Depth-first expansion ( **`development-process.md`** § *Depth-first plan-tree t
 | Channel | When | Parent action |
 |---------|------|---------------|
 | **Spawn `AGENT_RESULT_RESPONSE_V1`** | **`coding-session`** child terminal after inline **`plan-reconcile`** with merge + main pull + archive | Parent merges **`prShipComplete`**; unlock next PR per **`### Sequencing`** |
-| **Squad Leader Ship recap** | Detached lanes or when spawn bubble-up missing | Parse recap on leader dispatch per **`../plan.mdc`** §8 |
+| **Host sync on leader** | Detached **`coding-session`** terminal with §8 **`outputs`** | Squad Leader §8 row updates automatically — no manual recap |
 
 ### Required terminal fields — **`coding-session`** (reconcile complete)
 

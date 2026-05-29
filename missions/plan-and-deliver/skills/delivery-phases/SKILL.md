@@ -230,7 +230,7 @@ In a **new** assistant turn after the developer selects an option in the approva
 | Choice | Action |
 | --- | --- |
 | **Approve phase list — no spawn yet** (`approve-list`) | Record `developerApprovalStatus: "list-approved"`; set each child row to `listed` with `_TBD_` **`Plan:`** links unchanged. Do **not** run **`new-plan`**. Offer **`expand-next-eligible`** on a later turn when the developer is ready (phase **1** is eligible immediately after list approval). |
-| **Expand next eligible phase row** (`expand-next-eligible`) | Resolve the lowest index **N** with pending **`Plan:`** whose prior phase is **ship-complete** (index **1** has no prior). **Inline:** run **`new-plan`** **once** for that **N** per [Inline handoff](#inline-handoff--delivery-phases--new-plan-step-6-act-after-select); merge **`## Completion (inline)`**; record **`phase-planner`** spawns in `activeLanes`. **Standalone spawned:** emit one **`AGENT_RUN_REQUEST_V1`** for that index only. If no row is eligible, stop with a one-line reason (prior phase ship incomplete) and surface §8 **Ship recap** needs — do not spawn. |
+| **Expand next eligible phase row** (`expand-next-eligible`) | Resolve the lowest index **N** with pending **`Plan:`** whose prior phase is **ship-complete** (index **1** has no prior). **Inline:** run **`new-plan`** **once** for that **N** per [Inline handoff](#inline-handoff--delivery-phases--new-plan-step-6-act-after-select); merge **`## Completion (inline)`**; record **`phase-planner`** spawns in `activeLanes`. **Standalone spawned:** emit one **`AGENT_RUN_REQUEST_V1`** for that index only. If no row is eligible, stop with a one-line reason (prior phase ship incomplete) — do not spawn. |
 | **Revise phase list first** | Apply one focused `StrReplace` on the list, then repeat recap → structured choice. |
 | **Defer / abandon** | Emit terminal result per labels; do not spawn. |
 | **More details for option _** | Elaborate (information-only), then run structured choice again. |
@@ -267,7 +267,7 @@ Only return `continuationStatus: "terminal"` when every row is explicitly `compl
 1. Set **`childRows[N].status: ship-complete`**.
 2. Compute **`expandNextEligibleIndex`** — lowest index with pending **`Plan:`** whose prior phase is ship-complete (index **1** after list approval).
 3. Set **`outputs.expandNextEligibleIndex`**; keep **`continuationStatus: active`** when a next phase may expand.
-4. **Re-emit updated terminal** (standalone) or **`## Completion (inline)`** (under **`planner`**) with merged **`outputs`** (same **`correlationId`**) so **`planner`** Step **7b** can offer **`expand-next-eligible`** without waiting for Squad Leader **Ship recap**.
+4. **Re-emit updated terminal** (standalone) or **`## Completion (inline)`** (under **`planner`**) with merged **`outputs`** (same **`correlationId`**) so **`planner`** Step **7b** can offer **`expand-next-eligible`** when spawn-chain **`phaseShipComplete`** is present.
 5. On the next structured-choice turn, include **`expand-next-eligible`** when **`expandNextEligibleIndex`** is set.
 
 **Ship-complete vs planning-terminal:** a phase row unlocks the **next** parent index for **`expand-next-eligible`** when **`outputs.phaseShipComplete: true`** arrives on the spawn chain **or** §8 shows all PRs under that phase **`rowStatus: closed`**. Planning-terminal **`phase-planner`** alone does **not** unlock the next phase index.

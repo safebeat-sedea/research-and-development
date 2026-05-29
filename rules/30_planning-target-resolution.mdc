@@ -27,22 +27,22 @@ When a turn **requires a user reply** before you continue (pick a planning branc
 | **`pr-plan`** or Squad Leader planning lane | `readyForImplementation: true` | Offer **AskQuestion** **Start coding session** → spawn **`coding-session`** (§5d), or detached start per **development-process.md** § *Start implementation (`coding-session` entry)* | Open worktree, edit hosting repo code, or set §8 `phase` past `not-started` on the **`pr-plan`** lane |
 | **`coding-session`** after **`pr-plan`** §5d spawn | `planningHandoffApproved: true` + exit 1 + `EXPECTED_SECTIONS_5_8_TBD` or exit 0 (`OK`) | **Auto-authorize** — open worktree and implement; fill §§5–8 on this lane (no second modal) | Treat `INCOMPLETE` as planning failure; re-ask planning approval |
 | **`coding-session`** (detached) | `plan-ws-completeness.mjs` exit 0 or override in worktree-open gate | Proceed with worktree + implementation | Assume planning handoff alone was enough |
-| **`coding-session`** (detached) | `developerApprovedImplementation: true` | Continue ship chain; nudge **Ship recap** on leader dispatch for §8 | Assume §8 auto-updated without recap or host sync |
-| **`coding-session`** after inline **`pr-review`** | PR comment triage finished on the coding lane | Nudge **Ship recap** on the leader dispatch (`shipPhase: pr-review`) | Assume host sync updated §8 — **`pr-review` is not host-synced** (§ *§8 ship ledger and inline `pr-review`* below) |
-| Squad Leader **`plan and deliver`** dispatch | Parsed **Ship recap** or host-sync message | Refresh §8 rows; then resolution gates | Close dispatch **`resolved`** while rows `open`/`blocked` without recap — **`plan.mdc`** §8 *§8 troubleshooting* |
+| **`coding-session`** (detached) | `developerApprovedImplementation: true` | Continue ship chain; re-emit terminal with §8 `outputs` for host sync | Assume §8 updated without terminal `outputs` |
+| **`coding-session`** after inline **`pr-review`** | PR comment triage finished on the coding lane | Re-emit **`coding-session`** terminal with `shipPhase: pr-review` | Assume host sync ran without re-emit |
+| Squad Leader **`plan and deliver`** dispatch | Host-sync message parsed | Refresh §8 rows; then resolution gates | Close dispatch **`resolved`** while rows `open`/`blocked` without host sync — **`plan.mdc`** §8 *§8 troubleshooting* |
 
 **Lane rule:** Planning skills (**`pr-plan`**, **`planner`**, decomposition tree) ≠ ship skills (**`coding-session`** → **`pre-pr-review`** → **`create-pr`** → …). **`pr-plan`** may spawn **`coding-session`** on a child lane (§5d); worktrees and implementation stay on the child.
 
 ## §8 ship ledger and inline `pr-review`
 
-Squad Leader **§8** on the **`plan and deliver`** dispatch is updated from **host sync**, a developer-posted **Ship recap**, or forwarded child **`outputs`** — not from silence on a detached coding lane.
+Squad Leader **§8** on the **`plan and deliver`** dispatch is updated **only** from Mission Control **host sync** on ship child terminals — not from silence on a detached coding lane and **not** from manual recap paste.
 
 | Source | Host sync? | Leader §8 action |
 |--------|------------|------------------|
-| **`coding-session`**, **`pre-pr-review`**, **`create-pr`**, **`deploy-walk`**, **`plan-reconcile`** child terminal with `outputs.targetPlanPath`, `outputs.shipPhase`, `outputs.rowStatus` | **Yes** when Mission Control implements §8 sync | Parse silent **`Mission Control: ship-ledger sync (section 8).`** or recap template — **`plan.mdc`** §8 |
-| **`pr-review`** (inline on **`coding-session`**) | **No** — no separate child terminal | **Always** post or nudge **Ship recap — plan and deliver** on the leader dispatch after triage milestones (`prReviewStatus`, `githubReconciliationStatus` when applicable) — **`pr-review/SKILL.md`** § *Leader §8 recap*, **`coding-session/SKILL.md`** § *Squad Leader bubble-up* |
+| **`coding-session`**, **`pre-pr-review`**, **`worktree-bootstrap`**, **`create-pr`**, **`deploy-walk`**, **`plan-reconcile`** child terminal with `outputs.targetPlanPath` and derivable `shipPhase` | **Yes** | Parse silent **`Mission Control: ship-ledger sync (section 8).`** — **`plan.mdc`** §8 |
+| **`pr-review`** (inline on **`coding-session`**) | Via **`coding-session`** re-emit | **`coding-session`** **must** re-emit with `shipPhase: pr-review` after triage — **`pr-review/SKILL.md`** § *§8 host sync (via coding-session)* |
 
-Do not report §8 as up to date, or propose dispatch **`resolved`**, because **`pr-review`** finished on a detached lane without a recap on the leader dispatch.
+Do not report §8 as up to date, or propose dispatch **`resolved`**, because **`pr-review`** finished on a coding lane without a subsequent **`coding-session`** terminal that includes §8 **`outputs`**.
 
 ## Disambiguation — rule 20 cadence step 3 vs `pr-review` steps
 
@@ -65,7 +65,7 @@ Three different signals appear in plan-and-deliver; advancing one does **not** a
 |--------|--------|-------|-------------------|
 | **`readyForImplementation`** | **`pr-plan`** child `outputs` | Planning §§ 1–4 are drafted; developer may open **`coding-session`** | Worktree may open; §§ 5–8 complete; Squad Leader §8 `phase` past `not-started` |
 | **`plan-ws-completeness.mjs` exit 0** | Script on PR plan path | PR plan §§ 5–8 lack blocking `_TBD_` for worktree handoff | **`coding-session`** already running; PR open |
-| **`developerApprovedImplementation`** | **`coding-session`** after worktree-open gate | Layer-2 consent to implement on a worktree | Dispatch ship ledger auto-updated (leader §8 still needs recap) |
+| **`developerApprovedImplementation`** | **`coding-session`** after worktree-open gate | Layer-2 consent to implement on a worktree | Dispatch ship ledger auto-updated (leader §8 updates via host sync from child terminal) |
 
 **`pr-plan` → `coding-session`:** After **AskQuestion** **Start coding session**, **`pr-plan`** emits **`AGENT_RUN_REQUEST_V1`** with absolute `targetPlanPath`, `repoPath`, and `planningHandoffApproved: true` (§5d). The child runs **`plan-ws-completeness.mjs`** then **auto-authorizes** worktrees when §§1–4 are drafted (or the plan is complete) — no second worktree-open modal. Detached **`coding-session`** entry (phrase, snapshot, new session) still uses the worktree-open gate. Do not implement on the **`pr-plan`** lane because `readyForImplementation` is true.
 
@@ -75,12 +75,12 @@ Three different signals appear in plan-and-deliver; advancing one does **not** a
 |--------|------------------|
 | Edit hosting repo code on the **`pr-plan`** planning lane after `readyForImplementation: true` | **Stop** — spawn **`coding-session`** (§5d) or start it on a **detached** lane; layer 2 worktree-open gate runs on the **`coding-session`** lane |
 | Open a worktree because **`pr-plan`** finished §§1–4 only | Run **`plan-ws-completeness.mjs`** on the **`coding-session`** lane — layer 1 + spawn handoff auto-authorizes when §§1–4 are drafted; detached entry still needs the worktree-open gate |
-| Set Squad Leader §8 `phase` to `worktree` / `implementing` from **`pr-plan`** outputs alone | Advance §8 only after **`coding-session`** reports `developerApprovedImplementation: true` or a parsed **Ship recap** on the leader dispatch |
+| Set Squad Leader §8 `phase` to `worktree` / `implementing` from **`pr-plan`** outputs alone | Advance §8 only after host sync from **`coding-session`** terminal with `developerApprovedImplementation: true` |
 | Run **`git commit`** / **`git push`** while still on a planning skill lane | Ship cadence is **`coding-session`** (or rule **20** on an implementation lane) — see rule **20** § *AskQuestion vs git commit/push* |
 | Treat planning **AskQuestion** (*next phase*, *continue planning*) as ship or git consent | Planning picks use § *Standard flow*; commit/push need rule **20** + **`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`** same-message words |
 | Treat rule **20** cadence **step 3** as “run full **`pr-review`** from Step 1” after every push | Cadence step **3** = **`pr-review` Step 5 — GitHub only** when Steps 1–4 already ran; otherwise **skip** cadence step 3 — § *Disambiguation — rule 20 cadence step 3 vs `pr-review` steps* and rule **20** § *Commit and push cadence* |
 
-Squad Leader §8 ship rows advance from **`coding-session`** outputs or an explicit **Ship recap — plan and deliver** on the leader dispatch — see [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](../missions/plan-and-deliver/plan.mdc) §8 and rule **20** § *Leader §8 ship recap*.
+Squad Leader §8 ship rows advance **only** from Mission Control host sync on ship child terminals — see [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](../missions/plan-and-deliver/plan.mdc) §8 and rule **20** § *Leader §8 host sync*.
 
 ## Planning vs ship cadence
 
@@ -141,7 +141,7 @@ When a pick is required, offer the same moves as **`AskQuestion`** `options` (§
 
 ## Depth-first expansion eligibility
 
-Normative contract: **development-process.md** § *Depth-first plan-tree traversal*. Agents resolve **ship-complete** from parsed **Ship recap** on the **`plan and deliver`** leader dispatch, host-sync §8 messages, or forwarded child `outputs` — not from planning-handoff alone.
+Normative contract: **development-process.md** § *Depth-first plan-tree traversal*. Agents resolve **ship-complete** from host-sync §8 messages, **`ship-ledger.v1.json`**, or spawn-chain **`prShipComplete`** / **`phaseShipComplete`** — not from planning-handoff alone.
 
 ### Phase rows (`Delivery phases` parent)
 

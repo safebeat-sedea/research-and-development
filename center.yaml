@@ -79,14 +79,15 @@ governance:
   hostSync:
     mission: plan-and-deliver
     summary: >-
-      Section 8 ship progress from detached ship child terminals is persisted by the
-      hosting Mission Control extension (not by this center repo alone).
+      Section 8 ship ledger is automation-only: host sync from ship child terminals
+      (including coding-session re-emits for inline milestones). No manual Ship recap
+      paste path. Missing outputs are mission gaps — see plan.mdc §8 automation completeness.
     agentDocs:
       - missions/plan-and-deliver/plan.mdc
       - docs/development-process.md
     extensionDoc: >-
       Hosting repo `extensions/mission-control/docs/plan-and-deliver-section-8-ship-ledger.md`
-      (ship-ledger.v1.json, silent leader recap, required child outputs, audit events).
+      (ship-ledger.v1.json, silent leader host-sync message, required child outputs, audit events).
     requiredChildOutputs:
       - targetPlanPath
       - shipPhase
