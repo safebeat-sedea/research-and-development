@@ -1,25 +1,11 @@
 ---
 name: deploy-walk
 description: >-
-  Walk through a PR plan's `## N. Deploy test plan` section one step at a time.
-  **Agent-executable** steps (tests, repo scripts, curl/log checks the agent can
-  run in the worktree or with available env) run **without approval** — on pass,
-  flip `[ ]` → `[x]` with a dated note and advance. **Manual** steps are presented
-  in detail for the developer (verbatim text, *because*, expected outcome, commands);
-  the agent assists until the developer confirms, then flips the box.
-  Three-state lifecycle (`drafted` → `deployed` → `done`) is recorded in a
-  `**Status:**` line at the top of § N so the auto-routing of `deploy-walk present <N>`
-  knows whether to land in `### Before deploy` or `### After deploy` without
-  the user spelling it out. When Status reaches `done`, frontmatter todo
-  `deploy-test-plan-verified` flips `pending` → `done` in the same turn (see
-  *Frontmatter capstone*). Does **not** auto-run **plan-reconcile**. Loose mode by design: between `deploy-walk present <N>` and
-  `deploy-walk <N> done` / `skip` / `block`, the chat is normal collaboration — the
-  agent answers questions, runs commands, debugs; the bracketing is the only
-  signal that matters. State lives in the plan file, not in chat memory, so
-  walks survive multi-day gaps and session summarization. **Cross-skill:** when another skill (for example **`coding-session`**) receives ad-hoc “step *N* confirmed” for §7, it must apply the same plan-file update rules here — or the developer should invoke **`deploy-walk <N> done`**. Ambiguous targets or
-  command mappings use **AskQuestion** (not freeform guessing). Use when the user
-  says `deploy-walk present <N>`, `deploy-walk <N> done [: <note>]`, `deploy-walk <N> skip: <reason>`,
-  `deploy-walk <N> block: <reason>`, `deploy-walk deployed [: <note>]`, or `deploy-walk status`.
+  Inline coding-session procedure to walk a PR plan's `## N. Deploy test plan` section
+  one step at a time. Executed by the active coding-session agent only — not spawned,
+  no warmUpRules. Agent-executable steps run without approval; manual steps present
+  for the developer. Three-state lifecycle in `**Status:**`; capstone todo when done.
+  Does not auto-run plan-reconcile.
 inputs:
   targetPlanPath:
     type: string
@@ -59,34 +45,40 @@ inputs:
     required: false
   upstreamSkill:
     type: string
-    description: Skill that spawned deploy verification — `coding-session` (Before deploy pre-merge or After deploy post-merge).
+    description: Skill that invokes deploy verification inline — `coding-session` (Before deploy pre-merge or After deploy post-merge).
     required: false
   worktreePath:
     type: string
-    description: Absolute worktree path (required when spawned from coding-session).
+    description: Absolute worktree path (required when inline on coding-session).
     required: false
   deployWalkScope:
     type: string
     description: >-
-      `before-deploy-only` when spawned from coding-session pre-merge — walk only
+      `before-deploy-only` when inline from coding-session pre-merge — walk only
       `### Before deploy` while Status stays `drafted`; do not run After deploy or
-      `deploy-walk deployed`. Omit for full post-merge walk (typical **`coding-session`** After-deploy spawn).
+      `deploy-walk deployed`. Omit for full post-merge walk (typical After-deploy inline).
     required: false
-warmUpRules:
-  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
-  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
-  - ".sedea/centers/research-and-development/docs/development-process.md"
-  - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
-  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # Deploy walk-through
 
-This skill drives the **per-step deploy verification loop** for a PR plan's `## N. Deploy test plan` section (the per-PR template's § 7, or § 6 in legacy 7-section per-PR plans). Each numbered step in `### Before deploy` and `### After deploy` is a **GFM task list checkbox** (`1. [ ] ...`).
+**Lane requirement (no separate warm-up).** This skill has **no** frontmatter **`warmUpRules`** by design. Run it **only** on the active **`coding-session`** lane after that session has loaded ship rules (**`20_efficient-pr-shipping`**, **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`**, **`skills/README.md`**, dev-process). Do **not** start a standalone Mission Control session on **`deploy-walk`** alone — context will be incomplete.
+
+### Standalone dispatch (stop immediately)
+
+If Mission Control opened a session whose only intent is **`deploy-walk`** / deploy verification with **no** active **`coding-session`** context (`worktreePath`, `targetPlanPath` when plan-anchored):
+
+1. **Stop** — do not walk checklists or edit the plan.
+2. Tell the developer **`deploy-walk`** is **inline-only** on the **`coding-session`** lane (Before deploy after commit, After deploy after merge, or deploy phrases on that lane).
+3. Direct them to open or return to **`coding-session`** with the PR plan and worktree — see [`coding-session/SKILL.md`](../coding-session/SKILL.md) § *Before deploy deploy-walk handoff* and § *After deploy deploy-walk handoff*.
+
+**Execution owner:** the active **coding-session agent** runs this skill inline. Do **not** spawn a separate deploy-walk child lane.
+
+**Agent-executable** steps (tests, repo scripts, curl/log checks the agent can run in the worktree or with available env) run **without approval** — on pass, flip `[ ]` → `[x]` with a dated note and advance. **Manual** steps are presented in detail for the developer (verbatim text, *because*, expected outcome, commands); the agent assists until the developer confirms, then flips the box. Three-state lifecycle (`drafted` → `deployed` → `done`) is recorded in a `**Status:**` line at the top of § N. When Status reaches `done`, frontmatter todo `deploy-test-plan-verified` flips `pending` → `done` in the same turn (see *Frontmatter capstone*). **Cross-skill:** when **`coding-session`** receives ad-hoc “step *N* confirmed” for §7, it must apply the same plan-file update rules here — or the developer should invoke **`deploy-walk <N> done`**. Use when the user says `deploy-walk present <N>`, `deploy-walk <N> done [: <note>]`, `deploy-walk <N> skip: <reason>`, `deploy-walk <N> block: <reason>`, `deploy-walk deployed [: <note>]`, or `deploy-walk status` **on the coding-session lane**.
 
 | Step kind | Who runs it | On success |
 |-----------|-------------|------------|
-| **Agent-executable** | **Deploy-walk agent** — no approval modal before run | Agent runs commands, flips `[ ]` → `[x]` with dated note (command + outcome), advances to the next step |
+| **Agent-executable** | **Coding-session agent** (inline deploy-walk) — no approval modal before run | Agent runs commands, flips `[ ]` → `[x]` with dated note (command + outcome), advances to the next step |
 | **Manual** | **Developer** — agent presents context and assists | Developer reports; agent flips on `deploy-walk <N> done` / skip / block |
 
 See [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
@@ -95,7 +87,7 @@ See [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
 
 Target picks, deploy-with-gaps, and closure gates use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — **preferred:** recap + modal in one message; bare **`MC_ASKQUESTION_V1`** is sentinel-only. **Act** (checkbox flips, status lines) follows developer selection or explicit deploy-walk commands.
 
-When spawned by **`coding-session`** (pre-merge **Before deploy** or post-merge **After deploy**), this skill is the **deploy-walk agent**. It owns deploy verification status and reports it upstream; it does not run implementation, PR review, or plan reconciliation.
+When run **inline** on **`coding-session`** (pre-merge **Before deploy** or post-merge **After deploy**), this procedure owns deploy verification status and reports it via **`## Completion (inline)`** to the coding-session agent; it does not run implementation, PR review, or plan reconciliation.
 
 ## Not chained to `plan-reconcile`
 
@@ -114,14 +106,14 @@ Canonical table: **`.sedea/centers/research-and-development/docs/development-pro
 
 | How it starts | Lane |
 |---------------|------|
-| Developer phrase (`deploy-walk present <N>`, status, done/skip/block) | Detached |
-| **`coding-session`** after implementation approval + commit — Before deploy only | Spawned child (`upstreamSkill: coding-session`, `deployWalkScope: before-deploy-only`) |
-| **`coding-session`** After deploy — developer chooses **PR merged — start After deploy deploy-walk** at post-create-pr gate | Spawned child (`upstreamSkill: coding-session`) — full §7 walk |
-| Direct skill dispatch with `targetPlanPath` / slug | Detached |
+| Developer phrase (`deploy-walk present <N>`, status, done/skip/block) on active **`coding-session`** | Inline on **`coding-session`** |
+| **`coding-session`** after implementation approval + commit — Before deploy only | Inline (`upstreamSkill: coding-session`, `deployWalkScope: before-deploy-only`) |
+| **`coding-session`** After deploy — developer chooses **PR merged — start After deploy deploy-walk** at post-create-pr gate | Inline (`upstreamSkill: coding-session`) — full §7 walk |
+| Detached phrase / direct skill dispatch without **`coding-session`** | **Stop** — redirect to **`coding-session`** (see *Standalone dispatch*) |
 
-**Pre-merge vs post-merge:** **`coding-session`** spawns walk **Before deploy** while the PR is still open (`**Status:**` stays `drafted`). **`coding-session`** (post-create-pr gate) or detached phrase after merge owns **After deploy** and the `drafted → deployed → done` lifecycle. Completing either walk does **not** start **`plan-reconcile`** — reconcile is a separate developer or **`coding-session`** follow-on when merge/archive triage is needed.
+**Pre-merge vs post-merge:** **`coding-session`** runs walk **Before deploy** while the PR is still open (`**Status:**` stays `drafted`). **`coding-session`** (post-create-pr gate) owns **After deploy** and the `drafted → deployed → done` lifecycle. Completing either walk does **not** start **`plan-reconcile`** — reconcile is a separate developer or **`coding-session`** follow-on when merge/archive triage is needed.
 
-## Spawned from coding-session (`before-deploy-only`)
+## Inline on coding-session (`before-deploy-only`)
 
 When `upstreamSkill` is **`coding-session`** and `deployWalkScope` is **`before-deploy-only`**:
 
@@ -131,15 +123,13 @@ When `upstreamSkill` is **`coding-session`** and `deployWalkScope` is **`before-
 | **Forbidden** | `deploy-walk deployed` / `deploy-walk deployed: …` (no `drafted → deployed` flip pre-merge) |
 | **Forbidden** | `deploy-walk present after <N>` or walking **`### After deploy`** |
 | **Forbidden** | **Frontmatter capstone** `deploy-test-plan-verified` → `done` (full checklist not complete pre-merge) |
-| **Terminal** | `AGENT_RESULT_RESPONSE_V1` with `status: success` when every Before-deploy box is `[x]` or explicitly skipped per skip rules; `outputs.beforeDeployStatus: complete`; `outputs.deployStatus: drafted` (unchanged); `outputs.afterDeployStatus: incomplete` or `unknown`; `continuationStatus: terminal` |
-| **Blocked** | Any Before-deploy step remains `[ ]` without skip/block resolution → `continuationStatus: active` or `partial` with `blockedStep` |
+| **Terminal** | `beforeDeployStatus: complete`; `deployStatus: drafted` (unchanged); `afterDeployStatus: incomplete` or `unknown` — hand back to **`coding-session`** for [Pre-PR review authorization](../coding-session/SKILL.md#pre-pr-review-authorization) |
+| **Blocked** | Any Before-deploy step remains `[ ]` without skip/block resolution → report `blockedStep` in inline outputs |
 | **Handback** | Parent **`coding-session`** continues to [Pre-PR review authorization](../coding-session/SKILL.md#pre-pr-review-authorization) — not **`create-pr`** |
 
-Use `worktreePath` / `branchName` from spawn inputs for command context in step presentations. PR merge fields (`prUrl`, `mergeSha`, …) are optional and usually absent.
+Use `worktreePath` / `branchName` from inline context for command context in step presentations. PR merge fields (`prUrl`, `mergeSha`, …) are optional and usually absent.
 
-**`initiatingPrompt`** from the parent should state pre-merge Before deploy only; auto-run agent-executable steps; return when Before deploy is satisfied.
-
-On lane start, run [Spawned walk bootstrap](#spawned-walk-bootstrap) — do not wait for `deploy-walk present 1`.
+On inline start, run [Inline walk bootstrap](#inline-walk-bootstrap) — do not wait for `deploy-walk present 1`.
 
 The skill is **loose mode by design** on **manual** steps. Between `deploy-walk present <N>` (manual presentation) and `deploy-walk <N> done` / `skip` / `block`, the chat is **normal collaboration** — the **developer** can ask questions, paste logs, debug. **Agent-executable** steps do **not** wait for `deploy-walk present <N>` — the agent runs them, updates the plan, and continues.
 
@@ -153,7 +143,7 @@ Classify each unchecked step **before** acting. When classification is ambiguous
 
 ### Agent-executable (auto-run — no approval)
 
-Run **without** an **AskQuestion** approval gate. Use `worktreePath` from spawn inputs when present; otherwise resolve cwd from plan anchor or chat.
+Run **without** an **AskQuestion** approval gate. Use `worktreePath` from inline context when present; otherwise resolve cwd from plan anchor or chat.
 
 | Examples | Notes |
 |----------|--------|
@@ -168,7 +158,7 @@ Run **without** an **AskQuestion** approval gate. Use `worktreePath` from spawn 
 
 **On fail:** do **not** flip the box. Either **`deploy-walk <N> block: <reason>`** with stderr/exit code, or present the failure and assist debug (manual collaboration) until the developer chooses done / skip / block.
 
-**Auto-advance:** after marking step N done, immediately process step N+1 in the **same assistant turn** when it is also agent-executable. Stop the chain when the next step is **manual**, **blocked**, sub-section complete, or a lifecycle gate applies (see [Spawned walk bootstrap](#spawned-walk-bootstrap)).
+**Auto-advance:** after marking step N done, immediately process step N+1 in the **same assistant turn** when it is also agent-executable. Stop the chain when the next step is **manual**, **blocked**, sub-section complete, or a lifecycle gate applies (see [Inline walk bootstrap](#inline-walk-bootstrap)).
 
 ### Manual (developer-led)
 
@@ -181,13 +171,13 @@ Run **without** an **AskQuestion** approval gate. Use `worktreePath` from spawn 
 
 **No auto-run** and **no auto-flip** until the developer invokes `deploy-walk <N> done`, `skip`, or `block`, or free-form equivalent confirmed in one line.
 
-### Spawned walk bootstrap
+### Inline walk bootstrap
 
-When spawned by **`coding-session`** (first turn on the lane after inputs validate):
+When run **inline** on **`coding-session`** (first turn after inline context validates):
 
 1. Resolve plan (Step 1) and read § N (Step 2).
 2. Run [Autonomous agent-executable pass](#autonomous-agent-executable-pass) from the first unchecked step in the active sub-section.
-3. Stop on the first **manual** step with full presentation, on **block**, or when the spawn scope is satisfied (`before-deploy-only` Before complete, or full walk terminal rules).
+3. Stop on the first **manual** step with full presentation, on **block**, or when the inline scope is satisfied (`before-deploy-only` Before complete, or full walk terminal rules).
 
 Do **not** wait for the developer to send `deploy-walk present 1` first when agent-executable steps are queued at the front of the checklist.
 
@@ -496,9 +486,9 @@ This skill walks **one PR plan's `## N. Deploy test plan` section at a time**. I
 - Apply to plans without the GFM task list contract (`1. [ ] ...`). Pre-skill plans must be swept first; the skill stops with a clear message instead of guessing.
 - Walk "all PR plans in flight" in batch. Cross-plan dashboards can come later as a one-line script over **`.sedea/operations/.../plans/`**; the skill is per-plan.
 
-## Spawned result contract
+## Inline result contract
 
-When spawned by **`coding-session`**, end each substantive turn with deploy status outputs so upstream can keep the ledger accurate:
+When run inline on **`coding-session`**, report these fields in prose via **`## Completion (inline)`** so the parent can merge into coding-session `outputs`:
 
 - `outputs.targetPlanPath`
 - `outputs.targetPlanSlug`
@@ -511,56 +501,18 @@ When spawned by **`coding-session`**, end each substantive turn with deploy stat
 - `outputs.deployTodoStatus` (`pending` | `done` | `missing` | `unknown`)
 - `outputs.blockedStep`
 - `outputs.remainingTasks`
-- `outputs.activeLanes`
-- `outputs.openLedgerEntries`
-- `outputs.continuationOwner: "deploy-walk-agent"`
-- `outputs.continuationStatus`
+- `outputs.shipPhase` — `deploy-walk` while checklist in progress; update when blocked or done
+- `outputs.rowStatus` — `open` while steps remain; `closed` when `deployStatus` and `deployTodoStatus` are both `done`; `blocked` when a deploy step is blocked
+- `outputs.blockedReason` — when `rowStatus` is `blocked` (name the blocked step)
 
-Set `continuationStatus`:
+Stop when a **manual** step is presented and awaiting developer input, when the walk is **blocked**, when Before-deploy scope is satisfied (`before-deploy-only`), or when full post-merge walk reaches `done`. You **may** process multiple **agent-executable** steps in one turn before stopping. Do not auto-invoke other skills; do not commit hosting-repo git from this procedure.
 
-- `terminal` when `deployStatus: "done"` and `deployTodoStatus: "done"` (full post-merge walk), **or** when `deployWalkScope` is `before-deploy-only` and `beforeDeployStatus: "complete"` while `deployStatus` remains `drafted`.
-- `active` while Before-deploy steps, deployed transition, After-deploy steps, or capstone todo remain.
-- `active` when any deploy step is blocked; include the blocked step and reason.
-- `partial` status with `continuationStatus: "active"` when plan format prevents reliable verification.
+## Mission Control section 8 sync (via coding-session)
 
-Stop when a **manual** step is presented and awaiting developer input, when the walk is **blocked**, when spawn scope is **terminal**, or when a lifecycle **AskQuestion** gate applies. You **may** process multiple **agent-executable** steps in one turn before stopping. Do not auto-invoke other skills; do not commit hosting-repo git from this lane.
-
-## Squad Leader bubble-up (detached lanes)
-
-Runs on a **detached** deploy lane. When `deployStatus` and `deployTodoStatus` are **done** (or deploy is blocked), nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch (**`../../plan.mdc`** §8).
-
-| Outcome | `shipPhase` | Key `outputs` for recap |
-|---------|-------------|-------------------------|
-| Checklist complete | `deploy-walk` | `targetPlanPath`, `deployStatus`, `deployTodoStatus` |
-| Blocked step | `deploy-walk` | `targetPlanPath`, `rowStatus: blocked`, blocked step in `remainingTasks` |
-
-## Mission Control section 8 sync (required terminal `outputs`)
-
-On **every** terminal `AGENT_RESULT_RESPONSE_V1` (including follow-up re-emits), `outputs` **must** include:
-
-| Field | Rule |
-|-------|------|
-| `targetPlanPath` | Absolute PR plan `.plan.md` path — **required** |
-| `shipPhase` | `deploy-walk` when checklist in progress; use bubble-up table when blocked or done |
-| `rowStatus` | `open` while steps remain; `closed` when `deployStatus` and `deployTodoStatus` are both `done`; `blocked` when a deploy step is blocked |
-| `deployStatus` / `deployTodoStatus` | Echo spawned contract fields |
-| `remainingTasks` | When `rowStatus` is not `closed` |
-| `blockedReason` | When `rowStatus` is `blocked` (name the blocked step) |
-
-Mission Control syncs section 8 on the Squad Leader lane from these fields.
-
-## Completion (spawned)
-
-Required `outputs` per **## Spawned result contract**, **Mission Control section 8 sync**, and the bubble-up table. Re-emit an **updated** terminal result after user-requested follow-up on this lane (same `correlationId`).
-
-### Host protocol line (required)
-
-Emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status`, `summary`, `outputs`, `errors` (use `[]` when none). Populate `outputs` from the sections above **including** `targetPlanPath`, `shipPhase`, and `rowStatus` on every terminal line. The emitted line must be **valid JSON** (no `{...}` placeholders in the actual output). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
-
-Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*).
+**`deploy-walk`** is **not** a separate child terminal. §8 ship ledger fields reach the Squad Leader via **`coding-session`** terminal **`outputs`** or manual **Ship recap** — include `targetPlanPath`, `shipPhase`, `rowStatus`, `deployStatus`, `deployTodoStatus`, `remainingTasks`, and `blockedReason` when applicable per **`../coding-session/SKILL.md`** § *Squad Leader bubble-up*.
 
 ## Completion (inline)
 
-Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
+Report the fields from **## Inline result contract** in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
 
-Normally spawned from **`coding-session`** (Before deploy, pre-merge, or After deploy post-merge). If run inline, use the same `outputs` semantics as **## Spawned result contract** and **`## Completion (spawned)`** in prose only.
+Normally invoked inline from **`coding-session`** (Before deploy, pre-merge, or After deploy post-merge). Deploy phrases on the active coding-session lane use the same procedure body.

@@ -151,12 +151,12 @@ The table above chooses **how to author** a PRD. This table chooses **which miss
 | `phase-planner` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/phase-planner/SKILL.md` | Populate a focused **phase plan** stub: drafts §§ 1–4 plus **`### Decomposition assessment`**. Runs **`delivery-phases`** / **`pr-breakdown`** **inline** on the phase-planner lane after route approval. |
 | `pr-plan` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md` | Populate §§ 1–4 on the **planning** lane; §§ 5–8 default **`_TBD_`**. **`new-plan`** runs this skill **inline** under **`planner`** or **`phase-planner`**; standalone dispatch may still spawn a child lane. **AskQuestion** **Start coding session** → spawn **`coding-session`** via **`AGENT_RUN_REQUEST_V1`** (§5d). See skill § *Handoff to coding-session*. |
 | `new-plan` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md` | Scaffold a new `.plan.md` + sidecar; parent linkage. **`delivery-phases`** / **`pr-breakdown`** run this skill **inline** under **`planner`** or **`phase-planner`**; standalone dispatch may still spawn a child lane. Runs **`pr-plan`** **inline**; spawns **`phase-planner`** when the child is a phase plan. |
-| `coding-session` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md` | **Separate** lane from **`pr-plan`**: worktree, attach, spawn **`worktree-bootstrap`** child (default), then **implements** §§ 5–8 on that lane (default after **`pr-plan`** spawn; **auto-authorize** when §§1–4 drafted) or **prompt-only** external handoff. Ship chain (**`pre-pr-review`**, **`create-pr`**, **`pr-review`**). |
+| `coding-session` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md` | **Separate** lane from **`pr-plan`**: worktree, attach, spawn **`worktree-bootstrap`** child (default), then **implements** §§ 5–8 on that lane (default after **`pr-plan`** spawn; **auto-authorize** when §§1–4 drafted) or **prompt-only** external handoff. Ship chain (**`pre-pr-review`**, inline **`create-pr`**, inline **`pr-review`**, inline **`deploy-walk`**). |
 | `worktree-bootstrap` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md` | Child lane spawned by **`coding-session`** after attach; runs **`bootstrap-worktree-dev.sh`** while the parent implements in parallel. Parent **commit** and Before deploy **`deploy-walk`** wait for **`bootstrapStatus: success`**. |
 | `pre-pr-review` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pre-pr-review/SKILL.md` | Fresh spawned pre-PR reviewer lane. Reviews committed implementation diff against a PR plan or free-form scope, checks per-PR template + repo rules + quality (§7 **Before deploy** only for deploy checklist — **After deploy** is post-merge). Returns **proposed** non-blocker items in `outputs.proposedFollowUps` when anchored to **`plan`** (does **not** edit the plan file). The active **`coding-session`** agent presents proposals to the developer; approved bullets are appended to `## Follow-ups` before **`create-pr`** when the developer chooses that path. Reports go/no-go. |
 | `create-pr` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/create-pr/SKILL.md` | **Inline** on the active **`coding-session`** lane after **`pre-pr-review`** returns `go` and Create-PR gate approval. **Only** path that may run **`gh pr create`** (per rule **20**). Builds reviewer-complete PR description; opens GitHub PR when authorized. Post-merge **`deploy-walk`** and **`plan-reconcile`** are owned by **`coding-session`** — not a separate child lane. |
 | `pr-review` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-review/SKILL.md` | Triage PR review comments; feeds **Code review follow-ups** on the PR plan. |
-| `deploy-walk` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/deploy-walk/SKILL.md` | Walk a PR plan's `## N. Deploy test plan` section step by step. **Agent-executable** steps (tests, repo scripts, automatable HTTP/file checks) run **without approval** — on pass the agent flips `[ ]` → `[x]` and advances. **Manual** steps (UI, production judgment, missing credentials) are presented in detail for the developer; the agent assists until `deploy-walk <N> done` / skip / block. Flip Status `drafted → deployed` to unlock After-deploy; capstone todo when Status is `done`. State lives in the plan file (**`**Status:**`** + GFM `1. [ ]`). Does **not** auto-run **`plan-reconcile`**. |
+| `deploy-walk` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/deploy-walk/SKILL.md` | **Inline** on the active **`coding-session`** lane. Walk a PR plan's `## N. Deploy test plan` section step by step. **Agent-executable** steps run **without approval**; **manual** steps present for the developer. Detached dispatch redirects to **`coding-session`**. Does **not** auto-run **`plan-reconcile`**. |
 | `plan-reconcile` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/plan-reconcile/SKILL.md` | Plan reconcile / archive, plus **follow-ups triage** at dispatch resolve time (see **Cadence** § *Plan Updates*). |
 
 ### Diagram and feedback channels
@@ -406,6 +406,7 @@ flowchart TB
     CPRB[create-pr]:::branch
     REVB[pr-review]:::branch
     CHILD --> CSB
+    CSB -.->|inline before-deploy| DWB
     CSB --> PPRB
     CSB -.->|inline create-pr| CPRB
     CSB -.->|inline pr-review| REVB
@@ -414,7 +415,7 @@ flowchart TB
   subgraph post["Post-merge — reconcile not auto-chained"]
     DWB[deploy-walk]:::branch
     RECB[plan-reconcile]:::branch
-    CSB -.->|after PR merge| DWB
+    CSB -.->|inline after-merge| DWB
     DWB -.->|separate explicit start| RECB
   end
 ```
@@ -532,7 +533,7 @@ After **`pr-plan`** handoff (or an approved per-PR plan), implementation runs on
 
 #### Coding Session
 
-Each PR is delivered through the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). This stage spins up a worktree and attaches the Sedea workbench when applicable. **Mission Control spawn** from **`pr-plan`** (or another spawner) defaults to **implementation on the child lane** in that worktree after the worktree-open gate — not an orchestrator-only stop that tells the developer to paste a prompt elsewhere. **Detached** or **`promptOnly`** entry may still emit a copy-safe prompt for **a separate coding agent** session. The active lane coordinates the **ship chain** (§ *Ship chain* below): after implementation, **one cut-point modal** covers approve + commit + Before deploy **`deploy-walk`** spawn when §7 has unchecked items — **no commit** before that pick.
+Each PR is delivered through the **`coding-session`** protocol branch (see **Development tools** § *Protocol branches*). This stage spins up a worktree and attaches the Sedea workbench when applicable. **Mission Control spawn** from **`pr-plan`** (or another spawner) defaults to **implementation on the child lane** in that worktree after the worktree-open gate — not an orchestrator-only stop that tells the developer to paste a prompt elsewhere. **Detached** or **`promptOnly`** entry may still emit a copy-safe prompt for **a separate coding agent** session. The active lane coordinates the **ship chain** (§ *Ship chain* below): after implementation, **one cut-point modal** covers approve + commit + Before deploy **`deploy-walk`** inline when §7 has unchecked items — **no commit** before that pick.
 
 **In-loop feedback** during implementation: **a coding agent** maintains **`## Follow-ups`** on the PR plan for scope-adjacent items (Strategy #6). **`pre-pr-review`** returns **proposed** follow-ups only; **`coding-session`** appends after developer approval. **`pr-review`** follow-ups follow the same approval pattern when required. § *Plan Updates* below drains routed bullets.
 
@@ -543,27 +544,27 @@ After **`pr-plan`** handoff and **`coding-session`** implementation, the happy p
 | Order | Branch | Role (one line) |
 |------:|--------|-----------------|
 | 1 | **`coding-session`** (implementation) | Worktree + implement §§ 5–8 — **no commit** until developer approves |
-| 2 | **`coding-session`** (ship gates) | One cut-point modal — approve + commit + spawn Before deploy **`deploy-walk`** when §7 applies |
+| 2 | **`coding-session`** (ship gates) | One cut-point modal — approve + commit + inline Before deploy **`deploy-walk`** when §7 applies |
 | 3 | **`pre-pr-review`** | Fresh reviewer lane on committed diff; go/no-go before merge-ready |
 | 4 | **`create-pr`** | **Inline** on **`coding-session`** — **only** path that may run **`gh pr create`** (rule **20**) |
 | 5 | **`pr-review`** | Triage open PR comments (often **inline** in **`coding-session`**) |
-| 6 | **`deploy-walk`** (After deploy) | Post-merge §7 **After deploy** + lifecycle to `done` (see **Entry points** below) |
+| 6 | **`deploy-walk`** (After deploy) | Post-merge §7 **After deploy** + lifecycle to `done` — **inline** on **`coding-session`** (see **Entry points** below) |
 | 7 | **`plan-reconcile`** | Merge-driven archive + follow-ups triage (separate cadence after merge/deploy) |
 
 **`deploy-walk` entry points (canonical)**
 
 | How it starts | Typical lane | When |
 |---------------|--------------|------|
-| **`coding-session` chain** — spawn after commit with `deployWalkScope: before-deploy-only` | Spawned **`deploy-walk`** child (`upstreamSkill: coding-session`) | Pre-merge; §7 **`### Before deploy`** has unchecked items |
-| **Developer phrase** — `deploy-walk present <N>`, `deploy-walk status`, step done/skip/block | Detached (developer or snapshot) | PR merged or target env ready; plan §7 exists |
-| **`coding-session` chain** — **AskQuestion** **PR merged — start After deploy deploy-walk** at post-create-pr gate | Spawned **`deploy-walk`** child (`upstreamSkill: coding-session`) | PR `merged`; full §7 walk including After deploy (**`coding-session/SKILL.md`** § *After deploy deploy-walk handoff*) |
-| **Mission / skill dispatch** — invoke **`deploy-walk/SKILL.md`** with plan anchor | Detached | Same as developer phrase when inputs are supplied |
+| **`coding-session` chain** — inline after commit with `deployWalkScope: before-deploy-only` | Inline on **`coding-session`** | Pre-merge; §7 **`### Before deploy`** has unchecked items |
+| **Developer phrase** — `deploy-walk present <N>`, `deploy-walk status`, step done/skip/block | Active **`coding-session`** lane (detached dispatch redirects) | Plan §7 exists; worktree + plan context on coding lane |
+| **`coding-session` chain** — **AskQuestion** **PR merged — start After deploy deploy-walk** at post-create-pr gate | Inline on **`coding-session`** | PR `merged`; full §7 walk including After deploy (**`coding-session/SKILL.md`** § *After deploy deploy-walk handoff*) |
+| **Mission / skill dispatch** — invoke **`deploy-walk/SKILL.md`** without **`coding-session`** | **Stop** — redirect to **`coding-session`** | Same procedure once coding lane is active |
 
 **Ordering:** **Before deploy** runs from **`coding-session`** after implementation approval and commit (pre-PR). **After deploy** runs after merge (typically **`coding-session`** post-create-pr gate). Finishing deploy-walk (or capstone todo **done**) does **not** run **`plan-reconcile`** — start **`plan-reconcile`** separately when linked PRs are merged and you want archive/follow-up triage (**`plan-reconcile/SKILL.md`** § *When to trigger*).
 
 ##### pre-pr-review
 
-Spawned from **`coding-session`** after developer implementation approval, **commit**, and **Before deploy** **`deploy-walk`** (or documented skip). Reviews the **committed** diff + PR plan + repo rules; returns **`recommendation: go`** or blockers. Non-blockers are **`outputs.proposedFollowUps`** — **`coding-session`** presents them; plan **`## Follow-ups`** edits only after developer approval. **Pre-merge scope only:** score §7 **`### Before deploy`** against what was walked or skipped; **`### After deploy`** is post-merge (**`deploy-walk`** after merge) — omit it entirely from the pre-PR report (not blockers, flags, **Defer**, or summary). See **`pre-pr-review/SKILL.md`** § *Pre-PR phase boundary*.
+Spawned from **`coding-session`** after developer implementation approval, **commit**, and inline **Before deploy** **`deploy-walk`** (or documented skip). Reviews the **committed** diff + PR plan + repo rules; returns **`recommendation: go`** or blockers. Non-blockers are **`outputs.proposedFollowUps`** — **`coding-session`** presents them; plan **`## Follow-ups`** edits only after developer approval. **Pre-merge scope only:** score §7 **`### Before deploy`** against what was walked or skipped; **`### After deploy`** is post-merge (**`deploy-walk`** after merge) — omit it entirely from the pre-PR report (not blockers, flags, **Defer**, or summary). See **`pre-pr-review/SKILL.md`** § *Pre-PR phase boundary*.
 
 ##### create-pr
 
@@ -575,7 +576,7 @@ Runs **inline** on the active **`coding-session`** lane after a PR exists (not a
 
 ##### deploy-walk
 
-Step-by-step walk of the PR plan **`## 7. Deploy test plan`**. **Agent-executable** steps (tests, scripts, automatable checks) run without approval; **manual** steps delegate to the developer with full context. Flips capstone todo **`deploy-test-plan-verified`** when done. Entry paths: **§ Ship chain** *deploy-walk entry points* above. See **`deploy-walk/SKILL.md`** § *Agent-executable vs manual steps*.
+Step-by-step walk of the PR plan **`## 7. Deploy test plan`** — **inline** on **`coding-session`**. **Agent-executable** steps run without approval; **manual** steps delegate to the developer with full context. Flips capstone todo **`deploy-test-plan-verified`** when done. Entry paths: **§ Ship chain** *deploy-walk entry points* above. See **`deploy-walk/SKILL.md`** § *Agent-executable vs manual steps*.
 
 ##### plan-reconcile
 
@@ -591,7 +592,7 @@ On a **`plan and deliver`** Mission Control dispatch, the Squad Leader **§8** s
 | **Developer recap** | Developer or agent posts the recap template on the **leader dispatch** (`lastReportedBy: developer-message`). |
 | **Forwarded child-output** | A parent lane forwards parseable child results to the leader. |
 
-- **Host sync is partial.** It covers terminal results from **`coding-session`**, **`pre-pr-review`**, **`deploy-walk`**, and **`plan-reconcile`** when required **`outputs`** are present. Inline **`pr-review`** and inline **`create-pr`** on **`coding-session`** are **not** separate child terminals — include `pr-open` / `pr-review` on **`coding-session`** terminal or manual recap. Manual recap is still required when sync was skipped (missing `targetPlanPath`, older Mission Control build, or nested parent not the Squad Leader).
+- **Host sync is partial.** It covers terminal results from **`coding-session`**, **`pre-pr-review`**, and **`plan-reconcile`** when required **`outputs`** are present. Inline **`pr-review`**, inline **`create-pr`**, and inline **`deploy-walk`** on **`coding-session`** are **not** separate child terminals — include ship fields on **`coding-session`** terminal or manual recap. Manual recap is still required when sync was skipped (missing `targetPlanPath`, older Mission Control build, or nested parent not the Squad Leader).
 - **Manual recap still valid.** Post **Ship recap — plan and deliver** on the leader dispatch when host sync did not fire or §8 rows look stale. Each ship skill § *Squad Leader bubble-up* and § *Mission Control section 8 sync* maps terminal **`outputs`** → **`shipPhase`** / **`rowStatus`**.
 
 ##### §8 troubleshooting (stale ledger or blocked dispatch close)
@@ -605,7 +606,7 @@ Full checklist and *Pre-resolution checklist* live in **`.sedea/centers/research
 | **`pr-review`** finished on coding lane | No detached child terminal — post recap with `shipPhase: pr-review` |
 | Developer wants **`resolved`** but rows still `open` | Run *Pre-resolution checklist* **AskQuestion** — recap, planning-only close, or **`partial`** |
 
-**Host sync scope:** **`coding-session`**, **`pre-pr-review`**, **`deploy-walk`**, **`plan-reconcile`** terminals — not inline **`pr-review`** or inline **`create-pr`** as separate children. Behavior is implemented in the **hosting repo Mission Control extension**, not in this center repository alone. Implementation contract: **`extensions/mission-control/docs/plan-and-deliver-section-8-ship-ledger.md`** (from monorepo root); manifest pointer: **`center.yaml`** `governance.hostSync`.
+**Host sync scope:** **`coding-session`**, **`pre-pr-review`**, **`plan-reconcile`** terminals — not inline **`pr-review`**, inline **`create-pr`**, or inline **`deploy-walk`** as separate children. Behavior is implemented in the **hosting repo Mission Control extension**, not in this center repository alone. Implementation contract: **`extensions/mission-control/docs/plan-and-deliver-section-8-ship-ledger.md`** (from monorepo root); manifest pointer: **`center.yaml`** `governance.hostSync`.
 
 - **Dispatch closure gate:** On the **plan and deliver** leader lane, do **not** propose **`MC_DISPATCH_RESOLVED_V1`** with **`resolved`** while any §8 ship row is **`open`** or **`blocked`** unless a **Ship recap** block for that row was parsed on the leader dispatch in this session (including host-sync messages), or the developer explicitly chose **planning-only** dispatch closure via **AskQuestion** (see **`plan.mdc`** §8 *Pre-resolution checklist*).
 

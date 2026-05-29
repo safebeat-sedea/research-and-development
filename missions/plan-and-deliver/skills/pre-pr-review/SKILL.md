@@ -60,7 +60,7 @@ warmUpRules:
 
 # Pre-PR Review
 
-**Who runs this:** a fresh **pre-PR reviewer agent** lane spawned by **`coding-session`** after developer implementation approval, **commit**, and **Before deploy** **`deploy-walk`** (or documented skip). The reviewer must have no carry-over from the coding agent that changed the branch.
+**Who runs this:** a fresh **pre-PR reviewer agent** lane spawned by **`coding-session`** after developer implementation approval, **commit**, and inline **Before deploy** **`deploy-walk`** (or documented skip). The reviewer must have no carry-over from the coding agent that changed the branch.
 
 This pass complements, and does not replace, the later GitHub-surface **reviewer agent**.
 
@@ -120,7 +120,7 @@ This skill runs **before** the PR is opened or merged. Scope is **pre-merge read
 | Plan section | Pre-PR scope | Owner after merge |
 |--------------|--------------|-------------------|
 | §§ **1–6**, § **8** | In scope for scoring and follow-ups | — |
-| § **7** `### Before deploy` | In scope — verify against diff / § 6 tests | **`coding-session`** spawns **`deploy-walk`** (`before-deploy-only`) before this review |
+| § **7** `### Before deploy` | In scope — verify against diff / § 6 tests | **`coding-session`** runs **`deploy-walk`** inline (`before-deploy-only`) before this review |
 | § **7** `### After deploy` | **Out of scope** — omit from the entire pre-PR report (see below) | **`deploy-walk`** after merge (**development-process.md** § *Ship chain*) |
 
 ### §7 After deploy — silent omission (binding)

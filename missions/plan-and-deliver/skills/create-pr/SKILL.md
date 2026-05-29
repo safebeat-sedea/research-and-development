@@ -170,4 +170,4 @@ Required fields (prose to invoker / merged into **`coding-session`** `outputs`):
 - All keys from **## Result contract**
 - One-line summary: PR opened (`prUrl`) or blocked reason
 
-**Handback:** the invoker opens [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate) on the **next** turn — do **not** auto-start inline **`pr-review`**, spawn **`deploy-walk`**, or **`plan-reconcile`** from this skill.
+**Handback:** the invoker opens [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate) on the **next** turn — do **not** auto-start inline **`pr-review`**, inline **`deploy-walk`**, or **`plan-reconcile`** from this skill.

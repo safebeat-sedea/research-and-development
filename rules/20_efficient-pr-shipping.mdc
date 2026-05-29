@@ -92,7 +92,7 @@ After implementing changes, **stop**. Do not `git add`, `git commit`, or `git pu
 
 - Present a summary of what changed and ask for next steps using `AskQuestion`. 
 - This applies to **all** workflows: feature PRs, PR comment fixes, and any other code changes.
-- The exceptions are creating branches and worktrees (fine without confirmation). The coding agent must not silently commit. After developer approves implementation, `coding-session` commits (with explicit consent), runs **Before deploy** via spawned **`deploy-walk`** when applicable, then spawns the `pre-pr-review` reviewer lane.
+- The exceptions are creating branches and worktrees (fine without confirmation). The coding agent must not silently commit. After developer approves implementation, `coding-session` commits (with explicit consent), runs **Before deploy** via inline **`deploy-walk`** when applicable, then spawns the `pre-pr-review` reviewer lane.
 
 **Sedea git gate (same message):** This section is a **workflow** pause — it does **not** replace [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](../../sedea/rules/6_git-commit-push-gate.mdc). Agents must satisfy **both** layers in § *Ship git consent (workflow + Sedea gate)* below.
 
