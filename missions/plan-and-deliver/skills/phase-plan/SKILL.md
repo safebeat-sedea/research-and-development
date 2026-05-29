@@ -333,15 +333,35 @@ Apply:
 
 - If both signals agree on `delivery-phases`, next route is `delivery-phases`.
 - If both signals agree on PR breakdown, next route is `pr-breakdown`; preserve single vs multi as `prBreakdownShape`.
+- If normalized route is `pr-breakdown-single`, set **`hoistRequired: true`** — default is **hoist** single-PR breakdown to the **decomposition ancestor** (the parent's `Delivery phases` row **N**), not a § 5 **`PR breakdown`** block on this phase plan (see **development-process.md** § *Single-PR hoist from a phase plan*).
 - If parent hint is `Delivery phases` but assessment says PR breakdown, or the reverse, do not auto-spawn. Surface the conflict as an open decision.
 - If either signal is missing or low-confidence, do not auto-spawn. Surface the uncertainty as an open decision.
+
+### 5a-hoist — Single-PR on ancestor (default)
+
+When **`hoistRequired`** is true (route `pr-breakdown-single`):
+
+1. Resolve **ancestor** = sidecar `parent:` of this phase plan (`parentPlanPath` / `parentPlanSlug` from spawn inputs when present). Verify the ancestor file exists and its dual-title section is **`Delivery phases`** (not already whole-plan **`PR breakdown`** only).
+2. **`StrReplace`** this phase plan's **`## 5. Delivery phases | PR breakdown`** body: replace `_TBD_` with a one-paragraph hoisted note — *PR breakdown for this phase is authored on ancestor `<ancestor-slug>` **`Delivery phases`** row **N**; do not draft § 5 **`PR breakdown`** here.*
+3. Spawn **`pr-breakdown`** on the **ancestor** (not this phase file) with inputs:
+   - `targetPlanPath` / `targetPlanSlug` = ancestor
+   - `hoistFromPhasePath` / `hoistFromPhaseSlug` = this phase plan
+   - `scopeParentIndex` = `parentIndex` from spawn inputs (step 3a **N**)
+   - `prBreakdownShape: "single"`
+   - `routeLock: "pr-breakdown"`
+   - `parentAgentRole: "phase-plan-agent"`
+   - `ledgerParent`, `decompositionAssessment` when known
+4. Do **not** set `targetPlanPath` to this phase plan for **`pr-breakdown`** unless the developer later chooses **decompose on this phase plan** ( **`decomposeOnPhasePlan: true`** on the spawn).
+
+When route is `pr-breakdown-multi`, **`hoistRequired`** is false — spawn **`pr-breakdown`** on **this** phase plan with `prBreakdownShape: "multi"` as today.
 
 ### 5b — Spawn next branch when clear
 
 When this skill is running as a spawned child and `autoContinue` is not `false`, spawn the next decomposition branch **only** when route signal is clear:
 
-- `delivery-phases` → spawn `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/delivery-phases/SKILL.md`
-- `pr-breakdown` → spawn `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-breakdown/SKILL.md`
+- `delivery-phases` → spawn `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/delivery-phases/SKILL.md` on **this** phase plan (`targetPlanPath` = phase).
+- `pr-breakdown-multi` → spawn `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-breakdown/SKILL.md` on **this** phase plan with `prBreakdownShape: "multi"`.
+- `pr-breakdown-single` → follow **§ 5a-hoist** (ancestor target + hoist inputs); do **not** spawn **`pr-breakdown`** on this phase file.
 
 Before spawning, present the drafted phase plan body and the route signal to the developer via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — **preferred:** brief recap + modal in one message; bare **`MC_ASKQUESTION_V1`** must be sentinel-only (no prose before the sentinel). Required options:
 
@@ -351,9 +371,16 @@ Before spawning, present the drafted phase plan body and the route signal to the
 - **Defer downstream decomposition**
 - **More details for option _**
 
-Only **Approve phase plan and route** authorizes the child-spawn request. Do not treat agreement between parent hint and assessment as developer approval.
+When **`hoistRequired`**, add:
 
-Inputs must include `targetPlanPath`, `targetPlanSlug`, `parentAgentRole: "phase-plan-agent"`, `ledgerParent`, `decompositionAssessment`, and `routeLock` (`"delivery-phases"` or `"pr-breakdown"`). For `pr-breakdown`, also include `prBreakdownShape` (`"single"` or `"multi"`) when known.
+- **Hoist single-PR to ancestor** (default when approving single-PR route)
+- **PR breakdown on this phase plan** — sets `decomposeOnPhasePlan: true` on the **`pr-breakdown`** spawn (override; not recommended after **`delivery-phases`** → **`phase-plan`**)
+
+Only **Approve phase plan and route** (with hoist when single-PR) authorizes the child-spawn request. Do not treat agreement between parent hint and assessment as developer approval.
+
+Inputs for **`delivery-phases`** / multi **`pr-breakdown`**: `targetPlanPath`, `targetPlanSlug` = **this phase plan**; `parentAgentRole: "phase-plan-agent"`; `ledgerParent`; `decompositionAssessment`; `routeLock`; `prBreakdownShape` when applicable.
+
+Inputs for hoisted single-PR **`pr-breakdown`**: per **§ 5a-hoist** (ancestor `targetPlanPath`, `hoistFromPhasePath`, `scopeParentIndex`, `prBreakdownShape: "single"`).
 
 After emitting the child-spawn request, announce that the **Phase plan agent** is waiting for the downstream decomposition result and stop. Do not return terminal success upstream while the downstream lane is active.
 
@@ -376,7 +403,7 @@ Recap content:
 **Structured route options** — one `option` per protocol branch (brief `label`; detail in `prompt`). Example `options`:
 
 - **`delivery-phases`** — draft the § 5 **list** as child phases (`Delivery phases` heading).
-- **`pr-breakdown`** — draft the § 5 **list** as PR breakdown (gates **Delivery phases** vs multi-PR vs single-PR `PR breakdown`). Align with **`### Decomposition assessment`** when the choice disagrees with the parent's hint.
+- **`pr-breakdown`** — multi-PR: draft § 5 on **this** phase plan. Single-PR: default **hoist** to ancestor (**§ 5a-hoist**); override only via **PR breakdown on this phase plan**.
 - **Revise a section** — the developer names § N and feedback; you apply one focused `StrReplace` and echo. For assessment-only edits, anchor on `## 4. Changes` … `### Decomposition assessment`.
 - **Commit plans** — remind the developer to commit when the body reads cleanly; this skill does **not** run git.
 - **More details for option _**
@@ -387,7 +414,7 @@ Recap content:
 
 When the developer asks to revise § N, re-read that section and apply edits via `StrReplace`; echo the result; re-offer structured choice (prefer phased or AskQuestion in one message) when a pick is required.
 
-When they choose **`delivery-phases`** or **`pr-breakdown`** via **AskQuestion**, emit one child-spawn request for the chosen **protocol branch** with inputs `targetPlanPath`, `targetPlanSlug`, `parentAgentRole: "phase-plan-agent"`, `ledgerParent`, the current `### Decomposition assessment`, and `routeLock`. Do **not** impersonate the other skill's full procedure in the same turn; announce that this agent is waiting if the result is needed to keep the mission ledger current.
+When they choose **`delivery-phases`** or **`pr-breakdown`** via **AskQuestion**, emit one child-spawn request for the chosen **protocol branch** with inputs per **§ 5b** / **§ 5a-hoist** (`targetPlanPath` on phase vs ancestor; hoist fields for single-PR). Do **not** impersonate the other skill's full procedure in the same turn; announce that this agent is waiting if the result is needed to keep the mission ledger current.
 
 ## Step 5e — Aggregate downstream result
 
@@ -411,7 +438,7 @@ This skill writes the **body** of the target phase plan — replacing the **`new
 
 **Owns:** in-file §§ 1–4 + assessment; echo to chat for review.
 
-**Out of scope here:** target plan frontmatter (left as **`new-plan`** set it); any edit to the parent plan body (including parent `Plan:` placeholders — **`plan-reconcile`**); drafting the dual-title § 5 **numbered list** inline and § 6 Caveats (**`delivery-phases`** / **`pr-breakdown`** and later turns own those); spawning grandchildren directly (**`new-plan`** after § 5 exists is owned by the spawned decomposition skill); git / commit automation.
+**Out of scope here:** target plan frontmatter (left as **`new-plan`** set it); editing the ancestor parent body except the **hoisted § 5 note** on this phase file (**§ 5a-hoist** step 2); parent `Plan:` / row updates on the ancestor (**hoisted `pr-breakdown`** + **`new-plan`**); drafting the dual-title § 5 **numbered list** on this phase when **`hoistRequired`**; § 6 Caveats (**`delivery-phases`** / non-hoisted **`pr-breakdown`** own those); spawning grandchildren directly (**`new-plan`** after § 5 exists is owned by the spawned decomposition skill); git / commit automation.
 
 Wrong template stops live in step 1a — use **`master-plan`** or **`pr-plan`** protocol branches when the file is a Master Plan or PR plan.
 
@@ -430,6 +457,8 @@ Required `outputs` fields:
 - `outputs.decompositionAssessment`
 - `outputs.routeDecision` — `delivery-phases` | `pr-breakdown` | `needs-user-decision`
 - `outputs.routeApprovalStatus`, `outputs.prBreakdownShape` — `single` | `multi` | `unknown`
+- `outputs.hoistRequired` — boolean when single-PR default applies
+- `outputs.hoistAncestorPlanSlug` — when hoist spawn emitted
 - `outputs.spawnedPlans`, `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`
 - `outputs.continuationOwner`: `"phase-plan-agent"`
 - `outputs.continuationStatus` — `active` while route approval, downstream decomposition, or route choice remains; `terminal` when no remaining planning work on this phase plan

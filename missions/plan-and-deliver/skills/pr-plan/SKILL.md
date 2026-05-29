@@ -69,7 +69,7 @@ The procedure below is a hard contract — do **not** skip steps or start drafti
 | Per-PR §§ **5–8** | Default **`_TBD_`**; optional *speculative* sketch if the developer picks a fill option | Substantive fill during implementation; final text once code paths are known |
 | `readyForImplementation` | Set in `outputs` and passed in spawn `inputs` | Read as layer-1 hint only |
 | Worktrees, implementation, ship chain | Out of scope — spawn only | Owns (spawned-lane default) |
-| Start **`coding-session`** | Step **5d** after **AskQuestion** **Start coding session** (§5c) when §5a passes | Spawned child lane with `planningHandoffMode`; layer 2 **Continue — fill §§5–8 while implementing** gate runs there |
+| Start **`coding-session`** | Step **5d** after **AskQuestion** **Start coding session** (§5c) when §5a passes | Spawned child lane with `planningHandoffMode` + `planningHandoffApproved`; layer 2 **auto-authorizes** when §§1–4 drafted (or plan complete) — no second worktree-open modal |
 
 **Signals (canonical):** **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Planning readiness vs ship* and § *Agent checklist (planning vs ship — do not conflate)* — `readyForImplementation` on this lane does **not** authorize code edits, worktrees, commit/push, or §8 `phase` past `not-started`.
 
@@ -318,9 +318,9 @@ Set `readyForImplementation: false` when any of those checks fail. Add each miss
 | Layer | Where | What passes |
 |-------|--------|-------------|
 | **Planning handoff** | This skill → `outputs.readyForImplementation` | §§ 1–4 drafted, capstone todo, parent link (§5a). §§ 5–8 may stay `_TBD_`. |
-| **Worktree gate** | **`coding-session`** § *Worktree-open gate (pr-plan spawn handoff)* when §5d spawn includes `planningHandoffMode` | Per-PR body may keep §§ 5–8 `_TBD_`; developer chooses **Continue — fill §§5–8 while implementing** on the child lane (not “executive override” framing). Detached entry without spawn uses the generic incomplete gate. |
+| **Worktree gate** | **`coding-session`** § *Auto-authorize implementation (pr-plan spawn)* when §5d passes `planningHandoffApproved` | Per-PR body may keep §§ 5–8 `_TBD_`; child lane opens worktree and implements without a second approval modal. Detached entry without spawn still uses the worktree-open gate. |
 
-`readyForImplementation: true` does **not** bypass **`plan-ws-completeness.mjs`** or authorize worktrees. The Squad Leader §8 ship ledger must keep `phase: not-started` until completeness passes or the developer authorizes on the **`coding-session`** lane **and** **`coding-session`** reports `developerApprovedImplementation: true` (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §7–§8). Agents that report “ready” here may still hit **`INCOMPLETE`** at worktree open — that is **expected** after §5d spawn; point the developer to **Continue — fill §§5–8 while implementing** on the child lane, pre-fill sketches here (§5c option 3), or finish §§ 5–8 before coding on a detached entry.
+`readyForImplementation: true` does **not** bypass **`plan-ws-completeness.mjs`** or authorize worktrees on **this** lane. The Squad Leader §8 ship ledger must keep `phase: not-started` until **`coding-session`** reports `developerApprovedImplementation: true` (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §7–§8). After §5d spawn, **`INCOMPLETE`** + **`EXPECTED_SECTIONS_5_8_TBD`** is **expected** — the child **auto-authorizes** worktrees when §§1–4 are drafted (no second modal). Detached **`coding-session`** still uses the worktree-open gate.
 
 However:
 
@@ -345,7 +345,7 @@ When using the legacy split, do **not** include **AskQuestion**, **`MC_ASKQUESTI
 
 1. A **`file://`** link to the target `.plan.md` under `.sedea/operations/.../plans/...`.
 2. One-line summary: *Drafted per-PR §§ 1–4; implementation readiness: `<ready|not ready>`.*
-3. Planning handoff note: *§§ **5–8** stay **`_TBD_`** until **`coding-session`** fills them on the implementation lane (or you choose **Pre-fill §§ 5–8 here (sketch, then coding)** below). Worktree validation may report **incomplete** — that is expected; on the child lane choose **Continue — fill §§5–8 while implementing** (not a planning failure) unless you pre-filled here.*
+3. Planning handoff note: *§§ **5–8** stay **`_TBD_`** until **`coding-session`** fills them on the implementation lane (or you choose **Pre-fill §§ 5–8 here (sketch, then coding)** below). Worktree validation may report **incomplete** — that is expected; the child lane **auto-starts** implementation when you pick **Start coding session** (no second approval modal) unless you pre-filled here or use detached entry.*
 
 Do **not** echo the full §§ 1–4 body in chat unless the developer asked for a fill sketch in the same flow.
 
@@ -386,14 +386,15 @@ Run only when the developer chose **`start-coding-session`** and §5a readiness 
    - §1 single concern; §3 change-scope bullets; parent `### PR list` item **N**; `readyForImplementation` and §5a gaps; non-blocking `remainingTasks`.
    - `planningHandoffMode: sections-1-4-complete`
    - `sections5to8Status: TBD-by-design — child owns substantive fill; do not treat as pr-plan failure`
-   - `expectedPlanCompleteness: incomplete-until-coding-session-fills-5-8 — use pr-plan spawn worktree-open gate, not executive-override framing`
+   - `expectedPlanCompleteness: incomplete-until-coding-session-fills-5-8 — auto-authorize worktree when EXPECTED_SECTIONS_5_8_TBD; no second approval modal`
+   - `planningHandoffApproved: true` when `readyForImplementation: true` (layer 1 consent from §5c **Start coding session**)
 3. **Emit exactly one** child-spawn line (valid JSON on the same line; new UUID per spawn):
 
    - `skillPath`: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`
    - `name`: `Coding session`
    - `slug`: `coding-session-<targetPlanSlug>` (unique per dispatch)
    - `description`: Worktree and implementation handoff after pr-plan
-   - `inputs`: `targetPlanPath`, `targetPlanSlug`, `readyForImplementation`, `planningHandoffMode: "sections-1-4-complete"` (required when `readyForImplementation: true`), `repoPath`, `ledgerParent`, `upstreamSkill: "pr-plan"`; include `parentPlanPath`, `parentPlanSlug`, `parentIndex` when known
+   - `inputs`: `targetPlanPath`, `targetPlanSlug`, `readyForImplementation`, `planningHandoffApproved: true` (only when `readyForImplementation: true`), `planningHandoffMode: "sections-1-4-complete"` (required when `readyForImplementation: true`), `repoPath`, `ledgerParent`, `upstreamSkill: "pr-plan"`; include `parentPlanPath`, `parentPlanSlug`, `parentIndex` when known
    - Optional `warmUpRules`: merge **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** if not already loaded from skill frontmatter
 
 4. Announce that this agent is waiting for the **`coding-session`** child result; **stop** — no second spawn in the same turn.

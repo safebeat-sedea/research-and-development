@@ -7,7 +7,9 @@ description: >-
   parent per planning-target-resolution; confirms parent before write except on
   indexed child spawn when parent + index N are already locked by session context.
   After an indexed spawn, may hand off to **phase-plan** or **pr-plan** via
-  initiating-agent ignition when those skills exist. Use under mission dispatch or
+  initiating-agent ignition when those skills exist. When spawned from an upstream
+  decomposition agent that already approved the parent list, skips the child-stub
+  populator approval modal and spawns the populator immediately. Use under mission dispatch or
   when the developer asks to scaffold a plan via **new-plan** (standalone) or expand
   a parent list item **N** (indexed-child) from a numbered dual-title list.
 inputs:
@@ -47,6 +49,21 @@ inputs:
   upstreamSkill:
     type: string
     description: Skill that requested this child creation.
+    required: false
+  hoistFromPhase:
+    type: boolean
+    description: >-
+      When true with childKind pr-plan, allow indexed PR child under a Delivery phases
+      parent row (single-PR hoist from phase-plan); requires hoistFromPhasePath.
+    required: false
+    default: false
+  hoistFromPhasePath:
+    type: string
+    description: Phase plan path whose §§ 2–4 scope the hoisted PR plan.
+    required: false
+  hoistFromPhaseSlug:
+    type: string
+    description: Slug of the hoisted phase plan.
     required: false
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
@@ -89,8 +106,10 @@ The regular parent-confirmation gate below is **skipped** when that pre-resoluti
 2. **Validate the requested child kind against the parent heading.**
    - `Delivery phases` parent heading requires `childKind: "phase-plan"` and `requestedPopulatorSkill: "phase-plan"` when a populator is requested.
    - `PR breakdown` parent heading requires `childKind: "pr-plan"` and `requestedPopulatorSkill: "pr-plan"` when a populator is requested.
-   - If the requested kind conflicts with the parent heading, stop with `failure`; do not create a child file.
+   - **Hoist exception:** when `hoistFromPhase: true` and `hoistFromPhasePath` are set, allow `childKind: "pr-plan"` under a **`Delivery phases`** parent for the indexed row **N** that owns the hoisted phase (single-PR hoist from **`phase-plan`**). Require `requestedPopulatorSkill: "pr-plan"` when a populator is requested. Read scope from the phase plan at **`hoistFromPhasePath`** for titling; the parent's **`Plan:`** sub-bullet (not **`Phase plan:`**) receives the new PR link after write.
+   - If the requested kind conflicts with the parent heading and the hoist exception does not apply, stop with `failure`; do not create a child file.
 3. **Capture the exact `Plan:` placeholder for item N.** The selected row must contain exactly one `Plan:` line that is still pending. Accept `_TBD`, `_TBD_`, or a clear spawn-hint placeholder after `Plan:`. If the row has no `Plan:` line, has multiple `Plan:` lines, or already links a `.plan.md`, stop with `partial` and report the row problem; do not create a duplicate child.
+4. **Capture parent row prose for the child stub.** When item **N** includes sub-bullets per the dev-process **§ 6 / § 5 contents rule** (decomposition decision, scope sentence, `Plan:`), treat that text as **already reviewed on the parent** — copy the scope sentence (and optional decomposition line) into the child `overview:` and `## Overview` when writing the stub. Do **not** ask the developer to re-approve that prose.
 
 **Stop conditions**
 
@@ -187,6 +206,7 @@ isProject: false
 - **Seed `todos:`** with one real first todo unless the developer asked for scope-only with empty todos.
 - **`isProject: false`** unless they asked otherwise.
 - **YAML quoting** — wrap `name:`, `overview:`, todo `content:` in double quotes when the value contains `: ` or ends with `:`, starts with YAML-significant characters, looks like `true`/`false`/`null`, etc. Re-read after write; if `name:` parsed as a nested object, re-quote.
+- **Indexed child — parent row prose** — when step 4 under **Indexed child spawn** captured a scope sentence from item **N**, use it for `overview:` and `## Overview` instead of inventing new scope. Keep `## Phasing` as a short stub (for example *TBD — filled by phase-plan / pr-plan or follow-up decomposition.*). Do **not** treat parent-list prose as needing a second developer approval pass.
 
 ### 2. `<slug>.state.yaml`
 
@@ -213,7 +233,27 @@ Always write the sidecar. `parent:` required; use YAML `null` unquoted for a **t
 
 2. **Link the child** using an absolute `file://` URL to the real path under `.sedea/operations/.../plans/...` so the developer can open it.
 
-3. **Populator approval gate (indexed spawn only).** If this skill was spawned with `requestedPopulatorSkill`, present the created child stub and verified parent `Plan:` link to the developer before spawning the populator. Collect approval via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — **preferred:** stub link + modal in one message. Required options:
+### Auto-authorize populator (upstream decomposition spawn)
+
+When **all** of the following are true, **skip** step 3 and go straight to step 4 after the child stub and parent `Plan:` link are written and verified:
+
+| Condition | Required |
+|-----------|----------|
+| `mode` is `indexed-child` | Yes |
+| `requestedPopulatorSkill` is set (`phase-plan` or `pr-plan`) | Yes |
+| `upstreamSkill` is `delivery-phases` or `pr-breakdown` | Yes |
+
+Rationale: **`delivery-phases`** and **`pr-breakdown`** already run a structured-choice gate (**Approve … and spawn children** / **Approve PR breakdown and spawn PR plans**) over the parent numbered list. Item **N** prose (scope sentence, decomposition hint) is reviewed there — re-asking on this lane is redundant.
+
+Set `outputs.populatorApprovalStatus: "waived-upstream"` and one line: *Parent list approved upstream — spawning `<requestedPopulatorSkill>` on the child stub.*
+
+**Still use step 3** when:
+
+- `upstreamSkill` is absent, `new-plan`, or another lane (standalone / manual indexed expand).
+- `requestedPopulatorSkill` is absent (stub-only create).
+- The developer explicitly chose **Revise child stub first** or **Defer population** on a prior turn (re-open step 3).
+
+3. **Populator approval gate (indexed spawn only — when not auto-authorized).** If this skill was spawned with `requestedPopulatorSkill` and [Auto-authorize populator](#auto-authorize-populator-upstream-decomposition-spawn) does **not** apply, present the created child stub and verified parent `Plan:` link to the developer before spawning the populator. Collect approval via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — **preferred:** stub link + modal in one message. Required options:
    - **Approve child stub and populate now**
    - **Revise child stub first**
    - **Defer population**
@@ -222,7 +262,9 @@ Always write the sidecar. `parent:` required; use YAML `null` unquoted for a **t
 
    Only **Approve child stub and populate now** authorizes a populator spawn. If the developer defers, return `partial` or `success` with `continuationStatus: "active"` and a `remainingTasks` item naming the deferred populator.
 
-4. **Populator handoff (indexed spawn only).** If the parent heading is **`Delivery phases`**, the next step is the **`phase-plan`** protocol branch on the new child; if **`PR breakdown`**, the **`pr-plan`** protocol branch. When this skill was spawned with `requestedPopulatorSkill` and the developer approved the populator gate, emit exactly one child-spawn request for that populator skill after the child stub and parent `Plan:` line are written and verified.
+   **Do not** open this gate when auto-authorize applies — proceed to step 4 in the same turn after the stub and `Plan:` link verify.
+
+4. **Populator handoff (indexed spawn only).** If the parent heading is **`Delivery phases`**, the next step is the **`phase-plan`** protocol branch on the new child; if **`PR breakdown`**, the **`pr-plan`** protocol branch. When `requestedPopulatorSkill` is set and either auto-authorize applies **or** the developer approved step 3, emit exactly one child-spawn request for that populator skill in the **same turn** after the child stub and parent `Plan:` line are written and verified (do **not** stop for a stub-approval modal when auto-authorized).
 
    Populator skill paths:
 
@@ -258,7 +300,7 @@ Required `outputs` fields:
 - `outputs.parentPlanPath`, `outputs.parentPlanSlug`, `outputs.parentIndex` (indexed mode)
 - `outputs.childKind`, `outputs.decompositionKind`
 - `outputs.parentPlanLinkStatus` — `linked` | `already_linked` | `blocked`
-- `outputs.populatorSkill`, `outputs.populatorApprovalStatus`, `outputs.populatorStatus`
+- `outputs.populatorSkill`, `outputs.populatorApprovalStatus` (`waived-upstream` | `approved` | `deferred` | `not-requested`), `outputs.populatorStatus`
 - `outputs.spawnedPlans`, `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`
 - `outputs.continuationOwner`: `"new-plan-agent"`
 - `outputs.continuationStatus` — `active` while populator approval, a populator lane, or row repair remains; `terminal` when stub, parent link, and optional populator handoff are complete

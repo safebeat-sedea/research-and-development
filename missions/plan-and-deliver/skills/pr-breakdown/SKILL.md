@@ -47,6 +47,25 @@ inputs:
     type: string
     description: Optional upstream route detail for PR breakdown, single or multi.
     required: false
+  hoistFromPhasePath:
+    type: string
+    description: >-
+      When set, scope single-PR breakdown from this phase plan file; targetPlanPath
+      must be the decomposition ancestor (parent of that phase), not the phase plan.
+    required: false
+  hoistFromPhaseSlug:
+    type: string
+    description: Slug of the phase plan being hoisted (must match hoistFromPhasePath).
+    required: false
+  scopeParentIndex:
+    type: number
+    description: One-based Delivery phases index on the target ancestor for the hoisted phase row.
+    required: false
+  decomposeOnPhasePlan:
+    type: boolean
+    description: When true, allow single-PR pr-breakdown on a phase plan target (override hoist).
+    required: false
+    default: false
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
@@ -85,6 +104,23 @@ Acknowledge in one line: *"Target plan: `<slug>`."*
 
 Acknowledge: *"Stage: <Master Plan | Phase plan>; proceeding."*
 
+### 1b — Single-PR hoist gate (phase plan target)
+
+Run **after** stage verification when **all** of the following hold:
+
+- Body is a **Phase plan** (not Master Plan).
+- `decomposeOnPhasePlan` is not `true`.
+- `hoistFromPhasePath` is **not** set on this spawn (this lane is **not** already running hoisted breakdown on an ancestor).
+- `prBreakdownShape` is `"single"` **or** `routeLock` is `"pr-breakdown"` with upstream `parentAgentRole: "phase-plan-agent"` **and** `### Decomposition assessment` on the target recommends **single-PR** `PR breakdown` (PR count band `single` or routing line contains `single-PR`).
+
+**Stop** (do not draft § 5 PR breakdown on this phase plan):
+
+> *"Single-PR **`PR breakdown`** after **`phase-plan`** should **hoist** to the decomposition **ancestor** (the plan that owns this phase's **`Delivery phases`** row), not run set-level **`pr-breakdown`** on this phase file. Re-run **`pr-breakdown`** on the ancestor with `hoistFromPhasePath` / `hoistFromPhaseSlug`, `scopeParentIndex`, and `prBreakdownShape: \"single\"` — or set `decomposeOnPhasePlan: true` only when the developer explicitly wants a one-PR § 5 on this phase plan."*
+
+Return `partial` with `remainingTasks` naming the hoist when spawned from **`phase-plan`** without ancestor retargeting.
+
+When **`hoistFromPhasePath`** **is** set, the **target** must be the **ancestor** (Master or Phase plan whose **`Delivery phases`** list contains item **`scopeParentIndex`** for the hoisted phase). The phase file at **`hoistFromPhasePath`** is **scope-only** — do not use it as `targetPlanPath`. Acknowledge: *"Hoist mode: ancestor `<target-slug>`, phase scope `<hoistFromPhaseSlug>`, row N=<index>."* Then continue; **step 3.6** runs after step 3.
+
 ## Step 2 — Load the development-process doc
 
 Read `.sedea/centers/research-and-development/docs/development-process.md` with the Read tool, **no offset, no limit** (hosting repo root). Acknowledge in one sentence: *"Loaded development-process.md; will follow § 3 PR breakdown set-level template + § 6/§ 5 contents rule."*
@@ -109,6 +145,26 @@ Inspect the section and apply:
 | Heading is already `Delivery phases` | Wrong skill | **Stop:** *"This plan’s decomposition is **`Delivery phases`**. Use the **`delivery-phases`** protocol branch on this plan to draft the phase list."* |
 
 Acknowledge the state in one line.
+
+## Step 3.6 — Hoisted single-PR from a phase plan (ancestor target)
+
+Run when **`hoistFromPhasePath`** and **`scopeParentIndex`** are set and **`prBreakdownShape`** is `"single"` (or step 4 would route to **step 5s**).
+
+1. Read the phase plan at **`hoistFromPhasePath`** in full. Use §§ 2–4 and **`### Decomposition assessment`** as the **only** scope for the single PR (not the ancestor's full feature scope).
+2. Read the **target** (ancestor) plan. Locate **`## 6. Delivery phases`** (Master) or **`## 5. Delivery phases`** (Phase parent). If the ancestor dual-title is still `Delivery phases | PR breakdown` with `_TBD_` list, **stop** — run **`delivery-phases`** on the ancestor first, then re-enter hoist.
+3. Match **`scopeParentIndex`** to the numbered row whose **`Plan:`** links the hoisted phase plan (or whose title matches **`hoistFromPhaseSlug`** / phase `name:`). If no row matches, return `partial` and report the index mismatch.
+4. **`StrReplace`** on the ancestor — update **only** that row:
+   - Set the **Decomposition decision** sub-bullet to **`PR breakdown`**.
+   - If the row has a single **`Plan:`** line pointing at the phase plan, rename the label to **`Phase plan:`** (keep the phase link) and add a sibling sub-bullet **`Plan:`** with `_TBD_` (or `_TBD_` spawn placeholder) for the PR plan **`new-plan`** will create.
+   - If the row already has separate **`Phase plan:`** / **`Plan:`** lines, set **`Plan:`** to `_TBD_` only when the PR link is still missing.
+5. **`StrReplace`** on the phase plan — under **`## 5. Delivery phases | PR breakdown`**, replace `_TBD_` with a short hoisted note (one paragraph): PR breakdown is authored on ancestor **`<ancestor-slug>`** row **N**; do not draft a § 5 **`PR breakdown`** list on this phase file.
+6. Draft the single-PR set-level block (**`### Single-concern strategy`**, **`### Sequencing`**, **`### PR list`** with **K = 1**) using **step 5s**, grounded in the **phase** plan scope from step 1. **Do not** retitle the ancestor's top-level § 6 / § 5 from **`Delivery phases`** to **`PR breakdown`** — the hoisted PR is row-scoped on the ancestor list.
+7. Store the drafted block in working notes for step 6 approval, or write it under a comment block in chat only until approved — **preferred:** proceed to **step 6** with `hoistPendingWrite: true` and present the draft for approval before **`new-plan`** spawn.
+8. After developer approval (step 6 **`approve-spawn`** or equivalent), emit **`AGENT_RUN_REQUEST_V1`** for **`new-plan`** with `inputs` including `mode: "indexed-child"`, `parentPlanPath` / `parentPlanSlug` (ancestor), `index: scopeParentIndex`, `childKind: "pr-plan"`, `requestedPopulatorSkill: "pr-plan"`, `hoistFromPhase: true`, `hoistFromPhasePath`, `hoistFromPhaseSlug`, `decompositionKind: "pr-breakdown"`, `upstreamSkill: "pr-breakdown"`, plus `ledgerParent` when known. Pass the drafted single-PR row title in `initiatingPrompt` when helpful.
+
+**Skip** steps **4** and **5** (whole-plan dual-title gate and set-level rewrite on the ancestor) when step 3.6 applies — unless the developer explicitly chooses **`decomposeOnPhasePlan`** on a follow-up turn.
+
+Acknowledge: *"Hoist: row N on ancestor updated; phase §5 noted; ready for PR child spawn after approval."*
 
 ## Step 3.5 — Ensure `### Decomposition assessment`
 
@@ -198,6 +254,8 @@ Optional: one short intro under `## <N>. PR breakdown` before **`### Single-conc
 
 Use when step 4 returned **`pr_breakdown_single`**, or when step 4 was skipped and **`### Decomposition assessment`** clearly recommends **single-PR** **`PR breakdown`**.
 
+When **`hoistFromPhasePath`** is set, **5s** drafts content from the **phase** plan at that path (§§ 2–4), not from the full ancestor plan — the ancestor remains in **`Delivery phases`** mode at the section heading; only row **N** becomes PR-ready (see **step 3.6**).
+
 Draft the same three sub-headings, but:
 
 - **`### Single-concern strategy`:** one or two sentences — the whole plan ships as **one** mergeable unit.
@@ -273,7 +331,7 @@ In a **new** assistant turn after the developer selects an option in the approva
 
 | Choice | Action |
 | --- | --- |
-| **Approve PR breakdown and spawn PR plans** | Emit one **`AGENT_RUN_REQUEST_V1`** per PR row **1…K** for `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`. Each request’s `inputs` must include `mode: "indexed-child"`, `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "pr-plan"`, `requestedPopulatorSkill: "pr-plan"`, `ledgerParent`, `upstreamSkill: "pr-breakdown"`, and `decompositionKind: "pr-breakdown"`. Record each spawned child in the ledger (`active`, keyed by correlation id + `(parentPlanSlug, index)`). Announce waiting for **K** indexed child results. Then emit **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: "active"` (or `partial` when appropriate) — **not** in the recap-only pass or structured-choice message. |
+| **Approve PR breakdown and spawn PR plans** | Emit one **`AGENT_RUN_REQUEST_V1`** per PR row **1…K** for `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`. Each request’s `inputs` must include `mode: "indexed-child"`, `parentPlanPath`, `parentPlanSlug`, `index`, `childKind: "pr-plan"`, `requestedPopulatorSkill: "pr-plan"`, `ledgerParent`, `upstreamSkill: "pr-breakdown"`, and `decompositionKind: "pr-breakdown"`. When **`hoistFromPhasePath`** is set (**step 3.6**), **K = 1**; also include `hoistFromPhase: true`, `hoistFromPhasePath`, `hoistFromPhaseSlug`, and `scopeParentIndex` on the ancestor row. Record each spawned child in the ledger (`active`, keyed by correlation id + `(parentPlanSlug, index)`). Announce waiting for **K** indexed child results. Then emit **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: "active"` (or `partial` when appropriate) — **not** in the recap-only pass or structured-choice message. |
 | **Revise PR breakdown first** | Run step **6a**, then repeat recap → structured choice. Do **not** spawn children or emit terminal success until re-approved. |
 | **Defer child PR plan creation** | Emit **`AGENT_RESULT_RESPONSE_V1`** with defer semantics; do not spawn. |
 | **Abandon this branch** | Emit **`AGENT_RESULT_RESPONSE_V1`** with `status: "abandoned"` (or `partial` when work remains documented). |

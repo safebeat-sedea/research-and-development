@@ -43,6 +43,7 @@ missions:
       - missions/plan-and-deliver/skills/pr-plan/SKILL.md
       - missions/plan-and-deliver/skills/pr-review/SKILL.md
       - missions/plan-and-deliver/skills/pre-pr-review/SKILL.md
+      - missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md
   - slug: prd
     plan: missions/prd/plan.mdc
     skills: missions/prd/skills/
@@ -92,6 +93,7 @@ governance:
       - rowStatus
     shipSkills:
       - coding-session
+      - worktree-bootstrap
       - pre-pr-review
       - create-pr
       - deploy-walk
