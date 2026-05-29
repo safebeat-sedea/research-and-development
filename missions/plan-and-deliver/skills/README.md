@@ -10,7 +10,7 @@ When a skill runs **inline** on the invoker’s lane (not spawned via **`AGENT_R
 - Do **not** emit **`AGENT_RESULT_RESPONSE_V1`** or add a **Host protocol line** under the inline section — host protocol applies **only** under **`## Completion (spawned)`** (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
 - Do **not** emit **`AGENT_RUN_REQUEST_V1`** unless the protocol step explicitly switches to spawned mode.
 
-**plan and deliver** normally spawns planning and ship skills on child lanes; inline sections exist for dual-mode authoring and rare same-lane runs. **`pr-review`** is **inline-only** (no **`## Completion (spawned)`**).
+**plan and deliver** normally spawns planning and ship skills on child lanes; inline sections exist for dual-mode authoring and same-lane ship steps. **`pr-review`** and **`create-pr`** are **inline-only** on **`coding-session`** (no **`## Completion (spawned)`** on those skills).
 
 ## Recap, structured choice, act (plan-and-deliver)
 
@@ -34,7 +34,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 | **`phase-planner`** | §4f echo / §5c link | §5b / §5c | §5b spawn / §5d follow-up |
 | **`new-plan`** | stub + parent link | populator gate § indexed handoff | populator spawn |
 
-**Ship and ops skills:** **`coding-session`** (worktree-open, bootstrap spawn, pre-PR, create-PR handoffs), **`worktree-bootstrap`**, **`deploy-walk`**, **`plan-reconcile`**, **`create-pr`**, **`pre-pr-review`** — structured choice for gates; recap for status, diff, or dry-run report only. Prefer **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** when recap and modal belong in one message.
+**Ship and ops skills:** **`coding-session`** (worktree-open, bootstrap spawn, pre-PR spawn, inline **create-pr**), **`worktree-bootstrap`**, **`deploy-walk`**, **`plan-reconcile`**, **`pre-pr-review`** — structured choice for gates; recap for status, diff, or dry-run report only. Prefer **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** when recap and modal belong in one message.
 
 **Lane pick (no resolved target):** emit *Where we are now in the plan tree* snapshot, then structured choice per **30_planning-target-resolution** § *Sedea input channel* (phased or split — not prose menus).
 
@@ -74,9 +74,8 @@ These skills run on **detached** or **nested** lanes (often **not** the Squad Le
 | `coding-session` | Developer / mission dispatch; **`pr-plan`** spawn (default **spawned-lane** implement) | `## Implementation handoff result` (+ **`## Completion (inline)`** if same-lane) | Layer 2: `developerApprovedImplementation` after worktree-open gate; `shipPhase: implementing` when spawned child codes on lane (not prompt-only stop) |
 | `worktree-bootstrap` | **`coding-session`** after worktree attach | `## Spawned result contract` | `worktree`; `bootstrapStatus` |
 | `pre-pr-review` | `coding-session` | Step 8 — Report and result | `pre-pr-review`; `recommendation: go` |
-| `create-pr` | `coding-session` | `## Result contract` (+ lifecycle sections) | `pr-open`; `prUrl`, `prNumber` |
-| `deploy-walk` | **`coding-session`** (Before deploy, pre-merge), developer phrase, **`create-pr`** after merge, or detached dispatch | `## Spawned result contract` | `deploy-walk`; entry points in **development-process.md** § *Ship chain* |
-| `plan-reconcile` | Developer / `create-pr` after deploy | `## Spawned result contract` | `reconcile` → `done`; `archivedSlugs` |
+| `deploy-walk` | **`coding-session`** (Before deploy, pre-merge), developer phrase, **`coding-session`** after merge (**AskQuestion**), or detached dispatch | `## Spawned result contract` | `deploy-walk`; entry points in **development-process.md** § *Ship chain* |
+| `plan-reconcile` | Developer / **`coding-session`** after deploy | `## Spawned result contract` | `reconcile` → `done`; `archivedSlugs` |
 
 The Squad Leader **§8** ship ledger does **not** auto-update when detached ship work finishes — post **Ship recap — plan and deliver** on the leader dispatch (or forward `AGENT_RESULT_RESPONSE_V1` as `child-output`). See **`../plan.mdc`** §8 and **development-process.md** § *Leader-lane ship recap*.
 
@@ -89,8 +88,9 @@ When a ship skill finishes a milestone on a **detached** lane, nudge the develop
 | Skill | Invoker | Result section | §8 ship ledger |
 |-------|---------|------------------|----------------|
 | `pr-review` | Active **`coding-session`** agent on its lane | `## Inline result for coding-session` | Leader **Ship recap** after triage — fields via **`coding-session`** § *Squad Leader bubble-up* (`shipPhase: pr-review`) |
+| `create-pr` | Active **`coding-session`** agent on its lane | `## Completion (inline)` | `pr-open` via **`coding-session`** terminal or manual **Ship recap** (`prUrl`, `prNumber`) — no separate child terminal |
 
-**`pr-review`** returns through **`coding-session`** on the coding lane. Update §8 on the **plan and deliver** leader dispatch with the recap template (**`../plan.mdc`** §8).
+**`pr-review`** and **`create-pr`** return through **`coding-session`** on the coding lane. Update §8 on the **plan and deliver** leader dispatch with the recap template (**`../plan.mdc`** §8).
 
 ## Required terminal line (all spawned children)
 
@@ -140,7 +140,7 @@ After emitting **`AGENT_RESULT_RESPONSE_V1`**, **stop on that lane** for the cur
 | `pr-plan` | Yes | May spawn **`coding-session`** in §5d before terminal (standalone) or inline under **`new-plan`**; one spawn per turn |
 | `planner` | Yes | Procedure stop before terminal when `continuationStatus: active`; Step 7 runs **`delivery-phases`** / **`pr-breakdown`** inline on **later** user messages only |
 | `delivery-phases`, `pr-breakdown`, `new-plan`, `ad-hoc-prd` | Yes | `delivery-phases` / `pr-breakdown`: inline **`new-plan`** under planner; `new-plan`: inline under decomposition; `ad-hoc-prd`: active result after write, terminal only after developer approval; see each skill § *Completion (spawned)* |
-| Ship chain (`coding-session`, `pre-pr-review`, `create-pr`, `deploy-walk`, `plan-reconcile`) | Yes | See each skill § *Completion (spawned)* |
+| Ship chain (`coding-session`, `pre-pr-review`, `deploy-walk`, `plan-reconcile`) | Yes | See each skill § *Completion (spawned)* |
 | `phase-planner` | Yes | Runs **`delivery-phases`** / **`pr-breakdown`** inline; may spawn nested **`phase-planner`** or **`coding-session`** |
 
 When authoring or reviewing a skill, duplicating the canonical sentence under **`## Completion (spawned)`** is encouraged but **not** required if this README is in **`warmUpRules`** or the spawn request passes it.
@@ -159,12 +159,12 @@ Every **spawned** plan-and-deliver skill lists the paths below in frontmatter **
 
 - `.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`
 
-**Ship skills** (`coding-session`, `pre-pr-review`, `create-pr`, `deploy-walk`, `plan-reconcile`) also include:
+**Ship skills** (`coding-session`, `pre-pr-review`, `deploy-walk`, `plan-reconcile`) also include:
 
 - `.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`
 - `.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`
 
-**`pr-review`** is inline-only — **no** frontmatter **`warmUpRules`**; it runs **only** on the active **`coding-session`** lane (which includes this README and rule **20**). Do not dispatch **`pr-review`** as a standalone skill session.
+**`pr-review`** and **`create-pr`** are inline-only — **no** frontmatter **`warmUpRules`**; they run **only** on the active **`coding-session`** lane (which includes this README and rule **20**). Do not dispatch **`pr-review`** or **`create-pr`** as standalone skill sessions.
 
 ### Adding or removing a skill
 

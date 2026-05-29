@@ -298,7 +298,7 @@ After [Pre-worktree validation](#pre-worktree-validation-plan-completeness), an 
 Normative path when **`pr-plan`** (or another spawner) opens a **coding-session** child lane and layer 2 is satisfied.
 
 1. **Scope guard** — Edit only files under the attached worktree root(s). Resolve hosting repo root vs worktree per **20_efficient-pr-shipping.mdc**.
-2. **Bootstrap vs ship chain** — [Worktree bootstrap handoff](#worktree-bootstrap-handoff) may run on a child lane **in parallel** with implementation on this lane. **No limit** on worktree edits, plan §§ **5–8** fill, tests, or `npm` while `outputs.bootstrapStatus` is `pending`. **Forbidden until `outputs.bootstrapStatus: success`:** `git commit`, `git push`, [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy), spawn **`deploy-walk`** (Before deploy), spawn **`pre-pr-review`**, spawn **`create-pr`**, and inline Before-deploy deploy verification that substitutes for [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff). On bootstrap failure, keep implementing if useful; retry bootstrap per [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) — do not open the ship chain until bootstrap succeeds.
+2. **Bootstrap vs ship chain** — [Worktree bootstrap handoff](#worktree-bootstrap-handoff) may run on a child lane **in parallel** with implementation on this lane. **No limit** on worktree edits, plan §§ **5–8** fill, tests, or `npm` while `outputs.bootstrapStatus` is `pending`. **Forbidden until `outputs.bootstrapStatus: success`:** `git commit`, `git push`, [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy), spawn **`deploy-walk`** (Before deploy), spawn **`pre-pr-review`**, inline **`create-pr`**, and inline Before-deploy deploy verification that substitutes for [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff). On bootstrap failure, keep implementing if useful; retry bootstrap per [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory) — do not open the ship chain until bootstrap succeeds.
 3. **Warm-up on this lane** — Follow [Session prompt structure](#session-prompt-structure) Phase 1 steps (workspace readiness, branch check, load **Project rules** from the worktree, plan file + sidecar when anchored). You may skip emitting a fenced **external** session prompt unless the developer asks for a copy.
 4. **Read the anchored PR plan** — Load `targetPlanPath` (from spawn `inputs` / `initiatingPrompt`). Use §§ **1–4** for scope context; **first implementation work** is substantive fill of §§ **5–8** (replace `_TBD_` as code paths become known), then code/tests/docs per those sections.
 5. **Implement** — Make hosting-repo edits (code, tests, docs) in the worktree until **implementation ready for developer review** or a blocking stop. **Do not** `git commit` or `git push` during implementation — see **20_efficient-pr-shipping.mdc** § *Review before commit* and [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) (ship cut-point also requires `outputs.bootstrapStatus: success`). Maintain **`## Follow-ups`** on the PR plan per **development-process** § *Coding Session*.
@@ -436,7 +436,7 @@ Run after attach succeeds (Generic flow step 3 or multi-repo step 4). **Normativ
 
 3. **Continue on this lane** — Proceed to [Spawned implementation lane](#spawned-implementation-lane) (or keep coding if already started). One line: bootstrap running on a child lane; implementation continues here.
 
-4. **Blocked until `outputs.bootstrapStatus: success`:** `git commit`, `git push`, [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy), [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff), spawn **`pre-pr-review`**, spawn **`create-pr`**. **Not blocked:** worktree edits, plan §§ **5–8** fill, tests, local `npm` / compile in the worktree.
+4. **Blocked until `outputs.bootstrapStatus: success`:** `git commit`, `git push`, [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy), [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff), spawn **`pre-pr-review`**, inline **`create-pr`**. **Not blocked:** worktree edits, plan §§ **5–8** fill, tests, local `npm` / compile in the worktree.
 
 5. **Multi-repo** — Emit one spawn per **`WORKTREE_ROOT`** (unique `slug` per repo). Implement per repo in parallel with each repo’s bootstrap child. Before **ship chain** steps for a repo, that repo’s `outputs.bootstrapStatus` must be `success`; aggregate failures into `outputs.bootstrapFailureReason`.
 
@@ -508,7 +508,7 @@ flowchart LR
 | 3 | [Pre-PR review handoff](#pre-pr-review-handoff) | **Yes** — Before deploy resolved or skipped |
 | 4 | [Create-PR handoff after go](#create-pr-handoff-after-go) | After **`pre-pr-review`** **go** |
 
-**Forbidden on this lane:** `git commit` before ship cut-point approval; **`git commit`**, Before deploy **`deploy-walk`**, or ship cut-point while `outputs.bootstrapStatus` is `pending` or `failed`; spawn **`pre-pr-review`** while the tree is dirty; spawn **`create-pr`** before steps 2–3 complete; treat inline Before-deploy chat on this lane as a substitute for step 2 **`deploy-walk`** spawn when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → spawn Before deploy when [Combined authorization](#combined-authorization) applies.
+**Forbidden on this lane:** `git commit` before ship cut-point approval; **`git commit`**, Before deploy **`deploy-walk`**, or ship cut-point while `outputs.bootstrapStatus` is `pending` or `failed`; spawn **`pre-pr-review`** while the tree is dirty; run inline **`create-pr`** before steps 2–3 complete; treat inline Before-deploy chat on this lane as a substitute for step 2 **`deploy-walk`** spawn when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → spawn Before deploy when [Combined authorization](#combined-authorization) applies.
 
 ## Ship cut-point gate (approve, commit, Before deploy)
 
@@ -521,7 +521,7 @@ When implementation is **ready for developer review** (or the developer signals 
 1. Present a short summary: `git status --short` (call out **uncommitted** vs committed), files touched, and scope vs the anchored plan when present. If there are **no commits yet** on the branch, say so — review is against the **working tree** and/or `git diff` / IDE SCM view.
 2. When plan-anchored, **read** §7 **`### Before deploy`** and note in the recap: empty / all `[x]` / *N* unchecked Before-deploy steps (list step numbers when ≤5).
 3. Tell the developer to review in the **IDE diff** (SCM: working tree, staged, and unstaged) and/or `git diff` / `git diff --cached` as appropriate. Do **not** treat “implementation done” chat as diff review.
-4. **Do not** run `git commit`, `git push`, spawn **`deploy-walk`**, spawn **`pre-pr-review`**, or spawn **`create-pr`** in the same assistant turn as this gate's modal.
+4. **Do not** run `git commit`, `git push`, spawn **`deploy-walk`**, spawn **`pre-pr-review`**, or inline **`create-pr`** in the same assistant turn as this gate's modal.
 
 ### Combined authorization
 
@@ -596,7 +596,7 @@ If commit fails or tree stays dirty after commit, stop with `partial` — do not
 
 **Precondition:** `outputs.bootstrapStatus: success`. **Do not** spawn Before deploy **`deploy-walk`** while bootstrap is `pending` or `failed`.
 
-Run from [Act after ship cut-point pick](#act-after-ship-cut-point-pick) when the cut-point pick authorizes spawn (**`commit-only`**, **`commit-push`**, or **`spawn-before-deploy-walk`**) — **no second AskQuestion** for spawn on that path. **Do not** spawn **`pre-pr-review`** or **`create-pr`** until this step completes or is skipped via **`commit-only-skip-before-deploy`** / **`skip-before-deploy`**.
+Run from [Act after ship cut-point pick](#act-after-ship-cut-point-pick) when the cut-point pick authorizes spawn (**`commit-only`**, **`commit-push`**, or **`spawn-before-deploy-walk`**) — **no second AskQuestion** for spawn on that path. **Do not** spawn **`pre-pr-review`** or run inline **`create-pr`** until this step completes or is skipped via **`commit-only-skip-before-deploy`** / **`skip-before-deploy`**.
 
 When `targetPlanPath` resolves to a PR plan:
 
@@ -677,8 +677,8 @@ When Mission Control delivers the **`pre-pr-review`** result:
    - `flags` is non-empty
    - `codingAgentHandback` includes a non-empty **Must** or **Should** group (ignore **Defer**-only handback and items tagged **`[G §7 After deploy — post-merge]`**)
 3. When **`actionablePrePrFindings`** is true, **immediately recommend** addressing pre-PR review findings before PR creation or another review pass — include one explicit sentence in the recap (for example: *Pre-PR review found issues; fix the relevant items on this lane before opening a PR.*). Do not deliver a findings-only recap without that recommendation.
-4. **If `actionablePrePrFindings`** — open [Review feedback approval gate](#review-feedback-approval-gate) on **this lane** in the **same session** **before** [Create-PR handoff after go](#create-pr-handoff-after-go), **even when** `recommendation` is `go`. Do **not** jump to Create-PR or spawn **`create-pr`** in the same turn as the reviewer result.
-5. **If NOT `actionablePrePrFindings`** and `recommendation` is `go` — proceed to [Create-PR handoff after go](#create-pr-handoff-after-go). Do not make **`pre-pr-review`** spawn `create-pr`.
+4. **If `actionablePrePrFindings`** — open [Review feedback approval gate](#review-feedback-approval-gate) on **this lane** in the **same session** **before** [Create-PR handoff after go](#create-pr-handoff-after-go), **even when** `recommendation` is `go`. Do **not** jump to Create-PR or run inline **`create-pr`** in the same turn as the reviewer result.
+5. **If NOT `actionablePrePrFindings`** and `recommendation` is `go` — proceed to [Create-PR handoff after go](#create-pr-handoff-after-go). Do not make **`pre-pr-review`** run inline **`create-pr`**.
 6. If review failed, was aborted, or was abandoned, keep the ledger entry blocked until the developer retries, defers, or abandons the review.
 
 ### Review feedback approval gate
@@ -723,13 +723,13 @@ Run on the **developer's response turn** — **not** in the same assistant turn 
 | **`revise-scope`**, **`more-details`** | Clarify; re-open feedback gate |
 | **`defer`** | Stop ship chain per developer choice |
 
-### User requests to open a PR (before `create-pr` spawn)
+### User requests to open a PR (before inline `create-pr`)
 
 When the developer says *open a PR*, *create a pull request*, or similar **before** **`pre-pr-review`** returns **`go`** and the **Create-PR handoff after go** gate:
 
-1. **Do not** call `gh pr create` or surface GitHub `pull/new/` URLs (rule **20** § *PR creation* and § *User phrases → required handoff*).
-2. State the required order: implementation → [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) (approve, commit, Before deploy **`deploy-walk`** in one modal when applicable) → spawn **`pre-pr-review`** → on **`go`**, **Create-PR handoff after go** → spawn **`create-pr`** only.
-3. If they only pushed and expect a PR, confirm whether **`pre-pr-review`** has run; first-push cadence does **not** replace the **`create-pr`** child lane.
+1. **Do not** call `gh pr create` or surface GitHub `pull/new/` URLs (rule **20** § *PR creation* and § *User phrases → required handoff*) except when executing inline **`create-pr`** after that gate approves.
+2. State the required order: implementation → [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) (approve, commit, Before deploy **`deploy-walk`** in one modal when applicable) → spawn **`pre-pr-review`** → on **`go`**, **Create-PR handoff after go** → run **`create-pr`** **inline** on this lane.
+3. If they only pushed and expect a PR, confirm whether **`pre-pr-review`** has run; first-push cadence does **not** skip the inline **`create-pr`** procedure.
 
 ### Create-PR handoff after go
 
@@ -743,7 +743,7 @@ When **`pre-pr-review`** returns `recommendation: "go"` **and** either:
 
 This path is the normative **`create-pr`** handoff on this lane — it **supersedes** rule **20** § *Commit and push cadence* step 5 prompt-only wording when both apply.
 
-1. Verify the worktree branch is pushed or pushable per **efficient-pr-shipping**. Do not open the PR directly from coding-session — only the **`create-pr`** child may run `gh pr create`.
+1. Verify the worktree branch is pushed or pushable per **efficient-pr-shipping**.
 2. Present the reviewer `go` summary, non-blocking flags, and any proposed follow-ups to the developer, then use **AskQuestion** before plan follow-up mutation or PR creation. Required options:
    - **Approve follow-ups and create PR now**
    - **Create PR without appending proposed follow-ups**
@@ -752,19 +752,25 @@ This path is the normative **`create-pr`** handoff on this lane — it **superse
    - **Abandon this implementation**
    - **More details for option _**
 3. Only **Approve follow-ups and create PR now** authorizes appending proposed follow-ups before PR creation. **Create PR without appending proposed follow-ups** authorizes only PR creation. Do not treat `pre-pr-review` `go` as developer approval to mutate the plan or open/prepare a PR.
-4. Emit exactly one child-spawn request for `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/create-pr/SKILL.md`.
-5. Inputs must include `targetPlanPath`, `targetPlanSlug`, `worktreePath`, `branchName`, `baseRef`, `repoUrl`, `diffSummary`, `prePrReviewRecommendation: "go"`, `prePrReviewFlags`, `followUpsAppended`, `ledgerParent`, and `upstreamSkill: "coding-session"`.
-6. Announce that **coding-session** is waiting for the PR-creating agent result and stop. Do not continue to `pr-review` or deploy until `create-pr` reports a PR URL/number or a blocking failure.
+4. On the **developer's response turn** (not the same turn as the modal), load `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/create-pr/SKILL.md` and run it **inline on this lane** — **do not** emit **`AGENT_RUN_REQUEST_V1`** for **`create-pr`**.
+5. Construct inline context:
 
-When Mission Control delivers the **`create-pr`** result:
+| Inline context field | Value |
+|----------------------|--------|
+| `targetPlanPath` / `targetPlanSlug` | From coding-session state when plan-anchored |
+| `worktreePath`, `branchName`, `baseRef`, `repoUrl` | From worktree / git |
+| `diffSummary` | Commits, files, changes since base |
+| `prePrReviewRecommendation` | `"go"` |
+| `prePrReviewFlags`, `followUpsAppended` | From **`pre-pr-review`** outputs and developer pick |
+| `ledgerParent` | From coding-session ledger when present |
+| `upstreamSkill` | `"coding-session"` |
 
-1. Copy `prUrl`, `prNumber`, `branchName`, `prState`, `reviewState`, `mergeSha`, `mergedAt`, `deployStatus`, `deployTodoStatus`, `remainingTasks`, `activeLanes`, and `openLedgerEntries` into the coding-session result.
-2. If `create-pr` reports an active **`deploy-walk`** child or `deployStatus` is in progress, announce that **coding-session** is waiting for the **deploy-walk** child result and **stop** — do not open [Post-create-pr handoff gate](#post-create-pr-handoff-gate).
-3. Otherwise open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) on **this lane** in the **same session**. Keep `continuationStatus: "active"`. Do **not** auto-start inline **`pr-review`** or spawn **`deploy-walk`** without the developer pick.
+6. Follow **`create-pr`** gates and procedure (`gh pr create` when authorized). Merge **`## Completion (inline)`** into coding-session `outputs` (`prUrl`, `prNumber`, `shipPhase`, `rowStatus`, `prState`, `remainingTasks`, …).
+7. On the **next** turn after inline **`create-pr`** completes, open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) on **this lane**. Keep `continuationStatus: "active"`. Do **not** auto-start inline **`pr-review`** or spawn **`deploy-walk`** without the developer pick. Do **not** wait for a child **`AGENT_RESULT_RESPONSE_V1`** — there is no **`create-pr`** child lane.
 
 ### Post-create-pr handoff gate
 
-When the **`create-pr`** child returns a PR URL/number (or the developer returns to this lane with a confirmed open PR from the same ship chain):
+When inline **`create-pr`** completes with a PR URL/number (or the developer returns to this lane with a confirmed open PR from the same ship chain):
 
 1. Recap: `prUrl`, `prNumber`, `prState`, `reviewState`, and §7 **`### After deploy`** unchecked count when plan-anchored.
 2. Use **one** **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *Coding session — PR opened, next step*). Required options **in this order**:
@@ -782,7 +788,7 @@ When the **`create-pr`** child returns a PR URL/number (or the developer returns
 
 ### Spawned lane — post-create-pr sentinel (binding)
 
-When the **AskQuestion tool** is unavailable after **`create-pr`** returns, emit **`MC_PHASED_RESPONSE_V1`** — recap in `display.markdown`, options in `askQuestion`. **Line 1 must be the sentinel.**
+When the **AskQuestion tool** is unavailable after inline **`create-pr`** completes, emit **`MC_PHASED_RESPONSE_V1`** — recap in `display.markdown`, options in `askQuestion`. **Line 1 must be the sentinel.**
 
 ```
 MC_PHASED_RESPONSE_V1
@@ -805,7 +811,7 @@ Run on the **developer's response turn** — **not** in the same assistant turn 
 
 Run from [Act after post-create-pr pick](#act-after-post-create-pr-pick) when the developer chooses **`spawn-after-deploy-walk`**, or when **`prState`** is **`merged`** and they explicitly say the PR merged / *start After deploy* in the same message.
 
-1. **Verify merge** — `prState` must be **`merged`** (from **`create-pr`** outputs or a fresh `gh pr view` / repo check). If still **`open`**, report one line and re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — do **not** spawn **`deploy-walk`** for After deploy only.
+1. **Verify merge** — `prState` must be **`merged`** (from coding-session `outputs` after inline **`create-pr`** or a fresh `gh pr view` / repo check). If still **`open`**, report one line and re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — do **not** spawn **`deploy-walk`** for After deploy only.
 2. When plan-anchored, **read** §7. If **`### After deploy`** is empty or all `[x]` and capstone is done, note in one line and offer [Post-create-pr handoff gate](#post-create-pr-handoff-gate) or **`plan-reconcile`** defer — no spawn.
 3. **Spawn** `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/deploy-walk/SKILL.md` on a **child lane** — **post-merge full walk** (do **not** set `deployWalkScope: before-deploy-only`).
 
@@ -813,7 +819,7 @@ Run from [Act after post-create-pr pick](#act-after-post-create-pr-pick) when th
 
 - `targetPlanPath`, `targetPlanSlug`
 - `worktreePath`, `branchName`
-- `prUrl`, `prNumber`, `mergeSha`, `mergedAt`, `repoUrl` (from **`create-pr`** outputs when present)
+- `prUrl`, `prNumber`, `mergeSha`, `mergedAt`, `repoUrl` (from coding-session `outputs` after inline **`create-pr`** when present)
 - `ledgerParent`, `upstreamSkill: "coding-session"`
 
 **`initiatingPrompt`** must state: PR **merged**; post-merge §7 deploy verification; walk **After deploy** (and remaining lifecycle to `done`); run agent-executable steps automatically; flip `**Status:**` via deploy-walk rules when appropriate.
@@ -823,7 +829,7 @@ Run from [Act after post-create-pr pick](#act-after-post-create-pr-pick) when th
 
 ### Inline PR review after PR creation
 
-Run only after the developer chooses **`start-pr-review`** at [Post-create-pr handoff gate](#post-create-pr-handoff-gate) (or an explicit *triage PR comments* message on this lane with a known `prUrl`). Do **not** auto-start immediately when **`create-pr`** returns unless the developer already picked **`start-pr-review`** on the prior turn.
+Run only after the developer chooses **`start-pr-review`** at [Post-create-pr handoff gate](#post-create-pr-handoff-gate) (or an explicit *triage PR comments* message on this lane with a known `prUrl`). Do **not** auto-start immediately when inline **`create-pr`** completes unless the developer already picked **`start-pr-review`** on the prior turn.
 
 Inline `pr-review` inputs come from coding-session state:
 

@@ -55,11 +55,11 @@ inputs:
     required: false
   ledgerParent:
     type: string
-    description: Ledger parent slug/path copied from create-pr.
+    description: Ledger parent slug/path copied from coding-session.
     required: false
   upstreamSkill:
     type: string
-    description: Skill that spawned deploy verification — `create-pr` (post-merge) or `coding-session` (pre-merge Before deploy).
+    description: Skill that spawned deploy verification — `coding-session` (Before deploy pre-merge or After deploy post-merge).
     required: false
   worktreePath:
     type: string
@@ -70,7 +70,7 @@ inputs:
     description: >-
       `before-deploy-only` when spawned from coding-session pre-merge — walk only
       `### Before deploy` while Status stays `drafted`; do not run After deploy or
-      `deploy-walk deployed`. Omit for full post-merge walk (typical create-pr spawn).
+      `deploy-walk deployed`. Omit for full post-merge walk (typical **`coding-session`** After-deploy spawn).
     required: false
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
@@ -95,7 +95,7 @@ See [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
 
 Target picks, deploy-with-gaps, and closure gates use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — **preferred:** recap + modal in one message; bare **`MC_ASKQUESTION_V1`** is sentinel-only. **Act** (checkbox flips, status lines) follows developer selection or explicit deploy-walk commands.
 
-When spawned by **`create-pr`** (post-merge) or **`coding-session`** (pre-merge **Before deploy** only), this skill is the **deploy-walk agent**. It owns deploy verification status and reports it upstream; it does not run implementation, PR review, or plan reconciliation.
+When spawned by **`coding-session`** (pre-merge **Before deploy** or post-merge **After deploy**), this skill is the **deploy-walk agent**. It owns deploy verification status and reports it upstream; it does not run implementation, PR review, or plan reconciliation.
 
 ## Not chained to `plan-reconcile`
 
@@ -103,7 +103,7 @@ When spawned by **`create-pr`** (post-merge) or **`coding-session`** (pre-merge 
 
 | Agent mistake | Correct action |
 |---------------|----------------|
-| Treat deploy walk `done` as permission to archive the plan | Tell the developer to start **`plan-reconcile`** separately (phrase, dispatch, or **`create-pr`** reconcile choice after merge) |
+| Treat deploy walk `done` as permission to archive the plan | Tell the developer to start **`plan-reconcile`** separately (phrase, dispatch, or **`coding-session`** reconcile choice after deploy) |
 | Emit **`AGENT_RUN_REQUEST_V1`** for **`plan-reconcile`** from this lane | **Forbidden** — hand off in prose only |
 
 Canonical: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *deploy-walk vs plan-reconcile (not chained)*.
@@ -116,10 +116,10 @@ Canonical table: **`.sedea/centers/research-and-development/docs/development-pro
 |---------------|------|
 | Developer phrase (`deploy-walk present <N>`, status, done/skip/block) | Detached |
 | **`coding-session`** after implementation approval + commit — Before deploy only | Spawned child (`upstreamSkill: coding-session`, `deployWalkScope: before-deploy-only`) |
-| **`create-pr`** after merge — developer chooses **Start deploy verification now** | Spawned child (`upstreamSkill: create-pr`) — full §7 walk |
+| **`coding-session`** After deploy — developer chooses **PR merged — start After deploy deploy-walk** at post-create-pr gate | Spawned child (`upstreamSkill: coding-session`) — full §7 walk |
 | Direct skill dispatch with `targetPlanPath` / slug | Detached |
 
-**Pre-merge vs post-merge:** **`coding-session`** spawns walk **Before deploy** while the PR is still open (`**Status:**` stays `drafted`). **`create-pr`** (or detached phrase after merge) owns **After deploy** and the `drafted → deployed → done` lifecycle. Completing either walk does **not** start **`plan-reconcile`** — reconcile is a separate developer or **`create-pr`** follow-on when merge/archive triage is needed.
+**Pre-merge vs post-merge:** **`coding-session`** spawns walk **Before deploy** while the PR is still open (`**Status:**` stays `drafted`). **`coding-session`** (post-create-pr gate) or detached phrase after merge owns **After deploy** and the `drafted → deployed → done` lifecycle. Completing either walk does **not** start **`plan-reconcile`** — reconcile is a separate developer or **`coding-session`** follow-on when merge/archive triage is needed.
 
 ## Spawned from coding-session (`before-deploy-only`)
 
@@ -183,7 +183,7 @@ Run **without** an **AskQuestion** approval gate. Use `worktreePath` from spawn 
 
 ### Spawned walk bootstrap
 
-When spawned by **`coding-session`** or **`create-pr`** (first turn on the lane after inputs validate):
+When spawned by **`coding-session`** (first turn on the lane after inputs validate):
 
 1. Resolve plan (Step 1) and read § N (Step 2).
 2. Run [Autonomous agent-executable pass](#autonomous-agent-executable-pass) from the first unchecked step in the active sub-section.
@@ -498,7 +498,7 @@ This skill walks **one PR plan's `## N. Deploy test plan` section at a time**. I
 
 ## Spawned result contract
 
-When spawned by **`create-pr`** or **`coding-session`**, end each substantive turn with deploy status outputs so upstream can keep the ledger accurate:
+When spawned by **`coding-session`**, end each substantive turn with deploy status outputs so upstream can keep the ledger accurate:
 
 - `outputs.targetPlanPath`
 - `outputs.targetPlanSlug`
@@ -563,4 +563,4 @@ Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` or run 
 
 Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
 
-Normally spawned from **`coding-session`** (Before deploy, pre-merge) or **`create-pr`** (full walk after merge). If run inline, use the same `outputs` semantics as **## Spawned result contract** and **`## Completion (spawned)`** in prose only.
+Normally spawned from **`coding-session`** (Before deploy, pre-merge, or After deploy post-merge). If run inline, use the same `outputs` semantics as **## Spawned result contract** and **`## Completion (spawned)`** in prose only.

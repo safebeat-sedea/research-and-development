@@ -26,7 +26,7 @@ inputs:
     required: false
   prState:
     type: string
-    description: PR state from create-pr; must be merged for spawned reconcile.
+    description: PR state from coding-session; must be merged for spawned reconcile.
     required: false
   deployStatus:
     type: string
@@ -38,11 +38,11 @@ inputs:
     required: false
   ledgerParent:
     type: string
-    description: Ledger parent slug/path copied from create-pr.
+    description: Ledger parent slug/path copied from coding-session.
     required: false
   upstreamSkill:
     type: string
-    description: Skill that spawned reconcile, usually create-pr.
+    description: Skill that spawned reconcile, usually coding-session.
     required: false
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
@@ -65,12 +65,12 @@ Dry-run reports, archive candidates, and follow-up triage use **AskQuestion**, *
 | How it starts | Requirements | Auto-start? |
 |---------------|--------------|-------------|
 | Developer says **plan reconcile** / **reconcile plans**, or mission dispatch | Valid **`operationsUserId`**; follow **Flow** below | No — explicit start |
-| **`create-pr`** spawns this skill | Developer chose reconcile on that turn; `prState: merged`; `deployStatus: done`; `deployTodoStatus: done`; `targetPlanPath` or `targetPlanSlug` | Yes |
+| **`coding-session`** spawns this skill | Developer chose reconcile on that turn; `prState: merged`; `deployStatus: done`; `deployTodoStatus: done`; `targetPlanPath` or `targetPlanSlug` | Yes |
 | **`deploy-walk`** finishes (checklist + capstone todo **done**) | — | **No** — deploy done alone does not start reconcile |
 
 Do **not** trigger on the word **`plan`** alone — too generic.
 
-When **`deploy-walk`** just finished and the user expects archive, use **AskQuestion** once: start **`plan-reconcile`** now vs defer. Merge + deploy verification are still required for spawned reconcile from **`create-pr`**.
+When **`deploy-walk`** just finished and the user expects archive, use **AskQuestion** once: start **`plan-reconcile`** now vs defer. Merge + deploy verification are still required for spawned reconcile from **`coding-session`**.
 
 Detail: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *deploy-walk vs plan-reconcile (not chained)*; **`.sedea/centers/research-and-development/docs/development-process.md`** § *Plan reconcile triggers*.
 
@@ -317,7 +317,7 @@ Mutations are under **`.sedea/operations/`** (and possibly center git elsewhere)
 
 ## Spawned result contract
 
-When spawned by `create-pr`, end with a child result containing:
+When spawned by **`coding-session`**, end with a child result containing:
 
 - `outputs.targetPlanPath`
 - `outputs.targetPlanSlug`

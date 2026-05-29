@@ -149,34 +149,34 @@ Finishing **`deploy-walk`** (checklist complete, capstone todo **`deploy-test-pl
 | **`deploy-walk`** | Deploy §7 walked; Status `done` | **`plan-reconcile`** |
 | **`plan-reconcile`** | Archive / follow-ups triage per **`plan-state.mjs`** | (nothing upstream) |
 
-Start **`plan-reconcile`** separately: developer phrase, mission dispatch, or **`create-pr`** after merge when the developer **explicitly** chooses reconcile — see **`plan-reconcile/SKILL.md`** § *When to trigger* and **development-process.md** § *Ship chain*.
+Start **`plan-reconcile`** separately: developer phrase, mission dispatch, or **`coding-session`** after deploy when the developer **explicitly** chooses reconcile — see **`plan-reconcile/SKILL.md`** § *When to trigger* and **development-process.md** § *Ship chain*.
 
-## PR creation — only **`create-pr`** on a PR-creating agent
+## PR creation — inline **`create-pr`** on **`coding-session`**
 
-**Rule (read first).** The **only** lane that may call `gh pr create` (or any equivalent GitHub API/MCP call that creates, drafts, or reopens a PR) is **a PR-creating agent** executing [`create-pr/SKILL.md`](../missions/plan-and-deliver/skills/create-pr/SKILL.md) after **`pre-pr-review`** returns `go` and that skill's gates pass. That child lane opens the PR **on the developer's behalf** after they approve PR creation — not from coding, planning, review, or Squad Leader lanes.
+**Rule (read first).** The **only** path that may call `gh pr create` (or any equivalent GitHub API/MCP call that creates, drafts, or reopens a PR) is the active **`coding-session`** agent **executing [`create-pr/SKILL.md`](../missions/plan-and-deliver/skills/create-pr/SKILL.md) inline** after **`pre-pr-review`** returns `go`, developer approval in **Create-PR handoff after go**, and that skill's gates pass.
 
 | Lane | May call `gh pr create`? | Handoff |
 |------|--------------------------|---------|
-| **PR-creating agent** (`create-pr` spawned child) | **Yes** — sole supported opener | Run `create-pr` procedure; terminal `AGENT_RESULT_RESPONSE_V1` |
-| **`coding-session`** (active ship chain) | **No** | After pre-PR **go** + developer approves PR creation → **`AGENT_RUN_REQUEST_V1`** for `create-pr`; wait for child result (§ *Create-PR handoff after go* in [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md)) |
-| **Other lanes** (Squad Leader, planning, `pre-pr-review`, `pr-review`, `planner`, …) | **No** | Prepare branch/context; spawn **`create-pr`** or emit **`create-pr`** copy-paste prompt for the developer to start **a PR-creating agent** session — never open from the current lane |
+| **`coding-session`** running **`create-pr` inline** | **Yes** — sole supported opener | Load **`create-pr/SKILL.md`** on this lane after Create-PR gate (§ *Create-PR handoff after go* in [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md)) |
+| **`coding-session`** (other steps) | **No** | Complete ship order through **`pre-pr-review`** → Create-PR gate → inline **`create-pr`** |
+| **Other lanes** (Squad Leader, planning, `pre-pr-review`, `pr-review`, `planner`, …) | **No** | Prepare branch/context; direct developer to **`coding-session`** ship chain or emit copy-paste prompt — never open from the current lane |
 
-**Developer accountability:** the developer decides **when** to open a PR and approves creation in the ship chain; **only** the **`create-pr`** child lane runs `gh pr create` on their behalf. Other lanes prepare context and hand off — they do not open GitHub themselves.
+**Developer accountability:** the developer decides **when** to open a PR and approves creation in the ship chain; **`coding-session`** runs inline **`create-pr`** (including `gh pr create` when authorized). Other lanes prepare context and hand off — they do not open GitHub themselves.
 
-**All other lanes:** do **not** call `gh pr create` and do **not** instruct a subagent to do so except by spawning **`create-pr`** via **`AGENT_RUN_REQUEST_V1`** on the path above.
+**All other lanes:** do **not** call `gh pr create` except **`coding-session`** while executing inline **`create-pr`** per the table above.
 
-When the user or task says "open a PR", "push and open a PR", or "create a pull request" on a **non–PR-creating** lane, interpret it as **hand off to `create-pr`** — not as permission to run `gh pr create` on this lane.
+When the user or task says "open a PR", "push and open a PR", or "create a pull request" on a **non–`coding-session`** lane, interpret it as **hand off to the `coding-session` ship chain** — not as permission to run `gh pr create` on this lane.
 
 ### User phrases → required handoff (not `gh pr create`)
 
 | User says (paraphrase OK) | Current lane | Required action |
 |---------------------------|--------------|-----------------|
-| *Open a PR* / *create the pull request* | **`coding-session`** before **`pre-pr-review`** **go** | **Do not** call `gh pr create`. Explain ship order: implementation review → commit → Before deploy **`deploy-walk`** → **`pre-pr-review`** → **Create-PR handoff after go** → spawn **`create-pr`**. |
-| *Open a PR* / *create the pull request* | **`coding-session`** after **`pre-pr-review`** **go** + developer approved PR creation | Spawn **`create-pr`** via **`AGENT_RUN_REQUEST_V1`** (§ *Create-PR handoff after go* in [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md)) — still **no** `gh pr create` on this lane. |
-| *Open a PR* | Planning, Squad Leader, **`pre-pr-review`**, **`pr-review`**, **`planner`**, … | Prepare context; emit **`create-pr`** session prompt or tell developer to run **`coding-session`** ship chain — **never** `gh pr create` here. |
-| *Push and open a PR* | **`coding-session`** | Run § *Commit and push cadence* (same-message *commit* / *push*) **first** when changes exist; then pre-PR / **`create-pr`** handoff — not one combined `gh pr create` step. |
+| *Open a PR* / *create the pull request* | **`coding-session`** before **`pre-pr-review`** **go** | **Do not** call `gh pr create`. Explain ship order: implementation review → commit → Before deploy **`deploy-walk`** → **`pre-pr-review`** → **Create-PR handoff after go** → inline **`create-pr`**. |
+| *Open a PR* / *create the pull request* | **`coding-session`** after **`pre-pr-review`** **go** + developer approved PR creation | Run inline **`create-pr`** per § *Create-PR handoff after go* in [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) — `gh pr create` only inside that procedure when gates pass. |
+| *Open a PR* | Planning, Squad Leader, **`pre-pr-review`**, **`pr-review`**, **`planner`**, … | Prepare context; direct developer to **`coding-session`** ship chain — **never** `gh pr create` here. |
+| *Push and open a PR* | **`coding-session`** | Run § *Commit and push cadence* (same-message *commit* / *push*) **first** when changes exist; then pre-PR / inline **`create-pr`** handoff — not one combined `gh pr create` step outside the inline procedure. |
 
-This rule covers **chat output**, not just tool calls. After `git push`, do **not** surface or paraphrase GitHub's remote hint (the `Create a pull request for '<branch>' on GitHub by visiting: https://github.com/<org>/<repo>/pull/new/<branch>` line). That URL is the GitHub UI form and bypasses the protocol. The only PR-creation artifacts you present from non–`create-pr` lanes are a **`create-pr`** spawn (on **`coding-session`**) or a **`create-pr`** session prompt (elsewhere).
+This rule covers **chat output**, not just tool calls. After `git push`, do **not** surface or paraphrase GitHub's remote hint (the `Create a pull request for '<branch>' on GitHub by visiting: https://github.com/<org>/<repo>/pull/new/<branch>` line). That URL is the GitHub UI form and bypasses the protocol. The only PR-creation artifacts you present from other lanes are direction to **`coding-session`** or a copy-paste prompt for a future ship pass.
 
 ## Worktree setup in plans
 
@@ -258,12 +258,12 @@ Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation 
      --number <number-from-gh>
    ```
 
-   Skip silently when `resolve` exits non-zero (session with no plan) or `gh pr list` returns empty (first push — the PR will appear after a PR-creating agent opens it; the **next** commit-and-push pass picks it up). Never block this cadence on a helper failure — log and continue with the remaining steps. **Exit code 3** from `upsert-pr` means the resolved plan is not a PR plan (the helper refuses to link PRs onto Master / Phase / top-level topic / stub plans, since sidecar `prs[]` is reconcile-tracked); surface the helper's stderr message verbatim so the user can fix the worktree → plan linkage, then continue with the remaining steps.
+   Skip silently when `resolve` exits non-zero (session with no plan) or `gh pr list` returns empty (first push — the PR will appear after inline **`create-pr`** on **`coding-session`**; the **next** commit-and-push pass picks it up). Never block this cadence on a helper failure — log and continue with the remaining steps. **Exit code 3** from `upsert-pr` means the resolved plan is not a PR plan (the helper refuses to link PRs onto Master / Phase / top-level topic / stub plans, since sidecar `prs[]` is reconcile-tracked); surface the helper's stderr message verbatim so the user can fix the worktree → plan linkage, then continue with the remaining steps.
 
    The [`pr-review` protocol branch](../missions/plan-and-deliver/skills/pr-review/SKILL.md) runs the same `upsert-pr` call at its Step 0 (after the PR is resolved) as a belt-and-braces linker for cases where no follow-up commit-and-push pass ever happens — `pr-review` triage that ends with all comments skipped (no commit, no push), quiet PRs with zero reviewer rounds, or single-commit PRs merged straight from GitHub. **`pr-review`** and this cadence upserts are idempotent against each other.
 5. Check if this is the **first push** for the branch (e.g. `git push` output contains `[new branch]`, or `gh pr list` in step 4 returned empty). If so, **`create-pr`** handoff is mandatory — not prompted by a separate user option. The handoff **replaces** any GitHub create-PR URL.
-   - **Active `coding-session` lane** — follow that skill's ship chain: first-push alone does **not** open a PR from this cadence step. After **`pre-pr-review`** returns `go` and the developer approves PR creation in **Create-PR handoff after go**, emit **`AGENT_RUN_REQUEST_V1`** for [`create-pr/SKILL.md`](../missions/plan-and-deliver/skills/create-pr/SKILL.md) and stop for the child result — do **not** paste an inline PR-creating prompt instead of spawning. If pre-PR review has not run yet, do not skip to prompt-only PR creation; run the cut point and **`pre-pr-review`** first per [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md).
-   - **Other lanes** — generate **a PR-creating agent PR prompt** via the **`create-pr`** protocol branch. The prompt’s description starter must satisfy **Comprehensive PR descriptions** (including slice boundaries and plan lineage when applicable).
+   - **Active `coding-session` lane** — follow that skill's ship chain: first-push alone does **not** open a PR from this cadence step. After **`pre-pr-review`** returns `go` and the developer approves PR creation in **Create-PR handoff after go**, run **`create-pr`** **inline** per [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) — do **not** paste a prompt-only substitute when the inline procedure is authorized. If pre-PR review has not run yet, do not skip to prompt-only PR creation; run the cut point and **`pre-pr-review`** first.
+   - **Other lanes** — generate a copy-paste PR prompt per **`create-pr/SKILL.md`** § *PR prompt fallback*, or direct the developer to **`coding-session`** ship chain.
    On subsequent pushes, only commit/push/reconcile/upsert — skip **`create-pr`** handoff until a new first-push branch needs a PR.
 
 6. **Leader §8 ship recap (detached lanes).** This cadence usually runs on **`coding-session`** or another **detached** lane — not on the **plan and deliver** Squad Leader dispatch. The leader §8 table does **not** auto-update from commit/push, `upsert-pr`, or **`pr-review`** reconciliation on this lane.
@@ -363,7 +363,7 @@ Break work down recursively until each piece is a **PR leaf**: one reviewable **
 - **Plan tree vs. git worktree** — The **plan** is a tree of intent: **planner** roots and nested `.plan.md` files (e.g. `parent:` links), with YAML **todos** in each file for **agents** (the Plan Board sidebar lists **plan files only**, not todo rows). **Git worktrees** are execution: at most one active PR per worktree ([One PR per worktree](#one-pr-per-worktree-many-worktrees-in-parallel)). **Each parallel PR** should map to **one leaf plan file** (and honest todos inside that file for the agent) so status stays honest.
 - **Child plans** — If one `.plan.md` gets too deep or cross-repo, add a **linked child plan**. The parent keeps a short **Plan map** (bullets or Mermaid) listing child slugs and roles.
 - **Contract drift** — If a leaf PR invalidates the breakdown, **update the parent plan** (diagram + todos) before spawning more worktrees so the tree stays the source of truth.
-- **Splitting an existing pile** — When splitting after the fact: get explicit approval before branch, commit, or push; save a recoverable snapshot (`git stash create` + `git update-ref refs/backup/pre-split-<timestamp> …`); stage named paths or hunks only (no `git add .` / `git add -A`); use Mermaid when multiple slices. After push, use the **`create-pr`** protocol branch for **a PR-creating agent** handoff — never open a PR from the assistant session (see **PR creation — only `create-pr`** above).
+- **Splitting an existing pile** — When splitting after the fact: get explicit approval before branch, commit, or push; save a recoverable snapshot (`git stash create` + `git update-ref refs/backup/pre-split-<timestamp> …`); stage named paths or hunks only (no `git add .` / `git add -A`); use Mermaid when multiple slices. After push, complete **`coding-session`** ship chain through inline **`create-pr`** — never open a PR from other lanes (see **PR creation — inline `create-pr` on `coding-session`** above).
 
 ### Planning and validation (diagrams)
 

@@ -28,11 +28,11 @@ flowchart TB
   subgraph pre["Pre-merge ship — detached lanes"]
     CSB[coding-session]:::branch
     PPRB[pre-pr-review]:::branch
-    CPRB[create-pr]:::branch
     REVB[pr-review]:::branch
     CHILD --> CSB
-    CSB --> PPRB --> CPRB
-    CSB -.->|inline on coding-session| REVB
+    CSB --> PPRB
+    CSB -.->|inline create-pr| CPRB[create-pr]:::branch
+    CSB -.->|inline pr-review| REVB
   end
 
   subgraph post["Post-merge — detached; reconcile not auto-chained"]
@@ -136,16 +136,16 @@ flowchart TB
     NOTE["developer phrase / snapshot / other lane"]:::detached
     CS["coding-session"]:::detached
     PPR["pre-pr-review"]:::detached
-    CPR["create-pr"]:::detached
-    PRV["pr-review"]:::detached
+    CPR["create-pr inline"]:::child
+    PRV["pr-review inline"]:::child
     DW["deploy-walk"]:::detached
     REC["plan-reconcile"]:::detached
     NOTE --> CS
     PP -.->|Start coding session| CS
     CS --> PPR
-    PPR --> CPR
-    CS -.->|inline pr-review| PRV
-    CPR -.->|post-merge| DW
+    CS -.->|inline| CPR
+    CS -.->|inline| PRV
+    CS -.->|after merge| DW
     DW -.->|not auto-chained| REC
   end
 
@@ -480,12 +480,12 @@ Related (optional):
 | 1 | `coding-session` | Developer phrase, snapshot, or post–**pr-plan** handoff | `skills/coding-session/SKILL.md` |
 | 2 | `deploy-walk` (Before deploy) | **coding-session** (spawn) after implementation approval + commit | `skills/deploy-walk/SKILL.md` — `deployWalkScope: before-deploy-only` |
 | 3 | `pre-pr-review` | **coding-session** (spawn) after Before deploy walk or skip | `skills/pre-pr-review/SKILL.md` |
-| 4 | `create-pr` | **coding-session** after pre-PR **go** | `skills/create-pr/SKILL.md` |
+| 4 | `create-pr` | **coding-session** (inline) after pre-PR **go** | `skills/create-pr/SKILL.md` |
 | 5 | `pr-review` | **coding-session** (inline) after PR exists | `skills/pr-review/SKILL.md` |
-| 6 | `deploy-walk` (After deploy) | Developer phrase, **`create-pr`** after merge (**AskQuestion**), or detached dispatch | `skills/deploy-walk/SKILL.md` — **development-process.md** § *deploy-walk entry points* |
-| 7 | `plan-reconcile` | Developer / **`create-pr`** after deploy done (not auto from deploy-walk) | `skills/plan-reconcile/SKILL.md` |
+| 6 | `deploy-walk` (After deploy) | Developer phrase, **`coding-session`** after merge (**AskQuestion**), or detached dispatch | `skills/deploy-walk/SKILL.md` — **development-process.md** § *deploy-walk entry points* |
+| 7 | `plan-reconcile` | Developer / **`coding-session`** after deploy done (not auto from deploy-walk) | `skills/plan-reconcile/SKILL.md` |
 
-**`deploy-walk` entry points:** **coding-session** spawns Before deploy pre-merge; developer phrase on a detached lane; **`create-pr`** spawns After deploy post-merge when the developer chooses **Start deploy verification now**; or direct skill dispatch with plan inputs. Finishing deploy-walk does **not** run **`plan-reconcile`**.
+**`deploy-walk` entry points:** **coding-session** spawns Before deploy pre-merge; developer phrase on a detached lane; **`coding-session`** spawns After deploy post-merge when the developer chooses **Start deploy verification now** at [Post-create-pr handoff gate](skills/coding-session/SKILL.md#post-create-pr-handoff-gate); or direct skill dispatch with plan inputs. Finishing deploy-walk does **not** run **`plan-reconcile`**.
 
 **Start `coding-session`:** Detached lane only — not a Squad Leader spawn from §§1–7. Entry paths, required inputs, and anti-patterns: **`.sedea/centers/research-and-development/docs/development-process.md`** § *Start implementation (`coding-session` entry)*.
 
@@ -513,7 +513,7 @@ Maintain one row per in-scope **PR plan** path under `.sedea/operations/.../plan
 |-------------|----------------------------------------|
 | `coding-session` | `developerApprovedImplementation: true` (after worktree-open gate in that skill) + `targetPlanPath` → at least `implementing`; worktree ready → `worktree` |
 | `pre-pr-review` | `recommendation: go` (or `no-go` + blockers → `blocked`) → `pre-pr-review` |
-| `create-pr` | `prUrl` / `prNumber` → `pr-open` |
+| `create-pr` (inline on **`coding-session`**) | `prUrl` / `prNumber` → `pr-open` (via **`coding-session`** terminal or manual recap — no separate child terminal) |
 | `pr-review` (inline in **coding-session**) | `prReviewStatus` terminal + `githubReconciliationStatus` when required → `pr-review` |
 | `deploy-walk` | `deployStatus: done` and `deployTodoStatus: done` → `deploy-walk` (then `done` when reconcile complete) |
 | `plan-reconcile` | terminal reconcile with target archived → `reconcile` or `done` |
@@ -536,7 +536,7 @@ When Mission Control hosts a **`plan and deliver`** dispatch, the extension may 
 
 | Step | Behavior |
 |------|----------|
-| **Trigger** | A ship child lane emits terminal **`AGENT_RESULT_RESPONSE_V1`** for **`coding-session`**, **`pre-pr-review`**, **`create-pr`**, **`deploy-walk`**, or **`plan-reconcile`** with **`outputs.targetPlanPath`**, **`outputs.shipPhase`**, and **`outputs.rowStatus`** (required per each skill § *Mission Control section 8 sync*). |
+| **Trigger** | A ship child lane emits terminal **`AGENT_RESULT_RESPONSE_V1`** for **`coding-session`**, **`pre-pr-review`**, **`deploy-walk`**, or **`plan-reconcile`** with **`outputs.targetPlanPath`**, **`outputs.shipPhase`**, and **`outputs.rowStatus`** (required per each skill § *Mission Control section 8 sync*). **`pr-review`** and inline **`create-pr`** on **`coding-session`** are **not** separate child terminals — `pr-open` / `pr-review` fields reach §8 via **`coding-session`** terminal or manual **Ship recap**. |
 | **Persist** | Merge one row per `targetPlanPath` into **`ship-ledger.v1.json`** in the dispatch bundle directory (alongside **`dispatch.yaml`**). |
 | **Deliver** | Queue a silent **UserSend** on the **Squad Leader** lane whose body starts with **`Mission Control: ship-ledger sync (section 8).`** and includes a **Ship recap — plan and deliver** block (same fields as the template below). The leader agent should parse it like a developer-posted recap and refresh §8 rows before other protocol work. |
 | **Audit** | Append **`ship-ledger-row-updated`** to **`dispatch-events.v1.ndjson`**. |
@@ -545,7 +545,7 @@ When Mission Control hosts a **`plan and deliver`** dispatch, the extension may 
 
 - Host sync **does not** replace child **`AGENT_RESULT_RESPONSE_V1`** delivery to parent lanes, domain **`continuationStatus`** fields, or *Pre-resolution checklist* / **`MC_DISPATCH_RESOLVED_V1`** gates.
 - If **`outputs.targetPlanPath`** is missing on a terminal line, the host **skips** ledger sync for that result (agents must populate required fields).
-- **`pr-review`** is **not** host-synced (inline on **`coding-session`** — no separate child terminal). See [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../../rules/30_planning-target-resolution.mdc) § *§8 ship ledger and inline `pr-review`*.
+- **`pr-review`** and inline **`create-pr`** are **not** host-synced as separate child terminals (inline on **`coding-session`**). See [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../../rules/30_planning-target-resolution.mdc) § *§8 ship ledger and inline `pr-review`*.
 - Leader-tab UI for the full ledger may lag persistence; treat **`ship-ledger.v1.json`** and the silent recap message as source of truth until UI catches up.
 
 Manual **Ship recap** paste on the leader dispatch remains valid and should be used when host sync did not run or rows look stale.
@@ -564,7 +564,7 @@ Use this when the **plan and deliver** leader dispatch cannot propose **`resolve
 
 **Three ways §8 gets truth on the leader lane** (same as **`.sedea/centers/research-and-development/docs/development-process.md`** § *Leader-lane ship recap*):
 
-1. **Host sync** — terminal **`AGENT_RESULT_RESPONSE_V1`** from **`coding-session`**, **`pre-pr-review`**, **`create-pr`**, **`deploy-walk`**, or **`plan-reconcile`** with required **`outputs`**.
+1. **Host sync** — terminal **`AGENT_RESULT_RESPONSE_V1`** from **`coding-session`**, **`pre-pr-review`**, **`deploy-walk`**, or **`plan-reconcile`** with required **`outputs`** (include `pr-open` / `pr-review` on **`coding-session`** terminal when applicable).
 2. **Manual recap** — developer or agent posts the template block below on **this** dispatch.
 3. **Forwarded child-output** — parent lane forwards parseable results; leader parses like a recap.
 
@@ -578,7 +578,7 @@ When the developer returns to the **plan and deliver** leader dispatch and any s
 | `shipPhase` | yes | Latest value from the phase enum |
 | `rowStatus` | yes | `open` while work continues; `closed` when `shipPhase: done`; `blocked` / `deferred` / `abandoned` when stated |
 | `remainingTasks` | when not `done` | One short line (or copy from skill `outputs.remainingTasks`) |
-| `prUrl` / `prNumber` | when phase ≥ `pr-open` | From **create-pr** or GitHub |
+| `prUrl` / `prNumber` | when phase ≥ `pr-open` | From inline **`create-pr`** on **`coding-session`** or GitHub |
 | `blockedReason` | when `rowStatus: blocked` | e.g. pre-PR no-go, deploy gate, reconcile failure |
 
 **Natural-language → `shipPhase` (examples)**
