@@ -6,9 +6,9 @@ description: >-
   (name, overview, todos, isProject) and `parent` only in the sidecar. Resolves
   parent per planning-target-resolution; confirms parent before write except on
   indexed child spawn when parent + index N are already locked by session context.
-  After an indexed spawn, may hand off to **phase-planner** (spawned child lane) or
-  **pr-plan** (inline on this lane). When spawned from an upstream decomposition
-  agent that already approved the parent list, skips the child-stub populator approval
+  After an indexed handoff, may run **pr-plan** inline or spawn **phase-planner**. When run inline from
+  **delivery-phases** or **pr-breakdown** under **planner**, reports Completion (inline) to the invoker.
+  When spawned from an upstream decomposition agent that already approved the parent list, skips the child-stub populator approval
   modal and runs the populator immediately. Use under mission dispatch or
   when the developer asks to scaffold a plan via **new-plan** (standalone) or expand
   a parent list item **N** (indexed-child) from a numbered dual-title list.
@@ -49,6 +49,10 @@ inputs:
   upstreamSkill:
     type: string
     description: Skill that requested this child creation.
+    required: false
+  parentAgentRole:
+    type: string
+    description: When delivery-phases-agent or pr-breakdown-agent, report Completion (inline) to the invoker instead of AGENT_RESULT_RESPONSE_V1.
     required: false
   hoistFromPhase:
     type: boolean
@@ -104,6 +108,8 @@ When `requestedPopulatorSkill` is **`pr-plan`**, run that skill **inline on this
 | `upstreamSkill` | `"new-plan"` |
 
 When `requestedPopulatorSkill` is **`phase-planner`**, emit **`AGENT_RUN_REQUEST_V1`** per step **4** (spawned populator lane — unchanged).
+
+When **`parentAgentRole`** is **`delivery-phases-agent`** or **`pr-breakdown-agent`** (this skill run **inline** from decomposition under **`planner`**), report **`## Completion (inline)`** to the invoker — do **not** emit **`AGENT_RESULT_RESPONSE_V1`**.
 
 ## Indexed child spawn (parent list item **N**)
 
@@ -338,10 +344,10 @@ Required `outputs` fields:
 - `outputs.continuationStatus` — `active` while populator approval, inline **`pr-plan`** handoff, a **`phase-planner`** child lane, a **`coding-session`** child from inline **`pr-plan`**, or row repair remains; `terminal` when stub, parent link, and populator handoff are complete
 - `outputs.readyForImplementation`, `outputs.implementationHandoffStatus` — when inline **`pr-plan`** ran (echo from inline completion)
 
-Complete write + parent confirmation (when required) + parent `Plan:` update (indexed) + populator handoff (inline **`pr-plan`** or **`phase-planner`** spawn / wait) **before** the terminal line. Do **not** emit **`AGENT_RUN_REQUEST_V1`** for **`pr-plan`**. Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` (except **`coding-session`** from inline **`pr-plan`** §5d) or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*).
+Complete write + parent confirmation (when required) + parent `Plan:` update (indexed) + populator handoff (inline **`pr-plan`** or **`phase-planner`** spawn / wait) **before** the terminal line when **spawned**. **Inline** (`parentAgentRole` **`delivery-phases-agent`** or **`pr-breakdown-agent`**): use **`## Completion (inline)`** — no terminal line. Do **not** emit **`AGENT_RUN_REQUEST_V1`** for **`pr-plan`** or **`new-plan`**. Stop after the terminal line on spawned runs. Do not emit another `AGENT_RUN_REQUEST_V1` (except **`phase-planner`** or **`coding-session`** per above) or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Completion (inline)
 
-Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
+Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1` for **`new-plan`**, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*). **Exception:** step **4** may still emit **`AGENT_RUN_REQUEST_V1`** for **`phase-planner`**; inline **`pr-plan`** may emit **`AGENT_RUN_REQUEST_V1`** for **`coding-session`**.
 
-Spawned from decomposition agents (**`delivery-phases`**, **`pr-breakdown`**) or indexed child expansion in normal flow. If run inline, use the same `outputs` semantics as **`## Completion (spawned)`** in prose only.
+**Primary path:** **`delivery-phases`** or **`pr-breakdown`** runs this skill **inline** under **`planner`** (`parentAgentRole: "delivery-phases-agent"` or `"pr-breakdown-agent"`). Use the same `outputs` semantics as **`## Completion (spawned)`** in prose only — the decomposition skill (then **planner**) merges ledger fields. **Standalone** mission dispatch may still spawn this skill on a child lane; then use **`## Completion (spawned)`** instead.

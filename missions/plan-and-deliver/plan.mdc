@@ -22,7 +22,7 @@ flowchart TB
   subgraph plan["Planning"]
     PRD[PRD] --> MPB[planner]:::branch
     MPB --> DEC[delivery-phases or pr-breakdown]:::branch
-    DEC --> CHILD[new-plan → pr-plan inline or phase-planner spawn]:::branch
+    DEC --> CHILD[new-plan inline → pr-plan inline or phase-planner spawn]:::branch
   end
 
   subgraph pre["Pre-merge ship — detached lanes"]
@@ -71,7 +71,7 @@ This diagram is the **dispatch ownership map**. It answers: which agent on this 
 |------|------|--------|----------|
 | **Squad Leader** | Mission dispatch leader | `ad-hoc-prd` (§3), `planner` (§5) | PRD approval on leader lane (owned by **Ad-Hoc PRD** child); route menu for §6 decomposition; `delivery-phases`, `coding-session`, etc. |
 | **Master Plan agent** | Child lane after §5 | **`delivery-phases`**, **`pr-breakdown`** inline via **AskQuestion** + skill load; drafts §7 inline | Replace Squad Leader ledger; resolve dispatch |
-| **Downstream skill agents** | Further child lanes | Per skill: e.g. `new-plan` (inline **`pr-plan`** or spawn **`phase-planner`**); `coding-session` → `pre-pr-review` | `MC_DISPATCH_RESOLVED_V1` |
+| **Downstream skill agents** | Further child lanes | Per skill: e.g. **`phase-planner`** spawn from inline **`new-plan`** on planner; **`coding-session`** → `pre-pr-review` | `MC_DISPATCH_RESOLVED_V1` |
 | **Detached branches** | Often separate session / phrase | Invoked via `development-process.md` branch names | Automatic Squad Leader spawn from §§1–5 |
 
 **Host rules:** each `AGENT_RUN_REQUEST_V1` opens a child lane; parent waits for `AGENT_RESULT_RESPONSE_V1` when the skill says so. Squad Leader **§7** tracks planning `activeLanes`, `openLedgerEntries`, `spawnedPlans`, `remainingTasks`; **§8** tracks ship rows per PR plan — it does not re-run detached child skills from the leader lane.
@@ -107,23 +107,21 @@ flowchart TB
     MP --> M7["AskQuestion → Caveats inline"]:::child
     DP["delivery-phases inline"]:::child
     PB["pr-breakdown inline"]:::child
+    NP["new-plan inline"]:::child
     M6 --> DP
     M6 --> PB
+    DP --> NP
+    PB --> NP
+    NP --> PP["pr-plan inline"]:::child
+    NP -.->|phase child| POP["phase-planner spawn"]:::child
   end
 
   S5 -.->|spawn| MP
 
-  subgraph planTree["Spawn tree — planning child lanes (from inline dp/pb)"]
-    NP["new-plan indexed"]:::child
-    PP["pr-plan inline on new-plan"]:::child
-    POP["phase-planner spawn"]:::child
-    DP --> NP
-    PB --> NP
-    NP --> PP
-    NP -.->|Delivery phases child| POP
-    POP -.->|may spawn| DP
-    POP -.->|single-PR hoist| PB
-    POP -.->|multi-PR on phase| PB
+  subgraph planTree["Spawn tree — from inline new-plan on planner"]
+    POP -.->|may spawn| DP2["delivery-phases"]:::child
+    POP -.->|single-PR hoist| PB2["pr-breakdown"]:::child
+    POP -.->|multi-PR on phase| PB2
   end
 
   subgraph impl["Detached — protocol branches not SL spawns"]
@@ -135,7 +133,7 @@ flowchart TB
     DW["deploy-walk"]:::detached
     REC["plan-reconcile"]:::detached
     NOTE --> CS
-    POP -.->|pr-plan inline approves handoff| CS
+    PP -.->|Start coding session| CS
     CS --> PPR
     PPR --> CPR
     CS -.->|inline pr-review| PRV
@@ -143,6 +141,7 @@ flowchart TB
     DW -.->|not auto-chained| REC
   end
 
+  S7 -.->|ledger tracks| mpLane
   S7 -.->|ledger tracks| planTree
   S7 -.->|ledger tracks when reported| impl
 ```

@@ -72,7 +72,7 @@ AGENT_RUN_REQUEST_V1 {"version":1,"correlationId":"00000000-0000-4000-8000-00000
 
 ### Inline handoff — **planner** → **`delivery-phases`** / **`pr-breakdown`** (Step 7c)
 
-When the user selects **Route §6 decomposition**, run the chosen skill **inline on this lane** — **do not** emit **`AGENT_RUN_REQUEST_V1`** for **`delivery-phases`** or **`pr-breakdown`**. Load the target **`SKILL.md`**, construct inline context from the table below, follow that skill’s steps, and merge its **`## Completion (inline)`** fields into this skill’s ledger (`spawnedPlans`, `activeLanes`, `openLedgerEntries`, `remainingTasks`). Those decomposition skills may still spawn **`new-plan`** child lanes per their own contracts.
+When the user selects **Route §6 decomposition**, run the chosen skill **inline on this lane** — **do not** emit **`AGENT_RUN_REQUEST_V1`** for **`delivery-phases`** or **`pr-breakdown`**. Load the target **`SKILL.md`**, construct inline context from the table below, follow that skill’s steps, and merge its **`## Completion (inline)`** fields into this skill’s ledger (`spawnedPlans`, `activeLanes`, `openLedgerEntries`, `remainingTasks`). Those decomposition skills run **`new-plan`** **inline** on this lane (no child lanes for **`new-plan`**); they may still spawn **`phase-planner`** or inline **`pr-plan`** (which may spawn **`coding-session`**) per their contracts.
 
 | Inline context field | Value |
 |----------------------|--------|
@@ -533,7 +533,7 @@ Execute **only** what the user selected in **AskQuestion** (or the matching **`o
    - `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/delivery-phases/SKILL.md` — `routeLock: "delivery-phases"`
    - `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-breakdown/SKILL.md` — `routeLock: "pr-breakdown"`
 3. Pass inline context: `targetPlanPath`, `targetPlanSlug`, `parentAgentRole: "master-plan-agent"`, `ledgerParent: <masterPlanSlug>`, `complexityBand`, `complexityScore`, `decompositionAssessment`, `routeLock`.
-4. When the inline skill returns **`## Completion (inline)`** fields, merge `activeLanes`, `openLedgerEntries`, `spawnedPlans`, `remainingTasks` into this skill’s ledger. If the inline skill spawned **`new-plan`** children, wait on this lane for their **`AGENT_RESULT_RESPONSE_V1`** deliveries per that skill’s step **6b**, then continue **`planner`** Step **7b** — **do not** emit a separate child lane for **`delivery-phases`** / **`pr-breakdown`**.
+4. When the inline skill returns **`## Completion (inline)`** fields, merge `activeLanes`, `openLedgerEntries`, `spawnedPlans`, `remainingTasks` into this skill’s ledger. If the inline skill opened **`phase-planner`** child lanes or **`coding-session`** from inline **`pr-plan`**, wait on this lane for their **`AGENT_RESULT_RESPONSE_V1`** deliveries per that skill’s aggregation step, then continue **`planner`** Step **7b** — **do not** emit child lanes for **`delivery-phases`**, **`pr-breakdown`**, or **`new-plan`**.
 
 Do **not** draft §6 in **`planner`** prose without running the inline skill.
 
@@ -570,7 +570,7 @@ This skill writes the Master Plan file (`<slug>.plan.md` + `<slug>.state.yaml`) 
 - Modify code or content in the selected repos. Step 3b is the only repo touch this skill makes — it runs `git status --porcelain`, `git checkout <default-branch>`, and `git pull --ff-only` to sync each selected hosting repo to its default branch before loading architectural rules. It refuses to run on a dirty tree or a linked worktree, never stashes / commits / discards, and never falls back to a non-fast-forward pull.
 - Run commit / push flow on the plans repo unless the user explicitly asks in the same message (Step 7c **commit-plans** option).
 - Draft section 6 (`Delivery phases | PR breakdown`) in **`planner`** prose alone — that section is owned by inline **`delivery-phases`** / **`pr-breakdown`**.
-- Spawn **`delivery-phases`** or **`pr-breakdown`** child lanes — those skills run inline; they may still spawn **`new-plan`** per their contracts.
+- Spawn **`delivery-phases`**, **`pr-breakdown`**, or **`new-plan`** child lanes — those skills run inline on this lane; they may still spawn **`phase-planner`** or **`coding-session`** per their contracts.
 
 ## Completion (spawned)
 
@@ -595,7 +595,7 @@ Required `outputs` fields:
 - `outputs.spawnedPlans` — plan paths/slugs created or reported by downstream agents
 - `outputs.remainingTasks` — pending user or agent actions; empty only when `continuationStatus` is `terminal`
 
-Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` for **`delivery-phases`** or **`pr-breakdown`** or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*). While `continuationStatus` is `active`, the **Squad Leader** acknowledges only (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §6); this lane owns **AskQuestion** + inline decomposition (Step 7) on **later** user messages on this lane — not in the same turn as the terminal line.
+Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` for **`delivery-phases`**, **`pr-breakdown`**, or **`new-plan`** or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*). While `continuationStatus` is `active`, the **Squad Leader** acknowledges only (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §6); this lane owns **AskQuestion** + inline decomposition (Step 7) on **later** user messages on this lane — not in the same turn as the terminal line.
 
 ## Completion (inline)
 
