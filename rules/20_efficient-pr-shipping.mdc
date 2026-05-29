@@ -266,13 +266,13 @@ Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation 
    - **Other lanes** — generate a copy-paste PR prompt per **`create-pr/SKILL.md`** § *PR prompt fallback*, or direct the developer to **`coding-session`** ship chain.
    On subsequent pushes, only commit/push/reconcile/upsert — skip **`create-pr`** handoff until a new first-push branch needs a PR.
 
-6. **Leader §8 ship recap (detached lanes).** This cadence usually runs on **`coding-session`** or another **detached** lane — not on the **plan and deliver** Squad Leader dispatch. The leader §8 table does **not** auto-update from commit/push, `upsert-pr`, or **`pr-review`** reconciliation on this lane.
+6. **Leader §8 host sync (detached lanes).** This cadence usually runs on **`coding-session`** or another **detached** lane — not on the **plan and deliver** Squad Leader dispatch. The leader §8 table does **not** auto-update from commit/push, `upsert-pr`, or **`pr-review`** reconciliation on this lane alone.
 
-   After steps 1–5 finish successfully, **nudge the developer once** to paste **Ship recap — plan and deliver** on the **leader dispatch** (template: [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](../missions/plan-and-deliver/plan.mdc) §8 *Leader-lane ship recap*; narrative: [development-process.md](../docs/development-process.md) § *Leader-lane ship recap*). Do **not** block the lane on the recap — ship skills also nudge at terminal milestones per **`skills/README.md`** § *Leader-lane ship recap*.
+   After steps 1–5 finish successfully, ensure the **`coding-session`** terminal (or next re-emit) includes §8 **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`, …) so Mission Control host sync updates the leader dispatch (**`plan.mdc`** §8; **`development-process.md`** § *Leader-lane §8 host sync*). **Forbidden:** nudging manual **Ship recap** paste on the leader dispatch.
 
-   **Silence on a detached lane is not ship complete.** If the **plan and deliver** dispatch stays active, missing recap means §8 rows stay stale — do not propose dispatch **`resolved`** from the leader lane until recap or explicit developer status (see **`plan.mdc`** §8 *Pre-resolution checklist* and *Dispatch resolution gates*). When the developer signals done on the leader dispatch but §8 still has **`open`** / **`blocked`** rows without a parsed recap, use **AskQuestion** once per **`plan.mdc`** §8 before **`MC_DISPATCH_RESOLVED_V1`** — do not infer **`resolved`** from done-language alone.
+   **Silence on a detached lane is not ship complete.** If the **plan and deliver** dispatch stays active, missing host sync means §8 rows stay stale — do not propose dispatch **`resolved`** from the leader lane until host-sync updates or explicit planning-only choice (see **`plan.mdc`** §8 *Pre-resolution checklist*).
 
-   Suggested `shipPhase` from this pass (when `resolve` returned a PR plan):
+   Suggested `shipPhase` from this pass (when `resolve` returned a PR plan) — include on **`coding-session`** terminal re-emit:
 
    | Cadence outcome | Suggest `shipPhase` |
    |-----------------|---------------------|

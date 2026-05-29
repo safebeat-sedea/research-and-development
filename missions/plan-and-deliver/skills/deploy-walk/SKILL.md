@@ -509,7 +509,7 @@ Stop when a **manual** step is presented and awaiting developer input, when the 
 
 ## Mission Control section 8 sync (via coding-session)
 
-**`deploy-walk`** is **not** a separate child terminal. §8 ship ledger fields reach the Squad Leader via **`coding-session`** terminal **`outputs`** or manual **Ship recap** — include `targetPlanPath`, `shipPhase`, `rowStatus`, `deployStatus`, `deployTodoStatus`, `remainingTasks`, and `blockedReason` when applicable per **`../coding-session/SKILL.md`** § *Squad Leader bubble-up*.
+**`deploy-walk`** is **not** a separate child terminal. §8 ship ledger fields reach the Squad Leader via **`coding-session`** terminal **`outputs`** on re-emit — include `targetPlanPath`, `shipPhase`, `rowStatus`, `deployStatus`, `deployTodoStatus`, `remainingTasks`, and `blockedReason` when applicable per **`../coding-session/SKILL.md`** § *Mission Control section 8 sync*. **Forbidden:** manual **Ship recap** on the leader dispatch.
 
 ## Completion (inline)
 

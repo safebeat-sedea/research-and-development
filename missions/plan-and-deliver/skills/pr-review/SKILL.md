@@ -251,15 +251,15 @@ The `[~]` marker plus the explicit "captured to … § Follow-ups" pointer lets 
 
 If Step 1 payloads are **missing or stale** in context (new comments since fetch, fresh chat), re-run **Step 1**’s `pr-review.py` array for the same `owner` / `repo` / `pull_number`, then run **GitHub only** above — do **not** start a second full **`pr-review`** triage unless you truly cannot resolve the PR identity.
 
-## Leader §8 recap (via coding-session)
+## §8 host sync (via coding-session)
 
-Runs **inline** on the **`coding-session`** lane. When triage reaches a stable milestone, ask the developer to paste **Ship recap — plan and deliver** on the **plan and deliver** leader dispatch (**`../../plan.mdc`** §8).
+Runs **inline** on the **`coding-session`** lane. When triage reaches a stable milestone, the **`coding-session`** agent **must** re-emit **`AGENT_RESULT_RESPONSE_V1`** with §8 **`outputs`** so Mission Control host sync updates the Squad Leader ledger (**`../../plan.mdc`** §8).
 
-| Milestone | `shipPhase` | Copy into recap |
-|-----------|-------------|-----------------|
-| PR comments triaged / reconciliation done | `pr-review` | `targetPlanPath`, `prReviewStatus`, `githubReconciliationStatus`, `remainingTasks` |
+| Milestone | `shipPhase` | Required `outputs` |
+|-----------|-------------|-------------------|
+| PR comments triaged / reconciliation done | `pr-review` | `targetPlanPath`, `shipPhase`, `rowStatus`, `prReviewStatus`, `githubReconciliationStatus`, `remainingTasks` |
 
-The **`coding-session`** agent carries the same fields in **`## Inline result for coding-session`** and **`coding-session`** § *Squad Leader bubble-up*.
+**Forbidden:** nudging manual **Ship recap** on the leader dispatch.
 
 ## Inline result for coding-session
 

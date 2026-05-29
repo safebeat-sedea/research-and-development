@@ -152,16 +152,24 @@ Set `continuationStatus`:
 - `active` when a PR prompt was emitted but the developer still must create the PR.
 - `active` when push or PR creation is blocked by missing authorization.
 
-## Squad Leader bubble-up
+## Mission Control section 8 sync (via coding-session)
 
-After inline completion on **`coding-session`**, nudge the developer to post **Ship recap — plan and deliver** on the leader dispatch when that dispatch is still active (**`../../plan.mdc`** §8).
+**`create-pr`** is **not** a separate child terminal. After inline completion, the invoker **must** merge these fields into the next **`coding-session`** **`AGENT_RESULT_RESPONSE_V1`** **`outputs`** (or re-emit updated terminal on that lane):
 
-| Outcome | `shipPhase` | Key fields for recap |
-|---------|-------------|----------------------|
+| Field | When |
+|-------|------|
+| `targetPlanPath` | Always when plan-anchored |
+| `shipPhase` | `pr-open` when PR created; `implementing` or `blocked` when deferred |
+| `rowStatus` | `open` when PR exists; `blocked` when handoff blocked |
+| `prUrl` / `prNumber` | When PR created |
+| `remainingTasks` / `blockedReason` | When applicable |
+
+**Forbidden:** nudging manual **Ship recap** on the Squad Leader dispatch. Host sync delivers §8 updates from **`coding-session`** terminals only.
+
+| Outcome | `shipPhase` | Key `outputs` |
+|---------|-------------|---------------|
 | PR created | `pr-open` | `targetPlanPath`, `prUrl`, `prNumber` |
 | Blocked / deferred | `implementing` or `blocked` | `targetPlanPath`, `remainingTasks`, `blockedReason` |
-
-**§8 host sync:** there is **no** separate **`create-pr`** child terminal. Populate `targetPlanPath`, `shipPhase`, and `rowStatus` on the next **`coding-session`** terminal `AGENT_RESULT_RESPONSE_V1` when that lane emits one — same pattern as inline **`pr-review`**.
 
 ## Completion (inline)
 
