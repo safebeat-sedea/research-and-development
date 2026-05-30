@@ -3,8 +3,9 @@ name: deploy-walk
 description: >-
   Inline coding-session procedure to walk a PR plan's `## N. Deploy test plan` section
   one step at a time. Executed by the active coding-session agent only — not spawned,
-  no warmUpRules. Agent-executable steps run without approval; manual steps present
-  for the developer. Three-state lifecycle in `**Status:**`; capstone todo when done.
+  no warmUpRules. Agent-executable steps run without approval; manual steps print
+  numbered step-by-step testing instructions for the developer. Three-state lifecycle
+  in `**Status:**`; capstone todo when done.
   Does not auto-run plan-reconcile.
 inputs:
   targetPlanPath:
@@ -74,12 +75,12 @@ If Mission Control opened a session whose only intent is **`deploy-walk`** / dep
 
 **Execution owner:** the active **coding-session agent** runs this skill inline. Do **not** spawn a separate deploy-walk child lane.
 
-**Agent-executable** steps (tests, repo scripts, curl/log checks the agent can run in the worktree or with available env) run **without approval** — on pass, flip `[ ]` → `[x]` with a dated note and advance. **Manual** steps are presented in detail for the developer (verbatim text, *because*, expected outcome, commands); the agent assists until the developer confirms, then flips the box. Three-state lifecycle (`drafted` → `deployed` → `done`) is recorded in a `**Status:**` line at the top of § N. When Status reaches `done`, frontmatter todo `deploy-test-plan-verified` flips `pending` → `done` in the same turn (see *Frontmatter capstone*). **Cross-skill:** when **`coding-session`** receives ad-hoc “step *N* confirmed” for §7, it must apply the same plan-file update rules here — or the developer should invoke **`deploy-walk <N> done`**. Use when the user says `deploy-walk present <N>`, `deploy-walk <N> done [: <note>]`, `deploy-walk <N> skip: <reason>`, `deploy-walk <N> block: <reason>`, `deploy-walk deployed [: <note>]`, or `deploy-walk status` **on the coding-session lane**.
+**Agent-executable** steps (tests, repo scripts, curl/log checks the agent can run in the worktree or with available env) run **without approval** — on pass, flip `[ ]` → `[x]` with a dated note and advance. **Manual** steps are presented with numbered **Testing steps** the developer follows in order (verbatim plan text, rationale, expected outcome, expanded commands); the agent assists until the developer confirms, then flips the box. Three-state lifecycle (`drafted` → `deployed` → `done`) is recorded in a `**Status:**` line at the top of § N. When Status reaches `done`, frontmatter todo `deploy-test-plan-verified` flips `pending` → `done` in the same turn (see *Frontmatter capstone*). **Cross-skill:** when **`coding-session`** receives ad-hoc “step *N* confirmed” for §7, it must apply the same plan-file update rules here — or the developer should invoke **`deploy-walk <N> done`**. Use when the user says `deploy-walk present <N>`, `deploy-walk <N> done [: <note>]`, `deploy-walk <N> skip: <reason>`, `deploy-walk <N> block: <reason>`, `deploy-walk deployed [: <note>]`, or `deploy-walk status` **on the coding-session lane**.
 
 | Step kind | Who runs it | On success |
 |-----------|-------------|------------|
 | **Agent-executable** | **Coding-session agent** (inline deploy-walk) — no approval modal before run | Agent runs commands, flips `[ ]` → `[x]` with dated note (command + outcome), advances to the next step |
-| **Manual** | **Developer** — agent presents context and assists | Developer reports; agent flips on `deploy-walk <N> done` / skip / block |
+| **Manual** | **Developer** — agent prints numbered **Testing steps** and assists | Developer reports; agent flips on `deploy-walk <N> done` / skip / block |
 
 See [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
 
@@ -164,10 +165,10 @@ Run **without** an **AskQuestion** approval gate. Use `worktreePath` from inline
 
 | Examples | Agent behavior |
 |----------|----------------|
-| Browser / UI verification, visual review, product sign-off | Present per [Step presentation contract](#step-4--step-presentation-contract); wait for developer |
+| Browser / UI verification, visual review, product sign-off | Present numbered **Testing steps** per [Step presentation contract](#step-4--step-presentation-contract); wait for developer |
 | Production dashboard, on-call judgment, “confirm with teammate” | Same |
-| Steps requiring credentials, VPN, or hardware the agent cannot access | Same — offer assistance (commands to run, what to look for) |
-| Subjective “feels right in staging” without automatable assertion | Same |
+| Steps requiring credentials, VPN, or hardware the agent cannot access | Same — **Testing steps** include commands the developer runs locally |
+| Subjective “feels right in staging” without automatable assertion | Same — **Testing steps** name concrete observations to record |
 
 **No auto-run** and **no auto-flip** until the developer invokes `deploy-walk <N> done`, `skip`, or `block`, or free-form equivalent confirmed in one line.
 
@@ -189,7 +190,7 @@ Repeat until stop condition:
 2. If none remain, run sub-section / lifecycle completion branches (Before complete → `deploy-walk deployed` hint or terminal; After complete → closure gate).
 3. Classify the step ([Agent-executable vs manual steps](#agent-executable-vs-manual-steps)).
 4. **Agent-executable:** run it → on pass, `StrReplace` flip + note → continue loop in the **same turn**.
-5. **Manual:** present step N per [Step presentation contract](#step-4--step-presentation-contract) and **stop** — wait for developer message.
+5. **Manual:** present step N with numbered **Testing steps** per [Step presentation contract](#step-4--step-presentation-contract) and **stop** — wait for developer message.
 
 **Forbidden:** **AskQuestion** “may I run this test?” before an agent-executable step. **Forbidden:** mark manual steps done without developer resolution.
 
@@ -265,7 +266,7 @@ Find the Nth numbered item in the active sub-section (regex `^N\. \[[ x]\] `). T
 - If the box is `[ ]` and has a prior `*(YYYY-MM-DD: Blocked — {reason})*` annotation, surface it: *"Previously blocked: {reason} (YYYY-MM-DD). Has the blocker cleared?"* Then classify — re-run if agent-executable and developer cleared the blocker; else present as manual.
 - If the box is `[ ]` and clean, **classify**:
   - **Agent-executable** — run per [Agent-executable vs manual steps](#agent-executable-vs-manual-steps); on pass flip and auto-advance; on fail block or assist.
-  - **Manual** — present per § *Step 4 — Step presentation contract* and stop.
+  - **Manual** — present with numbered **Testing steps** per § *Step 4 — Step presentation contract* and stop.
 
 ### `deploy-walk <N> done` / `deploy-walk <N> done: <note>` — flip box, advance hint
 
@@ -345,7 +346,7 @@ Where `{X}` is the count of `[x]` boxes (including skipped) in `### Before deplo
 
 Use this structure for **manual** steps only (or when an agent-executable run **failed** and you are handing back to the developer). Do **not** present first and wait when the step is agent-executable and runnable — run it per [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
 
-When presenting a manual step, use this structure. **Plan path:** show the absolute path you resolved in Step 1 (from **`plan-state resolve`** output, an explicit path the **developer** supplied, or the read tool path). Do **not** use `~/.cursor/plans/` or other non-**`.sedea/operations/`** locations for hosting repo plan IO.
+When presenting a manual step, **print numbered step-by-step testing instructions** the developer can follow without inferring missing actions. **Plan path:** show the absolute path you resolved in Step 1 (from **`plan-state resolve`** output, an explicit path the **developer** supplied, or the read tool path). Do **not** use `~/.cursor/plans/` or other non-**`.sedea/operations/`** locations for hosting repo plan IO.
 
 Use a **blockquote** or plain lines for the presentation shell — **do not** put `{slug}`, paths, or `{state}` inside raw `<…>` angle brackets (Markdown/HTML will eat them). Template:
 
@@ -360,13 +361,20 @@ Use a **blockquote** or plain lines for the presentation shell — **do not** pu
 >
 > *(any italic *because* phrasing in the plan body adjacent to or inside this step — search the surrounding paragraph for `*...*` runs that explain rationale; if there isn't one, omit this sub-section)*
 >
+> ### Testing steps
+>
+> 1. *(first concrete action — open URL, run command, navigate UI)*
+> 2. *(next action with inputs filled or `TODO:` markers)*
+> 3. *(verification checkpoint — what to observe, expected signal)*
+> *(continue until the full manual test is executable without inference)*
+>
 > ### Expected outcome
 >
-> *(inferred — what success looks like: HTTP status, response shape, log line, SQL output, dashboard signal. Pull from the step text + repo conventions; be concrete, not aspirational)*
+> *(pass/fail criteria after all testing steps — HTTP status, response shape, log line, SQL output, dashboard signal. Pull from the step text + repo conventions; be concrete, not aspirational)*
 >
 > ### Commands / context
 >
-> *(expand any shorthand the step uses — "each of the 9 `pushType` values" → enumerated list; "psql ..." → full command with the env vars filled or marked with a literal `TODO: fill in` where unknown; "curl staging" → full curl with headers and body; "tail logs filtered to ..." → the actual `kubectl logs` / `gcloud logging` invocation with the filter expression)*
+> *(full commands referenced in **Testing steps** — expand shorthand; "each of the 9 `pushType` values" → enumerated list; "psql ..." → full command with env vars filled or `TODO: fill in`; "curl staging" → full curl with headers and body)*
 >
 > ### Cross-references
 >
@@ -374,7 +382,25 @@ Use a **blockquote** or plain lines for the presentation shell — **do not** pu
 >
 > ---
 >
-> **Manual step** — run the verification yourself (or paste results). When done, reply `deploy-walk <N> done`, `deploy-walk <N> done: <note>`, `deploy-walk <N> skip: <reason>`, or `deploy-walk <N> block: <reason>`. Ask me anything while you work.
+> **Manual step** — follow **Testing steps** in order. When done, reply `deploy-walk <N> done`, `deploy-walk <N> done: <note>`, `deploy-walk <N> skip: <reason>`, or `deploy-walk <N> block: <reason>`. Ask me anything while you work.
+
+### Testing steps authoring rules
+
+1. **Testing steps** is **mandatory** for every manual presentation — a numbered list (`1.` … `N.`). Minimum one step; prefer **3–7** when the plan step implies multiple actions.
+2. Each sub-step is **one action + one checkpoint** (run command → check output; open page → confirm element; trigger flow → verify side effect).
+3. Expand plan shorthand into executable detail (URLs, curl bodies, CLI flags, UI paths, env vars as `TODO:` when unknown).
+4. **Forbidden:** manual presentation with only context blocks and **no** **Testing steps** list.
+5. When an agent-executable run **failed** and you hand back to the developer, include **Testing steps** for the retry path (same rules).
+
+**Example** (plan step: `Confirm staging health dashboard shows no alerts`):
+
+```markdown
+### Testing steps
+1. Open `{STAGING_DASHBOARD_URL}` (or run `open https://staging.example.com/health`).
+2. Filter to service `{service}` and window **Last 15 minutes**.
+3. Confirm **Active alerts** = 0 and **Error rate** below the threshold named in the plan step.
+4. Screenshot or paste the dashboard summary in chat if the signal is ambiguous.
+```
 
 If a sub-section ("Why" or "Cross-references") has nothing to say, omit it rather than emit a placeholder. If "Expected outcome" is genuinely ambiguous for a **manual** step, use **AskQuestion** to clarify what counts as success before the **developer** runs anything. For **agent-executable** ambiguity (missing env, unclear pass criteria), use **AskQuestion** to classify *agent-run* vs *manual* — not to approve a run you already know is agent-executable.
 
@@ -477,7 +503,7 @@ No blocking — the **developer** is in control.
 
 This skill walks **one PR plan's `## N. Deploy test plan` section at a time**. It does **not**:
 
-- Run **manual** steps without developer resolution — present, assist, wait for `done` / `skip` / `block`.
+- Run **manual** steps without developer resolution — present numbered **Testing steps**, assist, wait for `done` / `skip` / `block`.
 - Run destructive or irreversible production changes (deploy to prod, delete data, rotate secrets) unless the step text explicitly requires it **and** the developer chose that path in the same message — prefer **block** + AskQuestion when unsure.
 - **`git commit`**, **`git push`**, or any other write to the **hosting** git tree on behalf of the **developer** unless they explicitly ask in the same message. Plan body edits are normal **`StrReplace`** on the **`.plan.md`** file; syncing **`.sedea/operations/`** (or the hosting repo) to version control follows the **developer**'s workflow and hosting repo docs — this skill does **not** prescribe a monorepo-specific plan-commit command.
 - Reconcile / archive the plan when it reaches `done`, or auto-run **`plan-reconcile`**. **`plan-reconcile`** is never auto-invoked from this skill. The `done` flip + frontmatter `deploy-test-plan-verified` → `done` close the **deploy checklist only**; archival still depends on merge + explicit **plan-reconcile** (see **development-process** cadence).
