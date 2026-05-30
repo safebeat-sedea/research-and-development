@@ -197,7 +197,7 @@ git worktree add <path> -b <branch> origin/main
 ./scripts/bootstrap-worktree-dev.sh "<absolute-worktree-root>"
 ```
 
-Submodules, native extensions, and vscode compile run per `scripts/bootstrap-worktree-dev.sh --help`. The script is idempotent. **`coding-session`** spawns **`worktree-bootstrap`** on a child lane by default (see [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Worktree bootstrap handoff*); the child runs the script in [`worktree-bootstrap/SKILL.md`](../missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md). On failure, ship phase stays at `worktree` and the parent reports `partial` until bootstrap succeeds. Use **`--skip-*`** only when the developer attests partial setup.
+Submodules, native extensions, and vscode compile run per `scripts/bootstrap-worktree-dev.sh --help`. The script is idempotent. **`coding-session`** runs **`worktree-bootstrap`** **inline** on the same lane after attach (see [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)* and [`worktree-bootstrap/SKILL.md`](../missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md)) and **waits** for success before implementation. On failure, ship phase stays at `worktree` and the lane reports `partial` until bootstrap succeeds. Use **`--skip-*`** only when the developer attests partial setup.
 
 ### Fast vs full worktree bootstrap (sedea-ai/app overlay)
 
@@ -247,7 +247,7 @@ Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetc
 - For each **independent** PR, emit a `git worktree add … -b <branch> origin/main` command. These can be created and worked on immediately.
 - For each **dependent** PR, emit the command but comment that it should be created only after the predecessor merges.
 - Include cleanup for after PRs merge: for each retired worktree, **`sedea_remove_worktree_folder`** with that worktree's **absolute** path (Mission Control first), then **`git worktree remove`** and **`git worktree prune`**.
-- In the **Worktree setup** narrative, after each `git worktree add`, tell the Squad Leader to invoke **`sedea_add_worktree_folder`** with that worktree's **absolute** path, then let **coding-session** spawn **`worktree-bootstrap`** (or run **`./scripts/bootstrap-worktree-dev.sh "<absolute-worktree-root>"`** inline when spawn is unavailable) before implementation.
+- In the **Worktree setup** narrative, after each `git worktree add`, tell the Squad Leader to invoke **`sedea_add_worktree_folder`** with that worktree's **absolute** path, then let **coding-session** run **`worktree-bootstrap` inline** (mandatory wait before implementation) per [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*.
 
 ### Dirty hosting repo before `git worktree add`
 

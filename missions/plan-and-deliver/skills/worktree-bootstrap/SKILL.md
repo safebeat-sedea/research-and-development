@@ -2,10 +2,12 @@
 name: worktree-bootstrap
 description: >-
   Run scripts/bootstrap-worktree-dev.sh on a fresh git worktree after Mission
-  Control attach. Spawned by coding-session while the parent lane continues
-  implementation in parallel. Does not commit, spawn deploy-walk, or run the ship
-  chain on the parent — those wait for bootstrap success. Does not implement product code on
-  open PRs, or edit plan files unless the spawner requests a skip attestation path.
+  Control attach. Normative path: **inline** on the **`coding-session`** lane — the parent
+  waits for bootstrap success before any implementation. Spawned execution is an exception
+  only when a protocol step explicitly requires a child lane. Does not commit, spawn
+  deploy-walk, or run the ship chain — those wait for bootstrap success on the parent.
+  Does not implement product code on open PRs, or edit plan files unless the spawner
+  requests a skip attestation path.
 inputs:
   worktreePath:
     type: string
@@ -53,7 +55,9 @@ warmUpRules:
 
 This skill runs **`./scripts/bootstrap-worktree-dev.sh`** on **`WORKTREE_ROOT`** from **`HOSTING_ROOT`**. It prepares a fresh worktree (submodules, native extensions, vscode compile, smoke checks) so **`coding-session`** can implement in that tree.
 
-Spawn bootstrap (`AGENT_RUN_REQUEST_V1`) is **not** developer approval for worktrees — layer 2 **`developerApprovedImplementation`** stays on the parent **`coding-session`** lane.
+**Normative invocation:** **`coding-session`** runs this skill **inline** on the same lane after worktree attach and **waits** for `outputs.bootstrapStatus: success` before implementation. Spawn (`AGENT_RUN_REQUEST_V1`) is **not** the default — use only when a protocol step explicitly requires a spawned bootstrap child; the parent must still wait for success before implementing.
+
+Running bootstrap is **not** developer approval for worktrees — layer 2 **`developerApprovedImplementation`** stays on the parent **`coding-session`** lane.
 
 ## Structured choice (Mission Control)
 
@@ -126,6 +130,6 @@ Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` on this
 
 ## Completion (inline)
 
-Report the same `outputs` semantics in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section.
+Report the same `outputs` semantics in prose to the invoker on the **same lane** (or populate `outputs` on **`coding-session`** terminal lines when this skill runs inline there). Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section.
 
-Normally spawned from **`coding-session`**. If run inline (rare), use the spawned contract fields in prose only.
+**Primary path:** **`coding-session`** invokes this skill inline after attach and blocks implementation until **`outputs.bootstrapStatus: success`**. See [`../coding-session/SKILL.md`](../coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*.
