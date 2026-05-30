@@ -12,32 +12,32 @@ description: >-
  opens a fresh planning chat from the "feature plan: design + changes"
  plan-board prompt, or says "planner" / "draft a master plan".
 inputs:
- seedBlock:
- type: string
- description: Complete planner seed block (Master Plan handoff) containing Feature planning, PRD, Parent, and optional Related entries.
- required: true
- featurePlanningTitle:
- type: string
- description: Human-readable feature title copied into the Master Plan name and H1.
- required: true
- prdRef:
- type: string
- description: Readable PRD URL, workspace @path, or absolute path.
- required: true
- parent:
- type: string
- description: Parent plan slug/path, or null when creating a new top-level plan.
- required: true
- related:
- type: array
- description: Optional related document entries with role and link/path.
- required: false
- default: []
+  seedBlock:
+    type: string
+    description: Complete planner seed block (Master Plan handoff) containing Feature planning, PRD, Parent, and optional Related entries.
+    required: true
+  featurePlanningTitle:
+    type: string
+    description: Human-readable feature title copied into the Master Plan name and H1.
+    required: true
+  prdRef:
+    type: string
+    description: Readable PRD URL, workspace @path, or absolute path.
+    required: true
+  parent:
+    type: string
+    description: Parent plan slug/path, or null when creating a new top-level plan.
+    required: true
+  related:
+    type: array
+    description: Optional related document entries with role and link/path.
+    required: false
+    default: []
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # Planner: §§ 1–5 from the PRD
@@ -500,7 +500,7 @@ Do **not** draft section 6 (`Delivery phases | PR breakdown`) or section 7 (Cave
 
 After **Echo to chat** (§§1–5 + complexity table), end with **one short status line only** (plan path, band, overall score). **Do not** embed the next-move menu in prose blockquotes.
 
-When using the **legacy split** (see **`../README.md`** § *Recap, structured choice, act*), do **not** invoke **AskQuestion** in the same message as the full section echo. **Required:** combine recap + next-move modal in one message via **AskQuestion tool** or **`MC_PHASED_RESPONSE_V1`** (`display.markdown` for status; `askQuestion` for options).
+When using the **legacy split** (see **`../README.md`** § *Recap, structured choice, act*), do **not** invoke **AskQuestion** in the same message as the full section echo. **Required:** combine recap + next-move modal in one message via **AskQuestion tool** or **`MC_PHASED_RESPONSE_V1`** (`display.markdown` for status; `askQuestion` for options). On the **initial §§1–5 draft turn**, include **`MC_PHASED_RESPONSE_V1`** in the **same** message as **`AGENT_RESULT_RESPONSE_V1`** — phased **line 1**, terminal **last line** (rule **2** § *Same message as spawn terminal*).
 
 ### Step 7b — Structured choice: primary next moves
 
@@ -661,7 +661,7 @@ Required `outputs` fields:
 - `outputs.expandEligibleIndices`, `outputs.expandNextEligibleIndex` — echo from inline decomposition after spawn-chain ship-complete merges
 - `outputs.prShipComplete`, `outputs.phaseShipComplete` — when this lane merged bubbled ship terminals from nested **`coding-session`** / **`phase-planner`** chains
 
-Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` for **`delivery-phases`**, **`pr-breakdown`**, or **`new-plan`** or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*). While `continuationStatus` is `active`, the **Squad Leader** acknowledges only (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §6); this lane owns **AskQuestion** + inline decomposition (Step 7) on **later** user messages on this lane — not in the same turn as the terminal line.
+Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` for **`delivery-phases`**, **`pr-breakdown`**, or **`new-plan`** or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*). While `continuationStatus` is `active`, the **Squad Leader** acknowledges only (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §6); this lane owns **AskQuestion** + inline decomposition (Step 7) on follow-up user messages. On turns that emit **`AGENT_RESULT_RESPONSE_V1`**, also emit **`MC_PHASED_RESPONSE_V1`** in the **same** message (phased line 1, terminal last line) per rule **2** § *Same message as spawn terminal* — Step **7b** options may be in that phased block on the initial draft turn.
 
 **§7 / terminal coupling:** Never emit **`continuationStatus: terminal`** in the same turn as a §7 approval **AskQuestion**. When §7 was just populated and **`caveatsApprovalStatus`** is **`pending`**, the next user-visible turn must be approval structured choice only — terminal **`AGENT_RESULT_RESPONSE_V1`** comes **after** the developer approves or skips §7.
 

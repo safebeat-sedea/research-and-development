@@ -42,7 +42,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 | **Parked continuation** | User leaves chat (PR/diff/CI) before next step | Open modal **before** end turn — rule **2** § External-wait; forbid prose “wait for user/developer” |
 | **Act** | Spawn, terminal result, implementation | After the user selects in the modal |
 
-**Normative:** Every skill in this mission that collects a pick, approval, or ship gate **must** close the choice turn with the **AskQuestion tool** or **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** § **Context and structured choice** and § **`MC_PHASED_RESPONSE_V1` wire format (binding)**. **Forbidden:** prose-only exit, prose menus, or “wait for the developer” without a modal. Do **not** use “Turn A/B” or similar implementation labels in developer-facing chat.
+**Normative:** Every skill in this mission **must** close **every** assistant turn with the **AskQuestion tool** or **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** § **Mandatory structured choice on every turn** and § **`MC_PHASED_RESPONSE_V1` wire format (binding)**. **Forbidden:** prose-only exit, recap-only endings, prose menus, or “wait for the developer” without a modal. Spawned skills that emit **`AGENT_RESULT_RESPONSE_V1`** put **`MC_PHASED_RESPONSE_V1`** on **line 1** and the terminal sentinel on the **last line** of the same message. Do **not** use “Turn A/B” or similar implementation labels in developer-facing chat.
 
 **Authoring new or updated skills (binding):**
 
@@ -64,7 +64,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 
 **Lane pick (no resolved target):** emit *Where we are now in the plan tree* snapshot, then structured choice per **30_planning-target-resolution** § *Sedea input channel* (phased or split — not prose menus).
 
-**Spawned child lanes:** Cloud/spawned agents lack the native AskQuestion tool. **Every choice turn** **must** emit **`MC_PHASED_RESPONSE_V1`** (sentinel line **1**, recap in **`display.markdown`**, options in **`askQuestion`**) or split per rule **2** priority **3**. Wire format: rule **2** § **`MC_PHASED_RESPONSE_V1` wire format (binding)**. Gate templates: **`coding-session/SKILL.md`** § *Spawned lane — sentinel-first (binding)*.
+**Spawned child lanes:** Cloud/spawned agents lack the native AskQuestion tool. **Every turn** **must** emit **`MC_PHASED_RESPONSE_V1`** (sentinel line **1**, recap in **`display.markdown`**, options in **`askQuestion`**) or split per rule **2** priority **3**. Wire format: rule **2** § **`MC_PHASED_RESPONSE_V1` wire format (binding)**. Gate templates: **`coding-session/SKILL.md`** § *Spawned lane — sentinel-first (binding)*.
 
 ## Planning spawn (Squad Leader §3, §5, decomposition tree)
 
@@ -226,6 +226,29 @@ Every **spawned** plan-and-deliver skill lists the paths below in frontmatter **
 - `.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`
 
 **`pr-review`** and **`create-pr`** are inline-only — **no** frontmatter **`warmUpRules`**; they run **only** on the active **`coding-session`** lane (which includes this README and rule **20**). Do not dispatch **`pr-review`** or **`create-pr`** as standalone skill sessions.
+
+### SKILL.md frontmatter (Mission Control spawn)
+
+Mission Control **`skillResolver`** parses YAML frontmatter with strict unique keys. **`inputs`** must use **2-space** nesting (input name → field keys), not single-space flat keys — flat `inputs` breaks spawn with `skill-not-found` / duplicate key errors.
+
+**Canonical shape** — copy from **`missions/topics/skills/create-topic-plan/SKILL.md`**:
+
+```yaml
+inputs:
+  inputName:
+    type: string
+    description: ...
+    required: true
+warmUpRules:
+  - ".sedea/centers/..."
+```
+
+**Repair / verify:** from hosting repo root (with **`scripts/node_modules`** installed):
+
+```bash
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/fix-skill-frontmatter.mjs --write
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/verify-skill-manifest.mjs
+```
 
 ### Adding or removing a skill
 
