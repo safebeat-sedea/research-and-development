@@ -162,13 +162,15 @@ For each **new** (not filtered in Step 2) comment, verify it against the **curre
 - **Skipped (no follow-up)** — issue is already fixed in the working tree, factually wrong, or pure noise (e.g. linter chatter the project doesn't enforce). Nothing to track.
 - **Skipped → follow-up** — issue is *valid* but *out of scope* for this PR's single concern. Strategy #6 forbids silently expanding the PR; propose a `## Follow-ups` bullet in Step 3a so the item isn't lost.
 
-Do **not** apply fixes yet. First report the classification and wait for explicit developer approval through `coding-session`.
+Do **not** apply fixes yet. First report the classification; then open the Step **3b** gate (below) — do **not** end the turn with prose “wait for approval”.
 
 ### Step 3b — Developer approval gate
 
-Run this gate only after Step 3a has prepared proposed follow-ups and Step 4 has reported the full classification to the developer.
+Run this gate only after Step 3a has prepared proposed follow-ups and Step **4** has printed the classification report.
 
-Before applying any code, plan, or GitHub changes, **coding-session** must ask the developer with **AskQuestion**. Required options:
+Before applying any code, plan, or GitHub changes, open the **parked disposition gate** in Step **4** (`MC_PHASED_RESPONSE_V1` or **AskQuestion** with the option set below). **Do not** duplicate the gate in prose.
+
+Required options:
 
 1. **Apply Must fixes** — edit only PR-blocking comments.
 2. **Apply Must + Should fixes** — edit blockers and approved non-blocking fixes.
@@ -180,7 +182,7 @@ No source edits, plan edits, commits, pushes, GitHub replies, resolves, minimize
 
 When the approved scope includes **Follow-ups only** or includes any **Skipped → follow-up** comments, append only those approved bullets to the linked PR plan's `## Follow-ups` section before Step 5. If the developer rejects a proposed follow-up, do not mutate the plan or mention it as captured in GitHub reconciliation.
 
-After approved fixes are applied, stop for developer review before commit/push. Do not commit or push silently.
+After approved fixes are applied, open a **second** structured-choice gate (commit/push options per Step **4** post-fix) before `git commit` or `git push` — do not commit or push silently.
 
 ### Step 3a — Propose out-of-scope flags as follow-ups
 
@@ -200,7 +202,7 @@ Acknowledge: *"Prepared <K> Code Review Follow-ups for `<slug>.plan.md` § Follo
 
 Plan files live under **`.sedea/operations/`** on the primary hosting repo. In the Sedea `app` monorepo, see `.sedea/centers/sedea/rules/0_hosting-repo.mdc`: that tree is often its **own** git repository, gitignored or submodule-pinned from the monorepo. Edits to `*.plan.md` / `*.state.yaml` therefore may **not** appear in the hosting repo worktree's `git status`. Sync plan changes through whatever workflow owns the operations repository (for example a dedicated `operations` commit), not only the `app` PR — rule **20** § *Commit and push cadence* still commits hosting-repo source changes as usual when the developer requests *commit* / *push* in the same message.
 
-### Step 4 — Report
+### Step 4 — Report and parked disposition gate
 
 Print **every** comment in its original form (quote the body). For each one, state one of four dispositions:
 
@@ -209,16 +211,30 @@ Print **every** comment in its original form (quote the body). For each one, sta
 - **Skipped (no follow-up)** — why it doesn't apply (already fixed, factually wrong, pure noise).
 - **Skipped → follow-up** — paraphrase the planning concern + the `(target: …)` hint (if any) proposed in Step 3a. Reference the slug so the user can approve or reject: *"Proposed for `<slug>.plan.md` § Follow-ups."*
 
-Do **not** reply to, resolve, or minimize any threads yet. Wait for the user to review the changes first.
+Do **not** reply to, resolve, or minimize any threads yet.
 
-If there are code changes to review, wait for the user before committing. If all comments were skipped (no code changes), proceed to Step 5 only after the developer approves the skipped dispositions and any proposed follow-ups.
+**Parked continuation (binding):** After the report, emit **`MC_PHASED_RESPONSE_V1`** (preferred on **`coding-session`** spawned lanes — sentinel line **1**, report recap in **`display.markdown`**) or the **AskQuestion** tool with the Step **3b** option set. The developer may review on GitHub or inspect local diffs **while the modal stays open**; they resume by **selecting an option**, not free-form chat.
 
-After Step 4, use **AskQuestion** (per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**) when fixes may be ready to land. Include at least:
+| Option id (illustrative) | Label (brief) |
+|--------------------------|---------------|
+| `apply-must` | Apply Must fixes only |
+| `apply-must-should` | Apply Must + Should fixes |
+| `follow-ups-only` | Follow-ups only — no source edits |
+| `skip-reject` | Skip / reject selected comments |
+| `more-details` | More details for option _ |
+
+**Forbidden:** “Review the PR and tell me when to continue”, “wait for the user to review”, or ending the turn without structured choice when dispositions need approval.
+
+**Act** (edits, plan append, GitHub reconciliation) runs on the **developer's response turn** after modal selection — not in the same turn as the parked gate.
+
+When fixes are applied and ready to land, use a **separate** structured-choice gate before commit/push. Include at least:
 
 1. **Commit and push** (same message must say *commit* / *push* per **`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`**) — when Step 4 ran in this chat, rule **20** § *Commit and push cadence* step 3 requires **this skill’s Step 5 (GitHub only)** in the **same agent turn** after push, before plan upsert and **create-pr** prompt.
 2. **Revise dispositions or fixes**
 3. **Defer — stay on pr-review**
 4. **More details for option _**
+
+If all comments were **Skipped (no follow-up)** with **no** code edits, the Step **3b** pick may authorize proceeding directly to Step **5 — GitHub only** (skipped-only path).
 
 ### Step 5 — GitHub reconciliation (after commit and push or skipped-only)
 

@@ -39,9 +39,16 @@ Mission Control delivery for skills that mix long plan output with structured us
 |-------|---------|--------|
 | **Recap** | Plan link, one-line summary, optional short recap | Prefer one message with structured choice (AskQuestion tool or `MC_PHASED_RESPONSE_V1`) |
 | **Structured choice** | Modal approval / gates | No bare `MC_ASKQUESTION_V1` after recap prose in the same message |
+| **Parked continuation** | User leaves chat (PR/diff/CI) before next step | Open modal **before** end turn — rule **2** § External-wait; forbid prose “wait for user/developer” |
 | **Act** | Spawn, terminal result, implementation | After the user selects in the modal |
 
 **Normative:** Every skill in this mission that collects a pick, approval, or ship gate MUST follow the precedence table in **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** § **Context and structured choice**. Do **not** use “Turn A/B” or similar implementation labels in developer-facing chat.
+
+**Authoring new or updated skills (binding):**
+
+- When a step says the developer will review work **outside** chat (GitHub PR, diff, staging), end the turn with **parked** structured choice — not “wait for the user” / “come back when done” prose alone.
+- Gate **`options`** must match the skill’s next branches (approve, revise, defer, commit when applicable, **More details for option _**).
+- Reference **`coding-session/SKILL.md`** § *Post-create-pr handoff gate* and **`pr-review/SKILL.md`** Step **4** for ship-path examples.
 
 **Reference implementations (planning):**
 
@@ -49,7 +56,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 |-------|-------|-------------------|-----|
 | **`pr-breakdown`**, **`delivery-phases`** | §5d | §6 (`approve-list` / `expand-eligible`) | §6 act-after-select (depth-first) |
 | **`pr-plan`** | §5c recap | §5c modal | §5d spawn |
-| **`planner`** | §7a | §7b | §7c |
+| **`planner`** | §7a | §7b (incl. §7 approve after ship-complete) | §7c |
 | **`phase-planner`** | §4f echo / §5c link | §5b / §5c | §5b spawn / §5d follow-up |
 | **`new-plan`** | stub + parent link | populator gate § indexed handoff | populator spawn |
 
@@ -192,7 +199,7 @@ After emitting **`AGENT_RESULT_RESPONSE_V1`**, **stop on that lane** for the cur
 |-------|------------------------------------------------------------------------|--------|
 | `author-prd` (prd mission) | Yes | Also forbids downstream planning spawns |
 | `pr-plan` | Yes | May spawn **`coding-session`** in §5d before terminal (standalone) or inline under **`new-plan`**; one spawn per turn |
-| `planner` | Yes | Procedure stop before terminal when `continuationStatus: active`; Step 7 runs **`delivery-phases`** / **`pr-breakdown`** inline on **later** user messages only |
+| `planner` | Yes | Procedure stop before terminal when `continuationStatus: active`; Step 7 runs **`delivery-phases`** / **`pr-breakdown`** inline on **later** user messages only; **`continuationStatus: terminal`** blocked while **`caveatsApprovalStatus: pending`** (§7 approve gate — see **`planner/SKILL.md`** *Draft §7 Caveats*) |
 | `delivery-phases`, `pr-breakdown`, `new-plan`, `ad-hoc-prd` | Yes | `delivery-phases` / `pr-breakdown`: inline **`new-plan`** under planner; `new-plan`: inline under decomposition; `ad-hoc-prd`: active result after write, terminal only after developer approval; see each skill § *Completion (spawned)* |
 | Ship chain (`coding-session`, `pre-pr-review`) | Yes | Inline ship skills (`create-pr`, `deploy-walk`, `plan-reconcile`, `pr-review`) — see **`## Completion (inline)`** |
 | `phase-planner` | Yes | Runs **`delivery-phases`** / **`pr-breakdown`** inline; may spawn nested **`phase-planner`** or **`coding-session`** |
