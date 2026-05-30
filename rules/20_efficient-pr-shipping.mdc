@@ -191,6 +191,8 @@ git worktree add <path> -b <branch> origin/main
 
 **Attach the worktree in Sedea.** In Mission Control chat, invoke the MCP tool **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` and, if you want a custom explorer label, an optional `"name"` field. Use an **absolute** `path` (resolve with `git worktree list`, or `cd` into the worktree and expand to a full path); relative paths are unreliable. Mission Control mirrors the tool into the workbench so the folder appears as a workspace root.
 
+**Lane ownership:** On a spawned **`coding-session`** implementation lane, [Generic flow](../missions/plan-and-deliver/skills/coding-session/SKILL.md) steps 1–3 are normative even when this section describes Squad Leader handoff — see that skill § *Worktree create → attach → bootstrap (ownership)*. **`worktree-bootstrap`** never calls **`sedea_add_worktree_folder`**; it runs only after attach.
+
 **Bootstrap the worktree (mandatory for coding-session).** After attach, from **`HOSTING_ROOT`** run:
 
 ```bash

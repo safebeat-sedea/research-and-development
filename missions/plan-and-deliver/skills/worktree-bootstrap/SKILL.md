@@ -59,6 +59,15 @@ This skill runs **`./scripts/bootstrap-worktree-dev.sh`** on **`WORKTREE_ROOT`**
 
 Running bootstrap is **not** developer approval for worktrees — layer 2 **`developerApprovedImplementation`** stays on the parent **`coding-session`** lane.
 
+## Prerequisites (parent **`coding-session`** lane)
+
+This skill **does not** create worktrees or attach them to Sedea. The parent lane must finish first:
+
+1. **`git worktree add`** — filesystem worktree exists at **`worktreePath`**.
+2. **`sedea_add_worktree_folder`** — worktree is a workspace root in Mission Control (unless the parent confirms attach already succeeded).
+
+Then invoke **`worktree-bootstrap`** inline with **`worktreePath`** and **`hostingRoot`**. If **`worktreePath`** is missing or MCP attach failed, stop — do **not** substitute `git worktree add` or **`sedea_add_worktree_folder`** on this lane (see **Forbidden** in step 2 below).
+
 ## Structured choice (Mission Control)
 
 This skill does not own approval modals. When the script fails and a retry path needs a developer pick, use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act*.

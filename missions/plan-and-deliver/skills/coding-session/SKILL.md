@@ -92,6 +92,21 @@ Hand off a unit of work into a **dedicated git worktree**, with the worktree vis
 
 **Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code when this run is **prompt-only** (see [Prompt-only handoff](#prompt-only-handoff)); opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
+## Worktree create → attach → bootstrap (ownership)
+
+Four **sequential** steps on the **`coding-session`** lane after the [Worktree-open gate](#worktree-open-gate). **`worktree-bootstrap`** runs **only** step 4 — it does **not** replace steps 1–3.
+
+| Step | Owner lane | Action | Tool / skill |
+|------|------------|--------|--------------|
+| 1 | **`coding-session`** | Create filesystem worktree + branch | `git worktree add` ([Generic flow](#generic-flow-single-repo) step 1) |
+| 2 | **`coding-session`** | Record sidecar `worktrees` / `session` | `plan-state.mjs` (step 2) |
+| 3 | **`coding-session`** | Mount worktree in Sedea workbench | MCP **`sedea_add_worktree_folder`** (step 3) |
+| 4 | **`coding-session`** (inline **`worktree-bootstrap`**) | Dev bootstrap script | `./scripts/bootstrap-worktree-dev.sh` — see [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) |
+
+**Not a conflict:** `git worktree add` creates the directory; **`sedea_add_worktree_folder`** adds that path to the Mission Control / editor workspace. **`worktree-bootstrap`** assumes both are done and **forbids** repeating steps 1 or 3 on its lane.
+
+**Squad Leader vs this lane:** **20_efficient-pr-shipping.mdc** § *Squad Leader on the main branch* may create the worktree and call **`sedea_add_worktree_folder`** before spawning **`coding-session`**. When this skill runs [Generic flow](#generic-flow-single-repo) on a **spawned implementation lane**, **this lane** owns steps 1–4 end-to-end unless the leader already completed attach and passed absolute **`WORKTREE_ROOT`** in spawn `inputs` — then skip duplicate `git worktree add` / MCP only when the worktree path already exists **and** is already mounted in the workbench.
+
 ## Structured choice (Mission Control)
 
 Approval gates and branch picks use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — **preferred:** recap (status, diff, validation) + modal in one message; bare **`MC_ASKQUESTION_V1`** is sentinel-only. **Act** (worktrees, spawn, `git`, code edits) is always after the developer selects in the modal.
