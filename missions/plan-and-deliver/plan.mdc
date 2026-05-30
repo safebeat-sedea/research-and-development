@@ -64,7 +64,19 @@ Approval gates and developer choices happen inside each skill.
 
 7. **Post-ship plan hygiene** — Merge-driven reconcile, archive candidates, follow-ups triage (`plan-reconcile`).
 
-8. **Plan tree integrity** — Scaffold and link `.plan.md` + `.state.yaml` under `.sedea/operations/` (`new-plan`, `plan-reconcile`); valid parents, slugs, Mission Control metadata (`mission.yaml` when listed).
+8. **Plan tree integrity** — Scaffold and link `.plan.md` + `.state.yaml` under `.sedea/operations/` (`new-plan`, `plan-reconcile`); valid parents, slugs, Mission Control metadata (`mission.yaml` when listed). **All operations writes from the main hosting clone only** — see *Operations filesystem invariant*.
+
+### Operations filesystem invariant (binding)
+
+All artifacts under **`.sedea/operations/`** — plans (`*.plan.md`, `*.state.yaml`), dispatch bundles, docs, and any other operations-tree paths — **must be created and edited only from the main hosting repo clone**: the filesystem tree whose root contains **`.sedea/centers/sedea/`** (primary clone / Mission Control workspace root). **Never** create, edit, move, or delete operations files with shell **`cwd`**, editor roots, or paths resolved from a **hosting repo git worktree**.
+
+| Allowed | Forbidden |
+|---------|-----------|
+| Read operations paths from any lane for context | Write operations files from a worktree `git rev-parse --show-toplevel` |
+| Run **`plan-state.mjs`** with `cd "$HOSTING_ROOT"`; pass **`--cwd "$WORKTREE_ROOT"`** only to **link** a plan to a worktree | Run **`plan-state.mjs set-*`** (or equivalent writes) with shell cwd inside a worktree |
+| Update sidecars during **`coding-session`** after resolving **`HOSTING_ROOT`** explicitly | Bootstrap or persist operations content under a worktree copy |
+
+Worktrees are **ephemeral**; operations artifacts must **persist** on the durable main clone. When a worktree lacks **`.sedea/operations/`**, **do not** treat it as the write surface — resolve the main hosting root first. Normative baseline: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § **Operations persistence (main hosting root only)**; **`HOSTING_ROOT`** resolution: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../rules/20_efficient-pr-shipping.mdc) § *Resolve `HOSTING_ROOT`*.
 
 ## Squad operations (`plan and deliver` dispatch)
 
