@@ -11,66 +11,66 @@ description: >-
  planning-target-resolution. Use under mission dispatch, **pr-breakdown**
  protocol branch, or natural language (decompose into PRs, draft PR breakdown).
 inputs:
- targetPlanPath:
- type: string
- description: Absolute or workspace-relative path to the Master Plan or Phase plan being decomposed.
- required: true
- targetPlanSlug:
- type: string
- description: Slug for the target plan.
- required: true
- parentAgentRole:
- type: string
- description: Upstream owner that invoked this skill inline, usually master-plan-agent or phase-planner-agent.
- required: false
- ledgerParent:
- type: string
- description: Slug/path of the ledger parent entry the Squad Leader tracks.
- required: false
- complexityBand:
- type: string
- description: Plan-scope complexity band copied from the upstream plan, when available.
- required: false
- complexityScore:
- type: number
- description: Plan-scope complexity score copied from the upstream plan, when available.
- required: false
- decompositionAssessment:
- type: string
- description: Current Decomposition assessment block from the upstream plan.
- required: false
- routeLock:
- type: string
- description: Optional upstream-selected route. When set to pr-breakdown, do not route back to delivery-phases unless the assessment creates a blocking conflict.
- required: false
- prBreakdownShape:
- type: string
- description: Optional upstream route detail for PR breakdown, single or multi.
- required: false
- hoistFromPhasePath:
- type: string
- description: >-
- When set, scope single-PR breakdown from this phase plan file; targetPlanPath
- must be the decomposition ancestor (parent of that phase), not the phase plan.
- required: false
- hoistFromPhaseSlug:
- type: string
- description: Slug of the phase plan being hoisted (must match hoistFromPhasePath).
- required: false
- scopeParentIndex:
- type: number
- description: One-based Delivery phases index on the target ancestor for the hoisted phase row.
- required: false
- decomposeOnPhasePlan:
- type: boolean
- description: When true, allow single-PR pr-breakdown on a phase plan target (override hoist).
- required: false
- default: false
+  targetPlanPath:
+    type: string
+    description: Absolute or workspace-relative path to the Master Plan or Phase plan being decomposed.
+    required: true
+  targetPlanSlug:
+    type: string
+    description: Slug for the target plan.
+    required: true
+  parentAgentRole:
+    type: string
+    description: Upstream owner that invoked this skill inline, usually master-plan-agent or phase-planner-agent.
+    required: false
+  ledgerParent:
+    type: string
+    description: Slug/path of the ledger parent entry the Squad Leader tracks.
+    required: false
+  complexityBand:
+    type: string
+    description: Plan-scope complexity band copied from the upstream plan, when available.
+    required: false
+  complexityScore:
+    type: number
+    description: Plan-scope complexity score copied from the upstream plan, when available.
+    required: false
+  decompositionAssessment:
+    type: string
+    description: Current Decomposition assessment block from the upstream plan.
+    required: false
+  routeLock:
+    type: string
+    description: Optional upstream-selected route. When set to pr-breakdown, do not route back to delivery-phases unless the assessment creates a blocking conflict.
+    required: false
+  prBreakdownShape:
+    type: string
+    description: Optional upstream route detail for PR breakdown, single or multi.
+    required: false
+  hoistFromPhasePath:
+    type: string
+    description: >-
+      When set, scope single-PR breakdown from this phase plan file; targetPlanPath
+      must be the decomposition ancestor (parent of that phase), not the phase plan.
+    required: false
+  hoistFromPhaseSlug:
+    type: string
+    description: Slug of the phase plan being hoisted (must match hoistFromPhasePath).
+    required: false
+  scopeParentIndex:
+    type: number
+    description: One-based Delivery phases index on the target ancestor for the hoisted phase row.
+    required: false
+  decomposeOnPhasePlan:
+    type: boolean
+    description: When true, allow single-PR pr-breakdown on a phase plan target (override hoist).
+    required: false
+    default: false
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # PR breakdown — mode #3 decomposition

@@ -10,43 +10,43 @@ description: >-
  resolved per planning-target-resolution. Use under mission dispatch, **delivery-phases**
  protocol branch, or natural language (decompose phases, draft delivery phases).
 inputs:
- targetPlanPath:
- type: string
- description: Absolute or workspace-relative path to the Master Plan or Phase plan being decomposed.
- required: true
- targetPlanSlug:
- type: string
- description: Slug for the target plan.
- required: true
- parentAgentRole:
- type: string
- description: Upstream owner that invoked this skill inline, usually master-plan-agent or phase-planner-agent.
- required: false
- ledgerParent:
- type: string
- description: Slug/path of the ledger parent entry the Squad Leader tracks.
- required: false
- complexityBand:
- type: string
- description: Plan-scope complexity band copied from the upstream plan, when available.
- required: false
- complexityScore:
- type: number
- description: Plan-scope complexity score copied from the upstream plan, when available.
- required: false
- decompositionAssessment:
- type: string
- description: Current Decomposition assessment block from the upstream plan.
- required: false
- routeLock:
- type: string
- description: Optional upstream-selected route. When set to delivery-phases, skip the decision gate.
- required: false
+  targetPlanPath:
+    type: string
+    description: Absolute or workspace-relative path to the Master Plan or Phase plan being decomposed.
+    required: true
+  targetPlanSlug:
+    type: string
+    description: Slug for the target plan.
+    required: true
+  parentAgentRole:
+    type: string
+    description: Upstream owner that invoked this skill inline, usually master-plan-agent or phase-planner-agent.
+    required: false
+  ledgerParent:
+    type: string
+    description: Slug/path of the ledger parent entry the Squad Leader tracks.
+    required: false
+  complexityBand:
+    type: string
+    description: Plan-scope complexity band copied from the upstream plan, when available.
+    required: false
+  complexityScore:
+    type: number
+    description: Plan-scope complexity score copied from the upstream plan, when available.
+    required: false
+  decompositionAssessment:
+    type: string
+    description: Current Decomposition assessment block from the upstream plan.
+    required: false
+  routeLock:
+    type: string
+    description: Optional upstream-selected route. When set to delivery-phases, skip the decision gate.
+    required: false
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # Delivery phases — mode #2 decomposition

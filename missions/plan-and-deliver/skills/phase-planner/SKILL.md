@@ -11,44 +11,44 @@ description: >-
  branch, natural language, or after **`new-plan`** ignition on a `Delivery phases`
  child stub.
 inputs:
- targetPlanPath:
- type: string
- description: Path to the phase plan stub to populate.
- required: true
- targetPlanSlug:
- type: string
- description: Slug for the phase plan stub.
- required: true
- parentPlanPath:
- type: string
- description: Path to the parent plan containing the Delivery phases row.
- required: true
- parentPlanSlug:
- type: string
- description: Slug for the parent plan.
- required: true
- parentIndex:
- type: number
- description: One-based Delivery phases index that produced this child.
- required: true
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from the upstream agent.
- required: false
- upstreamSkill:
- type: string
- description: Skill that requested this phase population, usually new-plan.
- required: false
- autoContinue:
- type: boolean
- description: When true, run the next decomposition branch inline after population if parent hint and assessment agree.
- required: false
- default: true
+  targetPlanPath:
+    type: string
+    description: Path to the phase plan stub to populate.
+    required: true
+  targetPlanSlug:
+    type: string
+    description: Slug for the phase plan stub.
+    required: true
+  parentPlanPath:
+    type: string
+    description: Path to the parent plan containing the Delivery phases row.
+    required: true
+  parentPlanSlug:
+    type: string
+    description: Slug for the parent plan.
+    required: true
+  parentIndex:
+    type: number
+    description: One-based Delivery phases index that produced this child.
+    required: true
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from the upstream agent.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Skill that requested this phase population, usually new-plan.
+    required: false
+  autoContinue:
+    type: boolean
+    description: When true, run the next decomposition branch inline after population if parent hint and assessment agree.
+    required: false
+    default: true
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # Phase plan: §§ 1–4 from the parent plan

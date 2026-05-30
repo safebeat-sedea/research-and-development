@@ -8,57 +8,57 @@ description: >-
  in `**Status:**`; capstone todo when done.
  Does not auto-run plan-reconcile.
 inputs:
- targetPlanPath:
- type: string
- description: Absolute PR plan path containing the deploy test plan.
- required: true
- targetPlanSlug:
- type: string
- description: PR plan slug.
- required: true
- prUrl:
- type: string
- description: GitHub PR URL that was merged.
- required: false
- prNumber:
- type: number
- description: GitHub PR number that was merged.
- required: false
- repoUrl:
- type: string
- description: Git repository URL.
- required: false
- branchName:
- type: string
- description: Feature branch that produced the PR (worktree or post-merge verification).
- required: false
- mergeSha:
- type: string
- description: Merge commit SHA for deployment verification.
- required: false
- mergedAt:
- type: string
- description: Timestamp when the PR merged.
- required: false
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from coding-session.
- required: false
- upstreamSkill:
- type: string
- description: Skill that invokes deploy verification inline — `coding-session` (Before deploy pre-merge or After deploy post-merge).
- required: false
- worktreePath:
- type: string
- description: Absolute worktree path (required when inline on coding-session).
- required: false
- deployWalkScope:
- type: string
- description: >-
- `before-deploy-only` when inline from coding-session pre-merge — walk only
- `### Before deploy` while Status stays `drafted`; do not run After deploy or
- `deploy-walk deployed`. Omit for full post-merge walk (typical After-deploy inline).
- required: false
+  targetPlanPath:
+    type: string
+    description: Absolute PR plan path containing the deploy test plan.
+    required: true
+  targetPlanSlug:
+    type: string
+    description: PR plan slug.
+    required: true
+  prUrl:
+    type: string
+    description: GitHub PR URL that was merged.
+    required: false
+  prNumber:
+    type: number
+    description: GitHub PR number that was merged.
+    required: false
+  repoUrl:
+    type: string
+    description: Git repository URL.
+    required: false
+  branchName:
+    type: string
+    description: Feature branch that produced the PR (worktree or post-merge verification).
+    required: false
+  mergeSha:
+    type: string
+    description: Merge commit SHA for deployment verification.
+    required: false
+  mergedAt:
+    type: string
+    description: Timestamp when the PR merged.
+    required: false
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from coding-session.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Skill that invokes deploy verification inline — `coding-session` (Before deploy pre-merge or After deploy post-merge).
+    required: false
+  worktreePath:
+    type: string
+    description: Absolute worktree path (required when inline on coding-session).
+    required: false
+  deployWalkScope:
+    type: string
+    description: >-
+      `before-deploy-only` when inline from coding-session pre-merge — walk only
+      `### Before deploy` while Status stays `drafted`; do not run After deploy or
+      `deploy-walk deployed`. Omit for full post-merge walk (typical After-deploy inline).
+    required: false
 ---
 
 # Deploy walk-through

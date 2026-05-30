@@ -5,42 +5,42 @@ description: >-
  archive candidates, follow-ups triage, and post-ship workspace cleanup. Executed by
  the active coding-session agent only — not spawned, no warmUpRules.
 inputs:
- targetPlanPath:
- type: string
- description: Absolute PR plan path that may be reconciled after PR merge and deploy verification.
- required: false
- targetPlanSlug:
- type: string
- description: PR plan slug that may be reconciled after PR merge and deploy verification.
- required: false
- prUrl:
- type: string
- description: Merged PR URL associated with the plan.
- required: false
- prNumber:
- type: number
- description: Merged PR number associated with the plan.
- required: false
- prState:
- type: string
- description: PR state from coding-session; must be merged for inline reconcile from ship chain.
- required: false
- deployStatus:
- type: string
- description: Deploy status from deploy-walk; must be done for inline reconcile from ship chain.
- required: false
- deployTodoStatus:
- type: string
- description: deploy-test-plan-verified todo status; must be done for inline reconcile from ship chain.
- required: false
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from coding-session.
- required: false
- upstreamSkill:
- type: string
- description: Invoker skill — must be coding-session when inline.
- required: false
+  targetPlanPath:
+    type: string
+    description: Absolute PR plan path that may be reconciled after PR merge and deploy verification.
+    required: false
+  targetPlanSlug:
+    type: string
+    description: PR plan slug that may be reconciled after PR merge and deploy verification.
+    required: false
+  prUrl:
+    type: string
+    description: Merged PR URL associated with the plan.
+    required: false
+  prNumber:
+    type: number
+    description: Merged PR number associated with the plan.
+    required: false
+  prState:
+    type: string
+    description: PR state from coding-session; must be merged for inline reconcile from ship chain.
+    required: false
+  deployStatus:
+    type: string
+    description: Deploy status from deploy-walk; must be done for inline reconcile from ship chain.
+    required: false
+  deployTodoStatus:
+    type: string
+    description: deploy-test-plan-verified todo status; must be done for inline reconcile from ship chain.
+    required: false
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from coding-session.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Invoker skill — must be coding-session when inline.
+    required: false
 ---
 
 # Plan reconcile

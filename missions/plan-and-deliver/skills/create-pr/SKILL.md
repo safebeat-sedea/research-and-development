@@ -5,56 +5,56 @@ description: >-
  implementation branch using PR plan lineage and pre-pr-review result. Executed by
  the active coding-session agent only — not spawned, no warmUpRules.
 inputs:
- targetPlanPath:
- type: string
- description: Absolute PR plan path, when plan-anchored.
- required: false
- targetPlanSlug:
- type: string
- description: PR plan slug, when plan-anchored.
- required: false
- worktreePath:
- type: string
- description: Absolute hosting repo worktree path.
- required: true
- branchName:
- type: string
- description: Branch to create the PR from.
- required: true
- baseRef:
- type: string
- description: Base ref for the PR, usually origin/main.
- required: true
- repoUrl:
- type: string
- description: Git remote URL for the repository.
- required: false
- diffSummary:
- type: object
- description: Summary of commits, files, and changes from coding-session.
- required: false
- prePrReviewRecommendation:
- type: string
- description: Recommendation from pre-pr-review. Must be go.
- required: true
- prePrReviewFlags:
- type: array
- description: Non-blocking flags from pre-pr-review.
- required: false
- default: []
- followUpsAppended:
- type: array
- description: Follow-up bullets appended to the PR plan by pre-pr-review.
- required: false
- default: []
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from coding-session.
- required: false
- upstreamSkill:
- type: string
- description: Invoker skill — must be coding-session when inline.
- required: false
+  targetPlanPath:
+    type: string
+    description: Absolute PR plan path, when plan-anchored.
+    required: false
+  targetPlanSlug:
+    type: string
+    description: PR plan slug, when plan-anchored.
+    required: false
+  worktreePath:
+    type: string
+    description: Absolute hosting repo worktree path.
+    required: true
+  branchName:
+    type: string
+    description: Branch to create the PR from.
+    required: true
+  baseRef:
+    type: string
+    description: Base ref for the PR, usually origin/main.
+    required: true
+  repoUrl:
+    type: string
+    description: Git remote URL for the repository.
+    required: false
+  diffSummary:
+    type: object
+    description: Summary of commits, files, and changes from coding-session.
+    required: false
+  prePrReviewRecommendation:
+    type: string
+    description: Recommendation from pre-pr-review. Must be go.
+    required: true
+  prePrReviewFlags:
+    type: array
+    description: Non-blocking flags from pre-pr-review.
+    required: false
+    default: []
+  followUpsAppended:
+    type: array
+    description: Follow-up bullets appended to the PR plan by pre-pr-review.
+    required: false
+    default: []
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from coding-session.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Invoker skill — must be coding-session when inline.
+    required: false
 ---
 
 # Create PR

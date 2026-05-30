@@ -9,36 +9,36 @@ description: >-
  mission dispatch or upstream agent only. Does not edit
  `.plan.md` files or run/spawn **`planner`**.
 inputs:
- createIntent:
- type: boolean
- description: True when the upstream protocol selected the ad-hoc PRD branch.
- required: true
- title:
- type: string
- description: Non-empty title for the Ad-Hoc PRD.
- required: false
- details:
- type: string
- description: Change-request description used to draft Problem, Desired outcome, and Proposed solution.
- required: true
- operationsUserId:
- type: string
- description: Operations user id supplied by Mission Control; required for user-private docs.
- required: true
- sourceSummary:
- type: string
- description: Optional short summary of where this ad-hoc request came from.
- required: false
- roadmapHints:
- type: array
- description: Optional roadmap, related slug, or worktree hints from the upstream protocol.
- required: false
- default: []
+  createIntent:
+    type: boolean
+    description: True when the upstream protocol selected the ad-hoc PRD branch.
+    required: true
+  title:
+    type: string
+    description: Non-empty title for the Ad-Hoc PRD.
+    required: false
+  details:
+    type: string
+    description: Change-request description used to draft Problem, Desired outcome, and Proposed solution.
+    required: true
+  operationsUserId:
+    type: string
+    description: Operations user id supplied by Mission Control; required for user-private docs.
+    required: true
+  sourceSummary:
+    type: string
+    description: Optional short summary of where this ad-hoc request came from.
+    required: false
+  roadmapHints:
+    type: array
+    description: Optional roadmap, related slug, or worktree hints from the upstream protocol.
+    required: false
+    default: []
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc"
 ---
 
 # Ad-Hoc PRD

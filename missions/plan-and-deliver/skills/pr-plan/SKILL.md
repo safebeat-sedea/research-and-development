@@ -11,48 +11,48 @@ description: >-
  mission dispatch, **pr-plan** protocol branch, natural language, or after **new-plan**
  ignition on a `PR breakdown` child stub.
 inputs:
- targetPlanPath:
- type: string
- description: Path to the PR plan stub to populate.
- required: true
- targetPlanSlug:
- type: string
- description: Slug for the PR plan stub.
- required: true
- parentPlanPath:
- type: string
- description: Path to the parent plan containing the PR list row.
- required: true
- parentPlanSlug:
- type: string
- description: Slug for the parent plan.
- required: true
- parentIndex:
- type: number
- description: One-based PR list index that produced this child.
- required: true
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from the upstream agent.
- required: false
- upstreamSkill:
- type: string
- description: Skill that requested this PR plan population, usually new-plan.
- required: false
- parentAgentRole:
- type: string
- description: When new-plan-agent, report Completion (inline) to the invoker instead of AGENT_RESULT_RESPONSE_V1.
- required: false
- autoContinue:
- type: boolean
- description: When true, report implementation readiness after PR planning; this skill still does not start coding.
- required: false
- default: true
+  targetPlanPath:
+    type: string
+    description: Path to the PR plan stub to populate.
+    required: true
+  targetPlanSlug:
+    type: string
+    description: Slug for the PR plan stub.
+    required: true
+  parentPlanPath:
+    type: string
+    description: Path to the parent plan containing the PR list row.
+    required: true
+  parentPlanSlug:
+    type: string
+    description: Slug for the parent plan.
+    required: true
+  parentIndex:
+    type: number
+    description: One-based PR list index that produced this child.
+    required: true
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from the upstream agent.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Skill that requested this PR plan population, usually new-plan.
+    required: false
+  parentAgentRole:
+    type: string
+    description: When new-plan-agent, report Completion (inline) to the invoker instead of AGENT_RESULT_RESPONSE_V1.
+    required: false
+  autoContinue:
+    type: boolean
+    description: When true, report implementation readiness after PR planning; this skill still does not start coding.
+    required: false
+    default: true
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # PR plan: §§ 1–4 from the parent plan

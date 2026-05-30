@@ -13,67 +13,67 @@ description: >-
  when the developer asks to scaffold a plan via **new-plan** (standalone) or expand
  a parent list item **N** (indexed-child) from a numbered dual-title list.
 inputs:
- mode:
- type: string
- description: Creation mode. Use indexed-child when expanding a parent list row; use standalone for ordinary new plans.
- required: false
- default: standalone
- parentPlanPath:
- type: string
- description: Parent plan path. Required when mode is indexed-child.
- required: false
- parentPlanSlug:
- type: string
- description: Parent plan slug. Required when mode is indexed-child.
- required: false
- index:
- type: number
- description: One-based child index from the parent's Delivery phases or PR list. Required when mode is indexed-child.
- required: false
- childKind:
- type: string
- description: Expected child body type, usually phase-planner or pr-plan. Required when mode is indexed-child.
- required: false
- requestedPopulatorSkill:
- type: string
- description: Optional populator skill to spawn after the child stub is wired.
- required: false
- decompositionKind:
- type: string
- description: Parent decomposition kind that produced this child, usually delivery-phases or pr-breakdown.
- required: false
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from the upstream decomposition agent.
- required: false
- upstreamSkill:
- type: string
- description: Skill that requested this child creation.
- required: false
- parentAgentRole:
- type: string
- description: When delivery-phases-agent or pr-breakdown-agent, report Completion (inline) to the invoker instead of AGENT_RESULT_RESPONSE_V1.
- required: false
- hoistFromPhase:
- type: boolean
- description: >-
- When true with childKind pr-plan, allow indexed PR child under a Delivery phases
- parent row (single-PR hoist from phase-planner); requires hoistFromPhasePath.
- required: false
- default: false
- hoistFromPhasePath:
- type: string
- description: Phase plan path whose §§ 2–4 scope the hoisted PR plan.
- required: false
- hoistFromPhaseSlug:
- type: string
- description: Slug of the hoisted phase plan.
- required: false
+  mode:
+    type: string
+    description: Creation mode. Use indexed-child when expanding a parent list row; use standalone for ordinary new plans.
+    required: false
+    default: standalone
+  parentPlanPath:
+    type: string
+    description: Parent plan path. Required when mode is indexed-child.
+    required: false
+  parentPlanSlug:
+    type: string
+    description: Parent plan slug. Required when mode is indexed-child.
+    required: false
+  index:
+    type: number
+    description: One-based child index from the parent's Delivery phases or PR list. Required when mode is indexed-child.
+    required: false
+  childKind:
+    type: string
+    description: Expected child body type, usually phase-planner or pr-plan. Required when mode is indexed-child.
+    required: false
+  requestedPopulatorSkill:
+    type: string
+    description: Optional populator skill to spawn after the child stub is wired.
+    required: false
+  decompositionKind:
+    type: string
+    description: Parent decomposition kind that produced this child, usually delivery-phases or pr-breakdown.
+    required: false
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from the upstream decomposition agent.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Skill that requested this child creation.
+    required: false
+  parentAgentRole:
+    type: string
+    description: When delivery-phases-agent or pr-breakdown-agent, report Completion (inline) to the invoker instead of AGENT_RESULT_RESPONSE_V1.
+    required: false
+  hoistFromPhase:
+    type: boolean
+    description: >-
+      When true with childKind pr-plan, allow indexed PR child under a Delivery phases
+      parent row (single-PR hoist from phase-planner); requires hoistFromPhasePath.
+    required: false
+    default: false
+  hoistFromPhasePath:
+    type: string
+    description: Phase plan path whose §§ 2–4 scope the hoisted PR plan.
+    required: false
+  hoistFromPhaseSlug:
+    type: string
+    description: Slug of the hoisted phase plan.
+    required: false
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # New plan

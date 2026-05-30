@@ -9,53 +9,53 @@ description: >-
  coding-session after the implementation cut point;
  coding-session obtains developer approval before any follow-up mutation.
 inputs:
- anchorType:
- type: string
- description: Review anchor type, either plan or free-form.
- required: true
- targetPlanPath:
- type: string
- description: Absolute PR plan path when anchorType is plan.
- required: false
- targetPlanSlug:
- type: string
- description: PR plan slug when anchorType is plan.
- required: false
- worktreePath:
- type: string
- description: Absolute hosting repo worktree path to review.
- required: true
- branchName:
- type: string
- description: Branch being reviewed.
- required: true
- baseRef:
- type: string
- description: Remote base ref for the review diff, usually origin/main.
- required: true
- projectRules:
- type: array
- description: Absolute .cursor/rules/*.mdc paths to read before scoring.
- required: false
- default: []
- diffSummary:
- type: object
- description: Optional summary from coding-session, including commits, files, and line counts.
- required: false
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from the upstream implementation agent.
- required: false
- upstreamSkill:
- type: string
- description: Skill that spawned this reviewer, usually coding-session.
- required: false
+  anchorType:
+    type: string
+    description: Review anchor type, either plan or free-form.
+    required: true
+  targetPlanPath:
+    type: string
+    description: Absolute PR plan path when anchorType is plan.
+    required: false
+  targetPlanSlug:
+    type: string
+    description: PR plan slug when anchorType is plan.
+    required: false
+  worktreePath:
+    type: string
+    description: Absolute hosting repo worktree path to review.
+    required: true
+  branchName:
+    type: string
+    description: Branch being reviewed.
+    required: true
+  baseRef:
+    type: string
+    description: Remote base ref for the review diff, usually origin/main.
+    required: true
+  projectRules:
+    type: array
+    description: Absolute .cursor/rules/*.mdc paths to read before scoring.
+    required: false
+    default: []
+  diffSummary:
+    type: object
+    description: Optional summary from coding-session, including commits, files, and line counts.
+    required: false
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from the upstream implementation agent.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Skill that spawned this reviewer, usually coding-session.
+    required: false
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # Pre-PR Review

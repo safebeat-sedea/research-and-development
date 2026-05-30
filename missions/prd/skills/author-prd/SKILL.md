@@ -2,43 +2,43 @@
 name: author-prd
 description: Gather evidence and draft or update a flexible Product or Feature Requirements Document.
 inputs:
- prdTitle:
- type: string
- description: Human-friendly PRD title.
- required: true
- prdDescription:
- type: string
- description: Problem, users, goals, or scope summary collected by the Squad Leader before spawn.
- required: true
- operation:
- type: string
- description: Either create or manage.
- required: true
- targetPath:
- type: string
- description: Output path for create mode or existing PRD path for manage mode.
- required: false
- sourceMaterials:
- type: array
- description: Seed materials from Squad Leader intake (step 2.5); author-prd extends the ledger for remaining gaps.
- required: false
- default: []
- sectionPolicy:
- type: object
- description: Map of PRD sections to mandatory, important, optional, or not applicable.
- required: false
- existingPrdBody:
- type: string
- description: Existing PRD content when operation is manage.
- required: false
- operationsUserId:
- type: string
- description: Current Mission Control operations user id for user-private operations paths.
- required: true
+  prdTitle:
+    type: string
+    description: Human-friendly PRD title.
+    required: true
+  prdDescription:
+    type: string
+    description: Problem, users, goals, or scope summary collected by the Squad Leader before spawn.
+    required: true
+  operation:
+    type: string
+    description: Either create or manage.
+    required: true
+  targetPath:
+    type: string
+    description: Output path for create mode or existing PRD path for manage mode.
+    required: false
+  sourceMaterials:
+    type: array
+    description: Seed materials from Squad Leader intake (step 2.5); author-prd extends the ledger for remaining gaps.
+    required: false
+    default: []
+  sectionPolicy:
+    type: object
+    description: Map of PRD sections to mandatory, important, optional, or not applicable.
+    required: false
+  existingPrdBody:
+    type: string
+    description: Existing PRD content when operation is manage.
+    required: false
+  operationsUserId:
+    type: string
+    description: Current Mission Control operations user id for user-private operations paths.
+    required: true
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/prd/plan.mdc"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/31_operations-user-id.mdc"
+  - ".sedea/centers/research-and-development/missions/prd/plan.mdc"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/31_operations-user-id.mdc"
 ---
 
 # Skill: author-prd

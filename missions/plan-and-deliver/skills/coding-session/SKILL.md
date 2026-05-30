@@ -16,73 +16,73 @@ description: >-
  explicit override incomplete plan). Use under mission dispatch, natural language, or
  after planning when handing off implementation.
 inputs:
- targetPlanPath:
- type: string
- description: Absolute or workspace-relative path to the PR plan to implement.
- required: false
- targetPlanSlug:
- type: string
- description: Slug for the PR plan to implement.
- required: false
- readyForImplementation:
- type: boolean
- description: Optional hint from a prior **pr-plan** menu (planning handoff only). Does not authorize worktrees.
- required: false
- developerApprovedImplementation:
- type: boolean
- description: Layer 2 output — true only after an authorizing worktree-open gate choice. Not supplied by **pr-plan**.
- required: false
- repoPath:
- type: string
- description: Absolute path to the hosting repo root for a single-repo coding session.
- required: false
- repoPaths:
- type: array
- description: Absolute paths to hosting repo roots for a multi-repo coding session.
- required: false
- default: []
- baseBranch:
- type: string
- description: Remote base branch to branch from; default origin/main unless repo rules say otherwise.
- required: false
- default: origin/main
- branchName:
- type: string
- description: Optional explicit branch name; otherwise derive from plan slug and local branch conventions.
- required: false
- ledgerParent:
- type: string
- description: Ledger parent slug/path copied from the upstream planning agent.
- required: false
- upstreamSkill:
- type: string
- description: Optional context label (developer dispatch, snapshot, pr-plan spawn, planning skill).
- required: false
- planningHandoffMode:
- type: string
- description: >-
- When "sections-1-4-complete" (from pr-plan §5d spawn), §§5–8 may stay _TBD_;
- use auto-authorize or pr-plan spawn handoff gate, not executive-override framing.
- required: false
- planningHandoffApproved:
- type: boolean
- description: >-
- Layer 1 approval from pr-plan §5c Start coding session. When true with
- planningHandoffMode, waives worktree-open AskQuestion when §§1–4 are drafted.
- required: false
- promptOnly:
- type: boolean
- description: >-
- When true, stop after worktree attach and emit an external session prompt only (detached
- handoff). Default false for Mission Control spawn from pr-plan — same lane implements.
- required: false
- default: false
+  targetPlanPath:
+    type: string
+    description: Absolute or workspace-relative path to the PR plan to implement.
+    required: false
+  targetPlanSlug:
+    type: string
+    description: Slug for the PR plan to implement.
+    required: false
+  readyForImplementation:
+    type: boolean
+    description: Optional hint from a prior **pr-plan** menu (planning handoff only). Does not authorize worktrees.
+    required: false
+  developerApprovedImplementation:
+    type: boolean
+    description: Layer 2 output — true only after an authorizing worktree-open gate choice. Not supplied by **pr-plan**.
+    required: false
+  repoPath:
+    type: string
+    description: Absolute path to the hosting repo root for a single-repo coding session.
+    required: false
+  repoPaths:
+    type: array
+    description: Absolute paths to hosting repo roots for a multi-repo coding session.
+    required: false
+    default: []
+  baseBranch:
+    type: string
+    description: Remote base branch to branch from; default origin/main unless repo rules say otherwise.
+    required: false
+    default: origin/main
+  branchName:
+    type: string
+    description: Optional explicit branch name; otherwise derive from plan slug and local branch conventions.
+    required: false
+  ledgerParent:
+    type: string
+    description: Ledger parent slug/path copied from the upstream planning agent.
+    required: false
+  upstreamSkill:
+    type: string
+    description: Optional context label (developer dispatch, snapshot, pr-plan spawn, planning skill).
+    required: false
+  planningHandoffMode:
+    type: string
+    description: >-
+      When "sections-1-4-complete" (from pr-plan §5d spawn), §§5–8 may stay _TBD_;
+      use auto-authorize or pr-plan spawn handoff gate, not executive-override framing.
+    required: false
+  planningHandoffApproved:
+    type: boolean
+    description: >-
+      Layer 1 approval from pr-plan §5c Start coding session. When true with
+      planningHandoffMode, waives worktree-open AskQuestion when §§1–4 are drafted.
+    required: false
+  promptOnly:
+    type: boolean
+    description: >-
+      When true, stop after worktree attach and emit an external session prompt only (detached
+      handoff). Default false for Mission Control spawn from pr-plan — same lane implements.
+    required: false
+    default: false
 warmUpRules:
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
- - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
- - ".sedea/centers/research-and-development/docs/development-process.md"
- - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
- - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
+  - ".sedea/centers/research-and-development/docs/development-process.md"
+  - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
 ---
 
 # Coding session
