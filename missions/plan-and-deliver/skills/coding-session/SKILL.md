@@ -1,10 +1,11 @@
 ---
 name: coding-session
 description: >-
-  **Coding session** protocol branch: create a git worktree + branch from origin/main,
-  record worktrees and session focus in the plan sidecar via plan-state.mjs, attach the
-  worktree in the same Sedea workbench (Mission Control sedea_add_worktree_folder per
-  20_efficient-pr-shipping.mdc), then run **`worktree-bootstrap`** **inline** on this lane
+  **Coding session** protocol branch: **create** the worktree with shell **`git worktree add`**
+  only (never **`sedea_add_worktree_folder`** for creation), record worktrees and session focus
+  in the plan sidecar via plan-state.mjs, **attach** the worktree with MCP
+  **`sedea_add_worktree_folder` only** (never editor Add Folder to Workspace), then run
+  **`worktree-bootstrap`** **inline** on this lane
   (mandatory wait before any implementation) via [`worktree-bootstrap/SKILL.md`](../worktree-bootstrap/SKILL.md).
   On a **spawned child lane** with layer-2 approval (or **pr-plan** spawn auto-authorize),
   **implement the anchored PR plan on this lane** in that worktree; on **prompt-only**
@@ -86,7 +87,7 @@ warmUpRules:
 
 # Coding session
 
-Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
+Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. Worktree **creation** is **`git worktree add` only**; workbench **attach** is **`sedea_add_worktree_folder` only** — see [Hard rules — git worktree vs workbench attach (binding)](#hard-rules--git-worktree-vs-workbench-attach-binding). **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
 
 **Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory inline worktree bootstrap** on this lane ([Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) — wait for `outputs.bootstrapStatus: success` before implementation), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** inline → **`pre-pr-review`** → **`create-pr`** → [Post-merge workspace cleanup](#post-merge-workspace-cleanup) → After deploy **`deploy-walk`** inline).
 
@@ -104,6 +105,17 @@ Four **sequential** steps on the **`coding-session`** lane after the [Worktree-o
 | 4 | **`coding-session`** (inline **`worktree-bootstrap`**) | Dev bootstrap script | `./scripts/bootstrap-worktree-dev.sh` — see [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) |
 
 **Not a conflict:** `git worktree add` creates the directory; **`sedea_add_worktree_folder`** adds that path to the Mission Control / editor workspace. **`worktree-bootstrap`** assumes both are done and **forbids** repeating steps 1 or 3 on its lane.
+
+## Hard rules — git worktree vs workbench attach (binding)
+
+Agents repeatedly call **`sedea_add_worktree_folder`** instead of **`git worktree add`**, or skip MCP attach after creating the worktree. On **every** **`coding-session`** lane these rules are **non-negotiable**:
+
+| Step | Required | Forbidden |
+|------|----------|-----------|
+| **1 — Create worktree + branch** | Shell **`git worktree add <path> -b <branch> <base-ref>`** | **`sedea_add_worktree_folder`** (MCP does **not** run git — it only mounts an **existing** folder), `git clone`, manual checkout/mkdir, opening a folder without `git worktree add` |
+| **3 — Mount in Sedea workbench** | MCP **`sedea_add_worktree_folder`** with **absolute** `path` (optional `name`) | VS Code / Cursor **Add Folder to Workspace**, hand-edited **`.code-workspace`** as the attach mechanism on Mission Control lanes, assuming step 1 made the worktree appear in the explorer |
+
+**Fixed order:** step **1** → **2** → **3** → **4**. Never call **`sedea_add_worktree_folder`** before **`git worktree add`** succeeds. Never skip step **3** because the directory exists on disk.
 
 **Squad Leader vs this lane:** **20_efficient-pr-shipping.mdc** § *Squad Leader on the main branch* may create the worktree and call **`sedea_add_worktree_folder`** before spawning **`coding-session`**. When this skill runs [Generic flow](#generic-flow-single-repo) on a **spawned implementation lane**, **this lane** owns steps 1–4 end-to-end unless the leader already completed attach and passed absolute **`WORKTREE_ROOT`** in spawn `inputs` — then skip duplicate `git worktree add` / MCP only when the worktree path already exists **and** is already mounted in the workbench.
 
@@ -237,7 +249,7 @@ Otherwise:
 
 ## Worktree-open gate
 
-**Layer 2 — single AskQuestion** before any `git worktree add`, sidecar session write, Mission Control worktree attach, or coding-agent prompt emission — **skip** when [Auto-authorize implementation (pr-plan spawn)](#auto-authorize-implementation-pr-plan-spawn) applies.
+**Layer 2 — single AskQuestion** before any `git worktree add`, sidecar session write, Mission Control worktree attach, or coding-agent prompt emission — **skip** when [Auto-authorize implementation (pr-plan spawn)](#auto-authorize-implementation-pr-plan-spawn) applies. After approval, [Generic flow](#generic-flow-single-repo) step **1** is **`git worktree add` only**; step **3** is **`sedea_add_worktree_folder` only** — see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding).
 
 **Recap and structured choice:** Summarize completeness / plan path in **`display.markdown`** when using **`MC_PHASED_RESPONSE_V1`**. On spawned lanes, **`MC_PHASED_RESPONSE_V1` must be line 1** — see [Spawned lane — sentinel-first (binding)](#spawned-lane--sentinel-first-binding). Open this gate via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **sentinel-only** **`MC_ASKQUESTION_V1`** — prefer one message for recap + modal. See **`../README.md`** § *Recap, structured choice, act (plan-and-deliver)*, **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**, and **`.cursor/rules/mission-control-agent-runtime.mdc`**.
 
@@ -358,11 +370,12 @@ When you emit the final session prompt for the user to paste into **a separate c
 
 Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-completeness) and an authorizing choice in the [Worktree-open gate](#worktree-open-gate).
 
-1. Create a worktree on a fresh branch from `origin/main`:
+1. Create a worktree on a fresh branch from `origin/main` — **`git worktree add` only** (see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding)):
    ```bash
    git fetch origin main
    git worktree add <sibling-path> -b <branch> origin/main
    ```
+   - **Forbidden (step 1):** Do **not** call **`sedea_add_worktree_folder`** to create the worktree — MCP attach only mounts an **existing** path. Worktree creation is **`git worktree add` only**.
    - Prefix sibling paths with the repo directory basename (see **Worktree setup** in `.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`).
    - Always branch from **`origin/main`**, not **`main`** (same failure mode as in **efficient-pr-shipping**).
    - Branch naming: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Branch naming* (primary **hosting repo** → Sedea **`7_stacked-pr-branch-naming`**; **hosting repo worktree** → `feat/`, `improve/`, `fix/`, …).
@@ -387,7 +400,9 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
    ```
    Skip when the session has no plan anchor.
 
-3. **Attach the worktree in Sedea** (same workbench): in Mission Control, invoke MCP **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` (optional `"name"` for the explorer label). See **20_efficient-pr-shipping.mdc** — *Squad Leader on the main branch vs. agent sessions on worktree* and *Attach the worktree in Sedea*.
+3. **Attach the worktree in Sedea** (same workbench) — **`sedea_add_worktree_folder` only** (see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding)): in Mission Control, invoke MCP **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` (optional `"name"` for the explorer label). See **20_efficient-pr-shipping.mdc** — *Squad Leader on the main branch vs. agent sessions on worktree* and *Attach the worktree in Sedea*.
+
+   - **Forbidden (step 3):** Do **not** use editor **Add Folder to Workspace**, hand-edited **`.code-workspace`** files, or “open folder” as a substitute for **`sedea_add_worktree_folder`**. Workbench attach is **`sedea_add_worktree_folder` only** (after step 1 succeeds).
 
    This MCP attach is mandatory before post-setup work. If the MCP call fails, stop with `partial`; report the worktree path and the attach error, and keep `continuationStatus: "active"` so the Squad Leader does not close the implementation lane.
 
@@ -464,14 +479,14 @@ When a protocol step **explicitly** requires a spawned bootstrap child:
 
 When the plan’s **Worktree setup** lists two or more repos, or the user asks for a cross-repo session:
 
-1. For **each** repo, `git worktree add` with the **same branch name** (unless the plan says otherwise).
+1. For **each** repo, **`git worktree add` only** with the **same branch name** (unless the plan says otherwise) — never **`sedea_add_worktree_folder`** for creation (see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding)).
    - Validate every repo before creating any worktree using the same **Dirty-tree gate** as § *Generic flow* step 1. If one repo is blocking-dirty or missing the requested base branch, stop before creating a partial multi-repo session.
 
-2. Optionally create a **`.code-workspace`** file listing each worktree folder with absolute `path` values — use only if your team uses that layout; otherwise attach **each** worktree root with **`sedea_add_worktree_folder`** in turn.
+2. Optionally create a **`.code-workspace`** file listing each worktree folder with absolute `path` values — use only if your team uses that layout; otherwise attach **each** worktree root with **`sedea_add_worktree_folder` only** in turn (never editor **Add Folder to Workspace**).
 
 3. **`plan-state.mjs set-worktrees`** with one JSON entry per repo; **`set-session --focus`** to the workspace file **or** primary worktree path per your team convention (must stay consistent with **`resolve --cwd`** expectations in **planning-target-resolution**).
 
-4. **Attach each worktree** with **`sedea_add_worktree_folder`**, then [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) **once per `WORKTREE_ROOT`** (sequential inline bootstrap per repo). Wait for each repo’s `bootstrapStatus: success` before any implementation or prompt for that repo.
+4. **Attach each worktree** with **`sedea_add_worktree_folder` only** (after each step-1 **`git worktree add`**), then [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) **once per `WORKTREE_ROOT`** (sequential inline bootstrap per repo). Wait for each repo’s `bootstrapStatus: success` before any implementation or prompt for that repo.
 
 5. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach) (spawned lane implements each repo’s scope in turn, or prompt-only emits **one session prompt per repo** with per-repo scope guards).
 

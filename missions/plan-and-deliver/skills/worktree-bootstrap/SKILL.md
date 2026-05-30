@@ -61,10 +61,10 @@ Running bootstrap is **not** developer approval for worktrees — layer 2 **`dev
 
 ## Prerequisites (parent **`coding-session`** lane)
 
-This skill **does not** create worktrees or attach them to Sedea. The parent lane must finish first:
+This skill **does not** create worktrees or attach them to Sedea. The parent lane must finish first (see [`coding-session/SKILL.md`](../coding-session/SKILL.md) § *Hard rules — git worktree vs workbench attach (binding)*):
 
-1. **`git worktree add`** — filesystem worktree exists at **`worktreePath`**.
-2. **`sedea_add_worktree_folder`** — worktree is a workspace root in Mission Control (unless the parent confirms attach already succeeded).
+1. **`git worktree add` only** — filesystem worktree exists at **`worktreePath`**. **Forbidden on parent before bootstrap:** **`sedea_add_worktree_folder`** used **instead of** `git worktree add`.
+2. **`sedea_add_worktree_folder` only** — worktree is a workspace root in Mission Control (unless the parent confirms attach already succeeded). **Forbidden on parent before bootstrap:** editor **Add Folder to Workspace** or skipping MCP attach because the directory exists on disk.
 
 Then invoke **`worktree-bootstrap`** inline with **`worktreePath`** and **`hostingRoot`**. If **`worktreePath`** is missing or MCP attach failed, stop — do **not** substitute `git worktree add` or **`sedea_add_worktree_folder`** on this lane (see **Forbidden** in step 2 below).
 

@@ -18,7 +18,7 @@ There are two kinds of agent sessions:
   - Planned implementation PRs
   - PR reviews and PR comment fixes
 
-When the Squad Leader receives an implementation request, PR review, or cross-repo task, hand off to a new agent session via the **`coding-session` protocol branch** ([`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) — same mission as `pr-review` / `create-pr`). Create the worktree with `git worktree add` (see **Worktree setup in plans**), then in Mission Control chat call the MCP tool **`sedea_add_worktree_folder`** with **`path`** set to the **absolute** filesystem path of the new worktree root (optional **`name`** for the explorer folder label) so that folder is added to the Sedea workbench workspace before emitting the two-phase session prompt, and stop.
+When the Squad Leader receives an implementation request, PR review, or cross-repo task, hand off to a new agent session via the **`coding-session` protocol branch** ([`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) — same mission as `pr-review` / `create-pr`). **Create** the worktree with shell **`git worktree add` only** (never **`sedea_add_worktree_folder`** — MCP does not run git), then in Mission Control chat call the MCP tool **`sedea_add_worktree_folder` only** with **`path`** set to the **absolute** filesystem path of the new worktree root (optional **`name`** for the explorer folder label) so that folder is added to the Sedea workbench workspace — never editor **Add Folder to Workspace** as a substitute. Then emit the two-phase session prompt, and stop. See **`coding-session/SKILL.md`** § *Hard rules — git worktree vs workbench attach (binding)*.
 
 ## Hosting repo cwd for scripts (canonical)
 
@@ -189,7 +189,7 @@ git fetch origin main
 git worktree add <path> -b <branch> origin/main
 ```
 
-**Attach the worktree in Sedea.** In Mission Control chat, invoke the MCP tool **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` and, if you want a custom explorer label, an optional `"name"` field. Use an **absolute** `path` (resolve with `git worktree list`, or `cd` into the worktree and expand to a full path); relative paths are unreliable. Mission Control mirrors the tool into the workbench so the folder appears as a workspace root.
+**Attach the worktree in Sedea.** In Mission Control chat, invoke the MCP tool **`sedea_add_worktree_folder` only** with JSON `{ "path": "<absolute-worktree-root>" }` and, if you want a custom explorer label, an optional `"name"` field. Use an **absolute** `path` (resolve with `git worktree list`, or `cd` into the worktree and expand to a full path); relative paths are unreliable. Mission Control mirrors the tool into the workbench so the folder appears as a workspace root. **Forbidden:** editor **Add Folder to Workspace**, hand-edited **`.code-workspace`** attach, or calling **`sedea_add_worktree_folder`** **before** **`git worktree add`** succeeds. See [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Hard rules — git worktree vs workbench attach (binding)*.
 
 **Lane ownership:** On a spawned **`coding-session`** implementation lane, [Generic flow](../missions/plan-and-deliver/skills/coding-session/SKILL.md) steps 1–3 are normative even when this section describes Squad Leader handoff — see that skill § *Worktree create → attach → bootstrap (ownership)*. **`worktree-bootstrap`** never calls **`sedea_add_worktree_folder`**; it runs only after attach.
 
