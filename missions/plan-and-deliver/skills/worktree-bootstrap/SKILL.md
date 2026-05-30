@@ -53,7 +53,7 @@ warmUpRules:
 
 # Worktree bootstrap
 
-This skill runs **`./scripts/bootstrap-worktree-dev.sh`** on **`WORKTREE_ROOT`** from **`HOSTING_ROOT`**. It prepares a fresh worktree (submodules, native extensions, vscode compile, smoke checks) so **`coding-session`** can implement in that tree.
+This skill runs **`./scripts/bootstrap-worktree-dev.sh`** on **`WORKTREE_ROOT`** from **`HOSTING_ROOT`**. It prepares a fresh worktree: **`.sedea/` center submodules** (`git submodule update --init` for paths under `.sedea/` in `.gitmodules`, with primary-clone seed fallback when init leaves an empty tree), **`.sedea/operations`** copy from the primary clone, linked primary **vscode** build artifacts, native extension sync/rebuild, and smoke checks. It does **not** run full **vscode compile** or **electron smoke** on the default fast-bootstrap path.
 
 **Normative invocation:** **`coding-session`** runs this skill **inline** on the same lane after worktree attach and **waits** for `outputs.bootstrapStatus: success` before implementation. Spawn (`AGENT_RUN_REQUEST_V1`) is **not** the default — use only when a protocol step explicitly requires a spawned bootstrap child; the parent must still wait for success before implementing.
 
@@ -90,6 +90,8 @@ From **`HOSTING_ROOT`**:
 ```
 
 Append each entry in `bootstrapSkipFlags` only when the parent documented developer attestation. The script is idempotent — safe to re-run after partial failure.
+
+**Submodule behavior (fast bootstrap default):** initializes every **`.sedea/`** path listed in **`.gitmodules`** (for example **`.sedea/centers/research-and-development/`**). If init leaves an empty center tree and the primary clone has a populated checkout, the script **seeds** that path from **`HOSTING_ROOT`**. Pass **`--skip-submodules`** only when the parent documented a manual seed (see **`.cursor/rules/dot-sedea.mdc`** § *Push before worktrees*).
 
 **Forbidden on this lane:** `git worktree add` / `remove`, `sedea_add_worktree_folder`, hosting-repo product edits, `gh pr create`, spawning other plan-and-deliver skills.
 
