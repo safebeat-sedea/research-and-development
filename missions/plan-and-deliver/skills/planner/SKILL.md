@@ -531,6 +531,17 @@ Always include **More details for option _** per conduct.
 
 Include these options **only** when the ledger shows non-empty eligible indices; omit when prior stage ship is still incomplete.
 
+**When decomposition is ship-complete** (no **`expandEligibleIndices`**, no **`expandNextEligibleIndex`**, and every decomposition / ledger row is **`ship-complete`**, **`closed`**, **`deferred`**, or **`abandoned`**):
+
+| Option id (example) | Label (brief) | When |
+|---------------------|---------------|------|
+| `draft-7` | Draft §7 Caveats | §7 is still **`_TBD_`** or empty |
+| `approve-caveats` | Approve §7 Caveats | §7 drafted; **`caveatsApprovalStatus: pending`** |
+| `revise-caveats` | Revise §7 Caveats | §7 drafted; developer wants edits before approve |
+| `skip-caveats` | Skip §7 Caveats | §7 still **`_TBD_`** or pending — explicit defer |
+
+Do **not** omit **`draft-7`** when all phases are shipped but §7 was never drafted. Do **not** set **`continuationStatus: terminal`** or empty **`remainingTasks`** until **`caveatsApprovalStatus`** is **`approved`** or **`skipped`** via explicit structured choice (see **Draft §7 Caveats** below).
+
 **Stop** after emitting AskQuestion — do not execute the chosen action in the same turn.
 
 ### Step 7c — One choice per turn
@@ -552,7 +563,44 @@ Do **not** draft §6 in **`planner`** prose without running the inline skill.
 
 #### Draft §7 Caveats (`draft-7`)
 
-Draft §7 inline from PRD + §§1–5 (and §6 if already drafted downstream). Stop; then Step 7b again on the next turn.
+Draft **`## 7. Caveats (optional)`** inline from PRD + §§1–5 (+ §6 when already drafted). **§7 requires an explicit developer approval gate** before this lane may report **`continuationStatus: terminal`** or imply planning complete to the Squad Leader.
+
+##### Act after `draft-7` select (turn 1 — write only)
+
+1. **`StrReplace`** the §7 **`_TBD_`** (or empty body) under **`## 7. Caveats (optional)`** with caveats grounded in PRD + §§1–6 (constraints from decomposition or ship — not generic PRD worries alone).
+2. Echo the full **`## 7. Caveats`** block in chat for review.
+3. Set working ledger **`caveatsApprovalStatus: pending`**.
+4. **Stop without** emitting **`AGENT_RESULT_RESPONSE_V1`**. Approval **AskQuestion** is the **next** turn — not combined with a terminal line in the same message.
+
+##### §7 approval gate (turn 2 — structured choice)
+
+On the **next** assistant turn after §7 was written, use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**:
+
+| Option id (example) | Label (brief) | Action |
+|---------------------|---------------|--------|
+| `approve-caveats` | Approve §7 Caveats | **`caveatsApprovalStatus: approved`** → evaluate terminal eligibility |
+| `revise-caveats` | Revise §7 Caveats | Step **7e** on §7; keep **`pending`** until re-approved |
+| `skip-caveats` | Skip §7 Caveats | **`caveatsApprovalStatus: skipped`** → evaluate terminal eligibility |
+| `more-details` | More details for option _ | Elaborate; re-ask |
+
+**Forbidden on the planner lane (binding):**
+
+- **Same turn:** §7 approval modal **and** **`AGENT_RESULT_RESPONSE_V1`** with **`continuationStatus: terminal`**.
+- **Same turn:** §7 approval modal **and** **`MC_DISPATCH_RESOLVED_V1`** — only the **Squad Leader** closes the dispatch.
+- **`continuationStatus: terminal`** while **`caveatsApprovalStatus: pending`**.
+- **`remainingTasks: []`** while **`caveatsApprovalStatus: pending`**.
+
+After **`approve-caveats`** or **`skip-caveats`**, emit **`AGENT_RESULT_RESPONSE_V1`** on a **separate turn** from the approval modal (or on the turn **after** the user selects in the modal — never terminal in the same message as the approve modal). Then Step **7b** unless terminal eligibility applies.
+
+##### Terminal eligibility (after §7 gate)
+
+Set **`continuationStatus: terminal`** and empty **`remainingTasks`** **only when all** apply:
+
+1. **`caveatsApprovalStatus`** is **`approved`** or **`skipped`** (explicit structured choice), **or** §7 was approved on a prior turn.
+2. No **`expandEligibleIndices`** / **`expandNextEligibleIndex`**; no **`open`** / **`blocked`** ledger rows needing planner action.
+3. No other pending Step **7b** choice.
+
+When (2) holds but §7 is still **`_TBD_`**, keep **`continuationStatus: active`**, offer **`draft-7`**, list **`Draft §7 Caveats`** in **`remainingTasks`**. When §7 is drafted but **`pending`**, keep **`active`**, list **`Approve §7 Caveats`** in **`remainingTasks`**, offer **`approve-caveats`** / **`revise-caveats`** / **`skip-caveats`** — **not** terminal status.
 
 #### Revise section (`revise`) — Step 7e
 
@@ -602,7 +650,8 @@ Required `outputs` fields:
 - `outputs.complexityBand`
 - `outputs.complexityScore`
 - `outputs.continuationOwner` — `master-plan-agent` while this lane owns follow-up (Step 7)
-- `outputs.continuationStatus` — `active` while follow-up choices remain; `terminal` when no remaining tasks
+- `outputs.continuationStatus` — `active` while follow-up choices remain; `terminal` only when **§7 approval gate** is satisfied (see **Draft §7 Caveats** *Terminal eligibility*) and no other pending tasks
+- `outputs.caveatsApprovalStatus` — `pending` | `approved` | `revised` | `skipped` | omitted when §7 untouched; **`pending`** blocks **`continuationStatus: terminal`**
 - `outputs.activeLanes` — downstream lane records (`correlationId`, skill, target path, status)
 - `outputs.openLedgerEntries` — phase/PR plan or lane entries the **Squad Leader** tracks (§7)
 - `outputs.spawnedPlans` — plan paths/slugs created or reported by downstream agents
@@ -611,6 +660,8 @@ Required `outputs` fields:
 - `outputs.prShipComplete`, `outputs.phaseShipComplete` — when this lane merged bubbled ship terminals from nested **`coding-session`** / **`phase-planner`** chains
 
 Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` for **`delivery-phases`**, **`pr-breakdown`**, or **`new-plan`** or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*). While `continuationStatus` is `active`, the **Squad Leader** acknowledges only (**`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §6); this lane owns **AskQuestion** + inline decomposition (Step 7) on **later** user messages on this lane — not in the same turn as the terminal line.
+
+**§7 / terminal coupling:** Never emit **`continuationStatus: terminal`** in the same turn as a §7 approval **AskQuestion**. When §7 was just populated and **`caveatsApprovalStatus`** is **`pending`**, the next user-visible turn must be approval structured choice only — terminal **`AGENT_RESULT_RESPONSE_V1`** comes **after** the developer approves or skips §7.
 
 ## Completion (inline)
 
