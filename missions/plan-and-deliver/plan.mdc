@@ -75,7 +75,8 @@ This diagram is the **dispatch ownership map**. It answers: which agent on this 
 | Role | Lane | Spawns | Does not |
 |------|------|--------|----------|
 | **Squad Leader** | Mission dispatch leader | `ad-hoc-prd` (§3), `planner` (§5) | PRD approval on leader lane (owned by **Ad-Hoc PRD** child); route menu for §6 decomposition; `delivery-phases`, `coding-session`, etc. |
-| **Master Plan agent** | Child lane after §5 | **`delivery-phases`**, **`pr-breakdown`** inline via **AskQuestion** + skill load; drafts §7 inline | Replace Squad Leader ledger; resolve dispatch |
+| **Master Plan agent** | Child lane after §5 | **`delivery-phases`**, **`pr-breakdown`** inline via **AskQuestion** + skill load on the **master plan**; drafts §7 inline; ack-only while a **phase-planner** child owns a phase row | Replace Squad Leader ledger; resolve dispatch; phase-scoped decomposition on this lane while **phase-planner** is active |
+| **Phase plan agent** | Child lane after inline **`new-plan`** | Owns **phase delivery** on its lane: route approval, inline **`delivery-phases`** / **`pr-breakdown`**, **`pr-plan`**, nested **`phase-planner`**, **`coding-session`** until **`phaseShipComplete`** or explicit defer/abandon | **`MC_DISPATCH_RESOLVED_V1`**; Master Plan §6 menus for the same phase while this lane is active |
 | **Downstream skill agents** | Further child lanes | **`phase-planner`** spawn from inline **`new-plan`** on planner; nested **`phase-planner`** from phase inline tree; **`coding-session`** → `pre-pr-review` | `MC_DISPATCH_RESOLVED_V1` |
 | **Detached branches** | Often separate session / phrase | Invoked via `development-process.md` branch names | Automatic Squad Leader spawn from §§1–5 |
 

@@ -463,6 +463,31 @@ When Mission Control delivers a child result from **`phase-planner`** or **`codi
 
 Silence or missing downstream metadata is not completion; return `partial` and keep the phase row open.
 
+## Phase delivery ownership (binding)
+
+After §§ 1–4 are drafted on this lane, **this phase-planner child lane owns phase delivery** until one of the terminal conditions below. The **Master Plan agent** (`planner` lane) must **not** re-offer §6 route menus, **`pr-breakdown`** approval, or phase-scoped expand options for the same phase while this lane is active.
+
+**Owns on this lane (through ship-complete or explicit defer/abandon):**
+
+- Route approval after §§ 1–4 (**Step 5b** / **5c** structured choice)
+- Inline **`delivery-phases`** / **`pr-breakdown`** on this phase plan (including **§ 5a-hoist**)
+- Inline **`new-plan`** / **`pr-plan`** and nested **`phase-planner`** / **`coding-session`** spawns from that subtree
+- Per-PR and phase ship aggregation (**Step 5e**)
+
+**Terminal conditions** — set **`continuationStatus: terminal`** and bubble upstream **only** when:
+
+1. **`outputs.phaseShipComplete: true`** — every PR under this phase is ship-complete per Step **5e**, **or**
+2. The developer explicitly **defers** or **abandons** this phase subtree via structured choice, **or**
+3. Unrecoverable **`failure`** / **`aborted`** on this lane with no retry path
+
+**Forbidden while phase delivery is in progress:**
+
+- Returning **`continuationStatus: terminal`** immediately after §§ 1–4 draft or route approval when inline decomposition or child lanes remain — use **`active`** and keep **`continuationOwner: "phase-planner-agent"`**
+- Emitting a terminal line that causes **`planner`** Step **7b** to offer **`route-6`**, **`pr-breakdown`**, or phase-scoped **`expand-eligible`** / **`expand-next-eligible`** for work this lane still owns
+- Telling the developer to continue phase decomposition on the **Master Plan** lane when this **phase-planner** child lane is open
+
+When **`AGENT_RESULT_RESPONSE_V1`** bubbles to inline **`new-plan`** / **`delivery-phases`** / **`planner`**, parents **acknowledge only** until **`phaseShipComplete`** or explicit defer/abandon — see **`new-plan`** step **5**, **`delivery-phases`** step **6b**, and **`planner`** Step **7b** *Phase-planner child active*.
+
 ## One choice per turn — surface observations
 
 Match the discipline in **`planner`**: perform exactly what was chosen; do not silently expand scope. If you notice gaps (parent Changes bullets that do not map to a phase, diagram simplifications, assessment vs parent hint mismatch), list them as short **numbered notes** in the chat reply; the developer addresses them by number on the next turn or folds them into a revise pass.
@@ -496,7 +521,7 @@ Required `outputs` fields:
 - `outputs.hoistAncestorPlanSlug` — when hoist inline handoff ran
 - `outputs.spawnedPlans`, `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`
 - `outputs.continuationOwner`: `"phase-planner-agent"`
-- `outputs.continuationStatus` — `active` while route approval, inline decomposition, **`phase-planner`** / **`coding-session`** child lanes, or route choice remains; `terminal` when no remaining planning work on this phase plan
+- `outputs.continuationStatus` — `active` while route approval, inline decomposition, nested **`phase-planner`** / **`coding-session`** child lanes, or phase ship work remains; `terminal` only per **Phase delivery ownership** ( **`phaseShipComplete`**, explicit defer/abandon, or unrecoverable failure)
 - `outputs.phaseShipComplete` — `true` when every PR under this phase is ship-complete (§5e)
 - `outputs.prShipComplete` — echo when aggregating a **`coding-session`** terminal for a PR under this phase
 

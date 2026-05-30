@@ -309,10 +309,14 @@ Set `outputs.populatorApprovalStatus: "waived-upstream"` and one line: *Parent l
 
 5. **Aggregate spawned `phase-planner` result.** When Mission Control delivers a **`phase-planner`** child result (spawned path only), match by correlation id first, then by `outputs.targetPlanPath` / `outputs.targetPlanSlug`.
 
-   - `success` with no remaining tasks → set this `new-plan` result to `terminal`; include the child plan in `spawnedPlans`.
+   - **`continuationOwner: "phase-planner-agent"`** and **`continuationStatus: "active"`** → keep this `new-plan` result **`active`**; merge `remainingTasks`, `activeLanes`, and `openLedgerEntries`; report **`## Completion (inline)`** to the invoker as **wait-state only** (acknowledge — developer continues on the **phase-planner** child lane). Do **not** set invoker `terminal` or re-open **`planner`** §6 menus for this phase.
+   - **`outputs.phaseShipComplete: true`** → merge ship fields; invoker may mark the parent row **`ship-complete`** and offer expand upstream per **`delivery-phases`** step **6b**.
+   - `success` with **`continuationStatus: "terminal"`** and **`phaseShipComplete`** or explicit defer/abandon only → set this `new-plan` result to `terminal`; include the child plan in `spawnedPlans`.
    - `partial` → keep this `new-plan` result `active`; copy the populator `remainingTasks`, `activeLanes`, and `openLedgerEntries`.
    - `failure`, `aborted`, or `abandoned` → return the same status upstream with the child stub path and the populator errors; the upstream decomposition agent decides retry/defer/abandon for that row.
    - Missing or malformed populator outputs → return `partial` and keep the row open; silence is not completion.
+
+   **Forbidden:** treating §§ 1–4 draft completion or route approval on **`phase-planner`** as **`new-plan` terminal** when the child still owns inline decomposition or ship work (**`phase-planner`** § *Phase delivery ownership*).
 
 5b. **Aggregate `coding-session` child result (inline `pr-plan` path).** When inline **`pr-plan`** spawned **`coding-session`** (§5d) and Mission Control delivers the child result:
 

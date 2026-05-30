@@ -251,6 +251,8 @@ When the developer chooses to hand off or populate a child in standalone use, ru
 
 **Inline `new-plan` under `planner` or `phase-planner`:** After each inline **`new-plan`** row completes, merge its **`## Completion (inline)`** into `childRows` and `spawnedPlans`. If inline **`new-plan`** reports an active **`phase-planner`** lane, keep the row open and add it to `activeLanes`. When Mission Control delivers a **`phase-planner`** child result, match by correlation id, then `outputs.parentPlanSlug` + `outputs.parentIndex`.
 
+**Phase-planner child active (inline under `master-plan-agent`):** When **`activeLanes`** includes an open **`phase-planner`** for row **N**, report **`## Completion (inline)`** to **`planner`** as **acknowledge only** — one status line naming the phase slug and child lane. Do **not** offer **`expand-next-eligible`** for row **N+1** or phase-scoped decomposition menus on the **Master Plan** lane until **`outputs.phaseShipComplete: true`** for row **N** or the developer explicitly defers/abandons that phase on the **phase-planner** lane (**`phase-planner`** § *Phase delivery ownership*).
+
 **Standalone spawned `new-plan`:** When Mission Control delivers a child result from a spawned **`new-plan`** lane:
 
 1. Match it to the ledger entry by correlation id first, then by `outputs.parentPlanSlug` + `outputs.parentIndex`.

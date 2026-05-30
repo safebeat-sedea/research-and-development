@@ -494,7 +494,7 @@ Do **not** draft section 6 (`Delivery phases | PR breakdown`) or section 7 (Cave
 
 §6 decomposition runs **`delivery-phases`** or **`pr-breakdown`** **inline on this lane** (no child lane for those skills). §7 **Caveats** is drafted **inline** in this skill when the user selects that option.
 
-**Continuation ownership.** When this skill runs as a spawned **Master Plan agent** under **`plan and deliver`**, this lane owns post–Master Plan continuation and downstream spawning. The **Squad Leader** only acknowledges status and maintains the closure ledger — no duplicate route **AskQuestion** on the leader lane. Include `continuationOwner: "master-plan-agent"` and `continuationStatus: "active"` in the terminal result while follow-up remains on this lane.
+**Continuation ownership.** When this skill runs as a spawned **Master Plan agent** under **`plan and deliver`**, this lane owns post–Master Plan continuation and downstream spawning **except phase-scoped delivery** — once inline **`new-plan`** opens a **`phase-planner`** child lane, that child owns the phase subtree until **`phaseShipComplete`** or explicit defer/abandon; this lane **acknowledges only** (Step **7b** *Phase-planner child active*). The **Squad Leader** only acknowledges status and maintains the closure ledger — no duplicate route **AskQuestion** on the leader lane. Include `continuationOwner: "master-plan-agent"` and `continuationStatus: "active"` in the terminal result while follow-up remains on this lane.
 
 ### Step 7a — Recap after initial draft
 
@@ -505,6 +505,8 @@ When using the **legacy split** (see **`../README.md`** § *Recap, structured ch
 ### Step 7b — Structured choice: primary next moves
 
 Invoke **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**, or **`MC_ASKQUESTION_V1`**. On the legacy split, run structured choice in a **separate** assistant message after step **7a** recap. Build options from plan state and Step 6c band.
+
+**Phase-planner child active (binding):** When **`activeLanes`** (from inline **`delivery-phases`** / **`new-plan`** merge or bubbled **`AGENT_RESULT_RESPONSE_V1`**) includes **`continuationOwner: "phase-planner-agent"`** with **`continuationStatus: "active"`** for a **`Delivery phases`** row, **do not** offer **`route-6`**, **`expand-eligible-pr`**, **`expand-next-phase`**, or other phase-scoped decomposition options for that row on this **Master Plan** lane. Acknowledge in one line (phase slug, child lane id when known) and tell the developer to continue on the **phase-planner** child lane. Re-offer Step **7b** master-plan options only after **`phaseShipComplete`** for that phase or explicit defer/abandon — see **`phase-planner`** § *Phase delivery ownership*.
 
 **When complexity is low or medium (C ≤ 20)** — include at minimum:
 

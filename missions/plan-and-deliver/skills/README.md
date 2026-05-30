@@ -13,7 +13,7 @@ This mission uses **three execution shapes** (see **`.sedea/centers/sedea/skills
 | **`pr-plan`** → **`coding-session`** | Spawn after §5c **Start coding session** | **`pr-plan`** on its lane | Child **`coding-session`** uses **`AGENT_RESULT_RESPONSE_V1`** |
 | **`ad-hoc-prd`** | Spawned | Squad Leader §3 | Child terminal |
 | **`delivery-phases`**, **`pr-breakdown`**, **`new-plan`** | Inline on **`planner`** / **`phase-planner`** lane | Parent planning skill | Inline completion merged into parent |
-| **`phase-planner`** | Spawned from inline **`new-plan`** (optional) | **`new-plan`** | Child terminal |
+| **`phase-planner`** | Spawned from inline **`new-plan`** (optional) | **`new-plan`** | Child terminal; **owns phase delivery** on its lane until **`phaseShipComplete`** or explicit defer/abandon — Master Plan lane ack-only meanwhile |
 | **`coding-session`** | Spawned (from **`pr-plan`** §5d) or detached entry | **`pr-plan`**, developer, dispatch | Child terminal + inline ship skills |
 | **`pr-review`**, **`create-pr`**, **`deploy-walk`**, **`plan-reconcile`** | **Inline only** on active **`coding-session`** | **`coding-session`** | Prose to coding-session — no child lane |
 
@@ -74,7 +74,7 @@ Squad Leader steps **§3** and **§5** spawn child lanes for **`ad-hoc-prd`** an
 |-------|-----------------|---------------------|
 | `ad-hoc-prd` | Squad Leader §3 | Child lane owns PRD recap + approval (steps 5–7); leader §4 only after `terminal` + `developerApprovedPrd: true`; no nested child lanes |
 | `planner` | Squad Leader §5 | Seed ledger; §6 ack when `continuationOwner: master-plan-agent` |
-| `phase-planner` | inline **`new-plan`** spawn | Runs **`delivery-phases`** / **`pr-breakdown`** inline; may spawn nested **`phase-planner`** or **`coding-session`** via inline tree |
+| `phase-planner` | inline **`new-plan`** spawn | Runs **`delivery-phases`** / **`pr-breakdown`** inline on **its child lane**; owns phase subtree through ship-complete; **`planner`** ack-only while **`continuationOwner: phase-planner-agent`** is active |
 | `delivery-phases` | **`planner`** or **`phase-planner` inline** | Runs **`new-plan`** inline on invoker lane |
 | `pr-breakdown` | **`planner`** or **`phase-planner` inline** | Same as delivery-phases |
 | `new-plan` | **`delivery-phases`** / **`pr-breakdown` inline** | Indexed stub + parent link; **`pr-plan`** inline; may spawn **`phase-planner`** |
