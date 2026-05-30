@@ -239,7 +239,8 @@ Hub activation must reference **`$WORKTREE_ROOT/extensions/`**, not the primary 
 
 **Agent verification (minimum before ship chain):** **`bootstrapStatus: success`**; smoke shows **`vscode/out`** + extension **`node_modules`**; optional **`SKIP_BUILD=1 VSCODE_SKIP_PRELAUNCH=1`** launch confirms worktree extension paths. Full checklist: **dot-sedea** § *Fast bootstrap verification checklist*.
 
-**Detach merged worktrees from the workbench.** After a PR merges and you retire a worktree, invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree.
+
+**Detach merged worktrees from the workbench.** After a PR merges, on the **`coding-session`** lane run [Post-merge workspace cleanup](../missions/plan-and-deliver/skills/coding-session/SKILL.md#post-merge-workspace-cleanup) **before** After deploy `deploy-walk`: invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree. Pull **`origin/main`** on **`HOSTING_ROOT`** in the same cleanup pass so the primary clone is not behind when After deploy verification runs.
 
 Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetch origin main:main`) fails with `fatal: refusing to fetch into branch 'refs/heads/main'` when `main` is already checked out in the current worktree.
 

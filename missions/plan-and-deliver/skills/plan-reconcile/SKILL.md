@@ -245,7 +245,11 @@ On non-zero exit, stop and surface the error.
 
 ### 5. Post-ship workspace cleanup
 
-Run after §§1–4 when archive/reconcile work for this pass is done (or when the developer explicitly requests workspace cleanup on a reconcile lane). **Destructive git** runs only after **AskQuestion** approval in this subsection.
+**Primary owner:** [coding-session post-merge workspace cleanup](../coding-session/SKILL.md#post-merge-workspace-cleanup) on the ship chain **after PR merge and before After deploy** `deploy-walk`. Run this subsection when archive/reconcile work for this pass is done, when the developer explicitly requests workspace cleanup on a reconcile lane, or as an **idempotent fallback** when post-merge cleanup was skipped or deferred on **`coding-session`**.
+
+**Idempotent fallback:** When **`detect-stale-workspaces`** returns no candidates (worktree already removed, **`mainPullStatus`** already **`success`** on this plan), report one line and skip **`--apply`** — do not treat as error.
+
+**Branch delete gate:** Same as **`post-reconcile-workspace-cleanup.mjs`** — linked PR(s) **`MERGED`** (`mergedPr: true`) **and** remote tracking branch absent; not merge-base into **`origin/main`**.
 
 **Detect (read-only):**
 
@@ -289,11 +293,11 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
   --operations-user-id "$OPS_ID" --apply [--slug <slug>]
 ```
 
-The script runs **`git worktree remove`**, deletes branches merged into **`origin/main`** (or **`--default-branch`**), **`git pull origin <defaultBranch>`** on **`HOSTING_ROOT`**, and **`plan-state.mjs prune-sessions --all`**.
+The script runs **`git worktree remove`**, deletes local feature branches when PR merged **and** remote head is gone (not merge-base heuristics), **`git pull origin <defaultBranch>`** on **`HOSTING_ROOT`**, and **`plan-state.mjs prune-sessions --all`**.
 
-3. Summarise **`cleanedWorktrees`**, **`deletedBranches`**, **`mainPullStatus`**, and any **`errors`** from the script JSON.
+3. Summarise **`cleanedWorktrees`**, **`deletedBranches`**, **`skippedBranches`**, **`mainPullStatus`**, and any **`errors`** from the script JSON.
 
-**coding-session** lanes use **`detect-stale-workspaces`** only and route here — they do **not** run **`--apply`**.
+**Primary path:** **`coding-session`** [Post-merge workspace cleanup](../coding-session/SKILL.md#post-merge-workspace-cleanup) runs **`--apply`** after PR merge and before After deploy walk. This §5 subsection is the **idempotent fallback** when that pass was skipped or deferred.
 
 ### 6. End state — no plans-repo shortcut
 
