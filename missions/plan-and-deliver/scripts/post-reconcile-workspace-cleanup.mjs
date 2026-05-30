@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Post-reconcile git + worktree cleanup (destructive). Invoked by plan-reconcile §5.
-// Agent must call sedea_remove_worktree_folder before --apply removes worktrees.
+// Post-ship git + worktree cleanup (destructive). Invoked by coding-session post-merge
+// cleanup and plan-reconcile §5 (idempotent fallback). Agent must call
+// sedea_remove_worktree_folder before --apply removes worktrees.
 // Detect-only listing: plan-state.mjs detect-stale-workspaces.
 
 import * as fs from 'node:fs/promises';
@@ -141,20 +142,40 @@ async function resolveMainRepoRoot(worktreePath) {
   return { ok: true, mainRepoRoot: worktreePath };
 }
 
-async function branchMergedIntoOrigin(mainRepoRoot, branch, defaultBranch) {
-  const fetch = await spawnGit(mainRepoRoot, ['fetch', 'origin', defaultBranch]);
-  if (!fetch.ok) {
-    return { ok: false, merged: false, error: fetch.stderr || 'fetch failed' };
+/**
+ * Branch delete eligibility: linked PR(s) MERGED (detect-stale-workspaces mergedPr)
+ * and the remote tracking branch is gone (GitHub deleted head after merge).
+ * Does not use merge-base / local "merged into origin/main" heuristics.
+ */
+async function branchEligibleForDelete(mainRepoRoot, branch, candidate) {
+  if (candidate.mergedPr !== true) {
+    return {
+      ok: true,
+      eligible: false,
+      reason: 'linked_prs_not_merged',
+    };
   }
-  const anc = await spawnGit(mainRepoRoot, [
-    'merge-base',
-    '--is-ancestor',
-    branch,
-    `origin/${defaultBranch}`,
-  ]);
-  if (anc.ok) return { ok: true, merged: true };
-  if (anc.code === 1) return { ok: true, merged: false };
-  return { ok: false, merged: false, error: anc.stderr || 'merge-base failed' };
+  const fetch = await spawnGit(mainRepoRoot, ['fetch', 'origin']);
+  if (!fetch.ok) {
+    return { ok: false, eligible: false, error: fetch.stderr || 'fetch failed' };
+  }
+  const remote = await spawnGit(mainRepoRoot, ['ls-remote', '--heads', 'origin', branch]);
+  if (!remote.ok) {
+    return { ok: false, eligible: false, error: remote.stderr || 'ls-remote failed' };
+  }
+  const remoteBranchExists = remote.stdout.trim().length > 0;
+  if (remoteBranchExists) {
+    return {
+      ok: true,
+      eligible: false,
+      reason: 'pr_merged_remote_branch_still_exists',
+    };
+  }
+  return {
+    ok: true,
+    eligible: true,
+    reason: 'pr_merged_remote_branch_deleted',
+  };
 }
 
 async function detectCandidates(hostingRoot, operationsUserId, slug) {
@@ -202,7 +223,7 @@ async function syncHostingDefaultBranch(hostingRoot, defaultBranch, dryRun) {
 const USAGE = `Usage: post-reconcile-workspace-cleanup [--operations-user-id <id>] [--dry-run | --apply] [--slug <slug>] [--default-branch <name>]
 
   --dry-run   Print planned git actions (default). Does not mutate git or sidecars.
-  --apply     Run git worktree remove, branch delete (when merged), hosting pull, prune-sessions.
+  --apply     Run git worktree remove, branch delete (PR merged + remote branch gone), hosting pull, prune-sessions.
               Agent must call sedea_remove_worktree_folder for each worktreePath before --apply.
 
   --default-branch <name>  Integration branch (default: main).
@@ -271,17 +292,19 @@ async function main() {
     }
 
     if (c.branch && c.branch !== defaultBranch) {
-      const merged = await branchMergedIntoOrigin(main.mainRepoRoot, c.branch, defaultBranch);
+      const eligibility = await branchEligibleForDelete(main.mainRepoRoot, c.branch, c);
       const delAction = {
         action: 'branch-delete',
         mainRepoRoot: main.mainRepoRoot,
         branch: c.branch,
-        merged: merged.merged,
+        eligible: eligibility.eligible === true,
+        reason: eligibility.reason || eligibility.error,
+        mergedPr: c.mergedPr,
         slug: c.slug,
       };
       report.actions.push(delAction);
-      if (!dryRun && merged.ok && merged.merged) {
-        const del = await spawnGit(main.mainRepoRoot, ['branch', '-d', c.branch]);
+      if (!dryRun && eligibility.ok && eligibility.eligible) {
+        const del = await spawnGit(main.mainRepoRoot, ['branch', '-D', c.branch]);
         if (del.ok) report.deletedBranches.push(c.branch);
         else {
           report.errors.push({
@@ -290,11 +313,18 @@ async function main() {
             error: del.stderr || 'branch delete failed',
           });
         }
-      } else if (!dryRun && merged.ok && !merged.merged) {
+      } else if (!dryRun && eligibility.ok && !eligibility.eligible) {
+        report.skippedBranches = report.skippedBranches || [];
+        report.skippedBranches.push({
+          slug: c.slug,
+          branch: c.branch,
+          reason: eligibility.reason || 'not eligible',
+        });
+      } else if (!dryRun && !eligibility.ok) {
         report.errors.push({
           slug: c.slug,
           branch: c.branch,
-          error: `branch not merged into origin/${defaultBranch}; skipped delete`,
+          error: eligibility.error || 'branch eligibility check failed',
         });
       }
     }

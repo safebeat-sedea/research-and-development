@@ -10,7 +10,7 @@ description: >-
   **implement the anchored PR plan on this lane** in that worktree; on **prompt-only**
   entry, emit a copy/paste-safe two-phase session prompt for a separate coding chat.
   After implementation, run the **ship chain** (one cut-point modal: approve + commit +
-  Before deploy **deploy-walk** inline → **pre-pr-review** spawn). Plan-anchored runs validate
+  Before deploy **deploy-walk** inline → **pre-pr-review** spawn). After PR merge, post-merge workspace cleanup (main pull, worktree remove, branch delete when remote gone) runs before After deploy **deploy-walk** inline. Plan-anchored runs validate
   per-PR plans with plan-ws-completeness.mjs (_TBD_ in body requires completion or
   explicit override incomplete plan). Use under mission dispatch, natural language, or
   after planning when handing off implementation.
@@ -88,7 +88,7 @@ warmUpRules:
 
 Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
 
-**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory worktree bootstrap** (spawn **`worktree-bootstrap`** child or inline `scripts/bootstrap-worktree-dev.sh`), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** inline → **`pre-pr-review`** → **`create-pr`**).
+**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory worktree bootstrap** (spawn **`worktree-bootstrap`** child or inline `scripts/bootstrap-worktree-dev.sh`), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** inline → **`pre-pr-review`** → **`create-pr`** → [Post-merge workspace cleanup](#post-merge-workspace-cleanup) → After deploy **`deploy-walk`** inline).
 
 **Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code when this run is **prompt-only** (see [Prompt-only handoff](#prompt-only-handoff)); opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
@@ -477,18 +477,17 @@ When the plan’s **Worktree setup** lists two or more repos, or the user asks f
 
 ## Stale worktree detection (detect-only)
 
-Post-ship **worktree removal**, **branch delete**, and **`main` sync** are owned by **`plan-reconcile`** (§ *Post-ship workspace cleanup* in **`plan-reconcile/SKILL.md`**) and **20_efficient-pr-shipping.mdc** § *Detach merged worktrees* — **not** on this lane.
+Post-merge **worktree removal**, **`HOSTING_ROOT` `git pull origin main`**, and **feature-branch delete** run on this lane in [Post-merge workspace cleanup](#post-merge-workspace-cleanup) **after PR merge and before** [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff). **`plan-reconcile`** §5 is an **idempotent fallback** when cleanup was skipped, deferred, or no stale paths remained at post-merge time.
 
 | Rule | Behavior |
 |------|----------|
-| **Forbidden** | Proactive **AskQuestion** or chat offers to **`sedea_remove_worktree_folder`**, **`git worktree remove`**, delete branch, or run full cleanup as routine session wrap-up |
-| **Forbidden** | Destructive git cleanup on the **coding-session** lane |
-| **When to detect** | After **`prState: merged`** and deploy verification **`done`**, or when the developer returns post-merge on this lane with a plan anchor |
+| **Forbidden** | Proactive **AskQuestion** or chat offers to run full **`plan-reconcile`** archive + cleanup as routine post-merge wrap-up before After deploy |
+| **Forbidden** | Destructive git cleanup outside [Post-merge workspace cleanup](#post-merge-workspace-cleanup) (authorized apply) or **`plan-reconcile`** §5 fallback |
+| **When to detect** | After **`prState: merged`** (post-create-pr, **`check-pr-status`**, or developer return) before After deploy walk |
 | **How** | From **`HOSTING_ROOT`**: `node …/plan-state.mjs --operations-user-id "$OPS_ID" detect-stale-workspaces --slug <slug> --json` |
-| **If empty** | One line: no stale worktree paths on disk for this plan — **no** cleanup menu |
-| **If stale** | Short recap (path, branch, **`mergedPr`** when **`prs[]`** exists) then **AskQuestion** (`modalTitle`: *Coding session — stale worktree*): **`start-plan-reconcile`** · **`defer-reconcile`** · **`more-details`** — **not** remove-worktree options |
-| **`start-plan-reconcile`** | On **next** turn, [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) |
-| **`defer-reconcile`** | Developer may run inline **`plan-reconcile`** later; do not run cleanup here |
+| **If empty** | One line: no stale worktree paths on disk — proceed to [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) when merge confirmed |
+| **If stale** | Short recap (path, branch, **`mergedPr`**) then route to [Post-merge workspace cleanup](#post-merge-workspace-cleanup) — **not** remove-worktree options on this detect-only pass |
+| **After deploy / archive** | [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) for archive when deploy verification **`done`** — §5 cleanup skips paths already cleaned |
 
 ## Ship chain after implementation (coding-session lane)
 
@@ -500,6 +499,8 @@ flowchart LR
   CUT --> BDW[Inline deploy-walk — Before deploy]
   BDW --> PPR[Spawn pre-pr-review]
   PPR --> CPR[Create-PR handoff after go]
+  CPR --> PMC[Post-merge workspace cleanup]
+  PMC --> ADW[Inline deploy-walk — After deploy]
 ```
 
 | Step | Section | Commit required? |
@@ -508,6 +509,8 @@ flowchart LR
 | 2 | [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) | **Yes** — after cut-point **Act** (commit when needed, then inline walk) |
 | 3 | [Pre-PR review handoff](#pre-pr-review-handoff) | **Yes** — Before deploy resolved or skipped |
 | 4 | [Create-PR handoff after go](#create-pr-handoff-after-go) | After **`pre-pr-review`** **go** |
+| 5 | [Post-merge workspace cleanup](#post-merge-workspace-cleanup) | **No** — after **`prState: merged`**, before After deploy |
+| 6 | [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) | **No** — post-merge cleanup done or skipped |
 
 **Forbidden on this lane:** `git commit` before ship cut-point approval; **`git commit`**, Before deploy **`deploy-walk`**, or ship cut-point while `outputs.bootstrapStatus` is `pending` or `failed`; spawn **`pre-pr-review`** while the tree is dirty; run inline **`create-pr`** before steps 2–3 complete; treat ad-hoc Before-deploy checkbox edits as a substitute for step 2 inline **`deploy-walk`** when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → Before deploy when [Combined authorization](#combined-authorization) applies.
 
@@ -805,14 +808,73 @@ Run on the **developer's response turn** — **not** in the same assistant turn 
 | Pick | Actions |
 |------|---------|
 | **`start-pr-review`** | [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) |
-| **`check-pr-status`** | Query PR state; update `outputs`; re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) |
-| **`spawn-after-deploy-walk`** | [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) |
+| **`check-pr-status`** | Query PR state; update `outputs`; when **`merged`**, route to [Post-merge workspace cleanup](#post-merge-workspace-cleanup) on **next** turn (or re-open gate if still open) |
+| **`spawn-after-deploy-walk`** | [Post-merge workspace cleanup](#post-merge-workspace-cleanup) on **next** turn when merge confirmed; then [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) after cleanup completes or is skipped |
 | **`defer-ship`** | Stop with recap; `continuationStatus: active` |
 | **`more-details`** | Clarify; re-open gate |
 
+### Post-merge workspace cleanup
+
+Run on this lane **after** `prState: merged` **and before** [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff). Normative entry: [Act after post-create-pr pick](#act-after-post-create-pr-pick) (**`spawn-after-deploy-walk`** or **`check-pr-status`** → merged), or explicit developer message (*pull main*, *remove worktree*, *post-merge cleanup*) when merge is already confirmed.
+
+**Purpose:** Sync **`HOSTING_ROOT`** with **`origin/main`**, detach/remove the session worktree from Mission Control and git, and delete the local feature branch **before** After deploy verification — so deploy-walk runs from an updated primary clone, not a stale worktree with **`main` behind**.
+
+**Branch delete gate (normative):** delete the local feature branch only when sidecar/**`gh`** reports linked PR(s) **`MERGED`** (`detect-stale-workspaces` **`mergedPr: true`**) **and** **`git ls-remote --heads origin <branch>`** is empty (remote head deleted after merge). Do **not** use **`git merge-base --is-ancestor`** or “safe to delete” local merge heuristics. When PR is merged but the remote branch still exists, **skip branch delete**, report one line, still remove worktree and pull **`main`** when authorized.
+
+**Preconditions:** `prState: merged`; plan anchor resolves when applicable.
+
+**Detect (read-only):**
+
+```bash
+cd "$HOSTING_ROOT"
+OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" detect-stale-workspaces --slug <slug> --json
+```
+
+When **`candidates`** is empty and sidecar **`worktrees[]`** / session focus is already clear, set `outputs.postMergeCleanupStatus: skipped_no_stale` and proceed to [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) on the **next** turn.
+
+**Dry-run git plan:**
+
+```bash
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
+  --operations-user-id "$OPS_ID" --dry-run [--slug <slug>]
+```
+
+Present **`actions`**, **`skippedBranches`** (when branch delete waits on remote), and **`mergedPr`** per candidate (information-only when long).
+
+**AskQuestion** (required before **`--apply`**):
+
+| Option id (illustrative) | Label (brief) |
+|--------------------------|---------------|
+| `cleanup-apply` | Run post-merge cleanup (worktree + pull main + branch when eligible) |
+| `cleanup-skip` | Skip cleanup — proceed to After deploy walk |
+| `cleanup-dry-run-only` | Dry-run only — no git mutations |
+| `more-details` | More details for option _ |
+
+Only **`cleanup-apply`** authorizes **`--apply`**.
+
+**Apply (after MCP detach):**
+
+1. For **each** candidate **`worktreePath`**, invoke MCP **`sedea_remove_worktree_folder`** with `{ "path": "<absolute-worktree-root>" }` **before** git removal (rule **20** § *Detach merged worktrees*).
+2. Run:
+
+```bash
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
+  --operations-user-id "$OPS_ID" --apply [--slug <slug>]
+```
+
+3. Merge script JSON into `outputs` (`cleanedWorktrees`, `deletedBranches`, `skippedBranches`, `mainPullStatus`, `postMergeCleanupStatus: success` \| `partial`).
+4. On **next** turn, continue to [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff). Do **not** run inline **`deploy-walk`** (After deploy) in the same assistant turn as cleanup **`--apply`**.
+
+**Spawned lane — post-merge cleanup sentinel (binding):** When the **AskQuestion tool** is unavailable, emit **`MC_PHASED_RESPONSE_V1`** with the same option ids (`modalTitle`: *Coding session — post-merge cleanup*).
+
 ### After deploy deploy-walk handoff
 
-Run from [Act after post-create-pr pick](#act-after-post-create-pr-pick) when the developer chooses **`spawn-after-deploy-walk`**, or when **`prState`** is **`merged`** and they explicitly say the PR merged / *start After deploy* in the same message.
+Run from [Act after post-create-pr pick](#act-after-post-create-pr-pick) when the developer chooses **`spawn-after-deploy-walk`**, when **`prState`** is **`merged`** and they explicitly say the PR merged / *start After deploy* **after** [Post-merge workspace cleanup](#post-merge-workspace-cleanup) completed or was skipped, or when cleanup reported **`skipped_no_stale`**.
+
+**Precondition:** [Post-merge workspace cleanup](#post-merge-workspace-cleanup) **`--apply`** succeeded, developer chose **`cleanup-skip`**, or detect reported no stale worktrees — **not** while session worktree remains and **`HOSTING_ROOT`** is still behind **`origin/main`** unless developer explicitly skipped cleanup.
 
 1. **Verify merge** — `prState` must be **`merged`** (from coding-session `outputs` after inline **`create-pr`** or a fresh `gh pr view` / repo check). If still **`open`**, report one line and re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — do **not** run inline **`deploy-walk`** for After deploy only.
 2. When plan-anchored, **read** §7. If **`### After deploy`** is empty or all `[x]` and capstone is done, note in one line and offer [Post-create-pr handoff gate](#post-create-pr-handoff-gate) or [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) defer — no inline walk.
@@ -833,7 +895,7 @@ Run from [Act after post-create-pr pick](#act-after-post-create-pr-pick) when th
 
 ### Plan-reconcile handoff (inline)
 
-Run when the developer chooses **`start-plan-reconcile`** at [Stale worktree detection (detect-only)](#stale-worktree-detection-detect-only), explicitly says *plan reconcile* / *reconcile plans* on this lane, or authorizes reconcile after After deploy / deploy verification **done**.
+Run when the developer explicitly says *plan reconcile* / *reconcile plans* on this lane, or authorizes reconcile after After deploy / deploy verification **done**.
 
 **Preconditions (plan-anchored ship chain):**
 
@@ -918,7 +980,9 @@ When this skill runs as a spawned child, end with a child result containing at l
 - `outputs.deployStatus`
 - `outputs.deployTodoStatus`
 - `outputs.deployPlanStepsChecked` — step numbers flipped to `[x]` in §7 during this turn (when applicable)
-- `outputs.mainPullStatus` — from inline **`plan-reconcile`** §5 cleanup when applicable
+- `outputs.mainPullStatus` — from [Post-merge workspace cleanup](#post-merge-workspace-cleanup) or inline **`plan-reconcile`** §5 when applicable
+- `outputs.postMergeCleanupStatus` — `success` \| `partial` \| `skipped` \| `skipped_no_stale` when post-merge cleanup ran or was bypassed
+- `outputs.skippedBranches` — branches not deleted (PR merged but remote head still exists)
 - `outputs.archivedSlugs` — when inline **`plan-reconcile`** archived the target
 - `outputs.prShipComplete` — `true` only when **`plan-reconcile`** finished with target archived, PR **merged**, and **`mainPullStatus`** is **`success`** or **`skipped`**
 - `outputs.parentPlanPath`, `outputs.parentPlanSlug`, `outputs.parentIndex` — echo spawn **`inputs`** when **`pr-plan`** (or upstream) supplied them; required on terminal lines that set **`prShipComplete: true`**
@@ -957,6 +1021,7 @@ This skill usually runs **off** the **plan and deliver** leader lane. Mission Co
 | Spawned lane implementing or review loop in progress | `implementing` | `targetPlanPath`, `shipPhase`, `rowStatus`, `implementationMode: spawned-lane`, `prePrReviewRecommendation`, `prReviewStatus` |
 | Pre-PR **go** | `pre-pr-review` | `targetPlanPath`, `shipPhase`, `rowStatus`, `prePrReviewRecommendation: go` |
 | PR opened | `pr-open` | `targetPlanPath`, `shipPhase`, `rowStatus`, `prUrl`, `prNumber` |
+| Post-merge cleanup | `post-merge-cleanup` | `targetPlanPath`, `shipPhase`, `rowStatus`, `mainPullStatus`, `cleanedWorktrees`, `postMergeCleanupStatus` |
 | PR comment triage complete | `pr-review` | `targetPlanPath`, `shipPhase`, `rowStatus`, `prReviewStatus`, `githubReconciliationStatus` |
 | Deploy walk finished | `deploy-walk` | `targetPlanPath`, `shipPhase`, `rowStatus`, `deployStatus`, `deployTodoStatus` |
 | Reconcile / archive done | `done` or `reconcile` | `targetPlanPath`, `shipPhase`, `rowStatus`, `remainingTasks` (empty), `prShipComplete` when archived + main pulled |
