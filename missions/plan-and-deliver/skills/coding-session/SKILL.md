@@ -526,7 +526,8 @@ flowchart LR
  BDW --> PPR[Spawn pre-pr-review]
  PPR --> CPR[Create-PR handoff after go]
  CPR --> PMC[Post-merge workspace cleanup]
- PMC --> ADW[Inline deploy-walk — After deploy]
+  PMC --> ADW[Inline deploy-walk — After deploy]
+  ADW --> REM[Post–After deploy remainder authorization]
 ```
 
 | Step | Section | Commit required? |
@@ -537,6 +538,7 @@ flowchart LR
 | 4 | [Create-PR handoff after go](#create-pr-handoff-after-go) | After **`pre-pr-review`** **go** |
 | 5 | [Post-merge workspace cleanup](#post-merge-workspace-cleanup) | **No** — after **`prState: merged`**, before After deploy |
 | 6 | [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) | **No** — post-merge cleanup done or skipped |
+| 7 | [Post–After deploy remainder authorization](#post-after-deploy-remainder-authorization) | **No** — one batch or per-step approval before tail ship work |
 
 **Forbidden on this lane:** `git commit` before ship cut-point approval; **`git commit`**, Before deploy **`deploy-walk`**, or ship cut-point while `outputs.bootstrapStatus` is `pending` or `failed`; spawn **`pre-pr-review`** while the tree is dirty; run inline **`create-pr`** before steps 2–3 complete; treat ad-hoc Before-deploy checkbox edits as a substitute for step 2 inline **`deploy-walk`** when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → Before deploy when [Combined authorization](#combined-authorization) applies.
 
@@ -925,7 +927,92 @@ Run from [Act after post-create-pr pick](#act-after-post-create-pr-pick) when th
 | `upstreamSkill` | `"coding-session"` |
 
 4. Follow **`deploy-walk`** procedure (post-merge §7, lifecycle to `done`). Merge **`## Completion (inline)`** into coding-session `outputs`. Do **not** run inline **`plan-reconcile`** in the same turn.
-5. When the walk completes or stops on a manual step, re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) or offer [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) defer per developer message. Do **not** wait for a child **`AGENT_RESULT_RESPONSE_V1`** — there is no **`deploy-walk`** child lane.
+5. When the walk completes with **`deployStatus: done`** and **`deployTodoStatus: done`** (developer confirmed the last After-deploy §7 step, or the walk reported no remaining manual steps), continue to [Post–After deploy remainder authorization](#post-after-deploy-remainder-authorization) on the **next** turn when [remainder inventory](#post-after-deploy-remainder-inventory) is non-empty. When inventory is empty, re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) or offer [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) defer per developer message. Do **not** wait for a child **`AGENT_RESULT_RESPONSE_V1`** — there is no **`deploy-walk`** child lane.
+
+### Post–After deploy remainder authorization
+
+Run on the **spawned coding-session lane** after [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) completes with **`deployStatus: done`** and **`deployTodoStatus: done`**, and the developer has approved the last After-deploy §7 step (or the walk left no pending manual steps).
+
+**Purpose:** After After deploy verification, offer **one** confirmation to run all remaining tail ship work, while preserving **per-step** approval when the developer has concerns.
+
+**Preconditions (all required):**
+
+1. `outputs.bootstrapStatus: success` (or bootstrap not required on this run).
+2. `prState` is **`merged`**.
+3. [Post-merge workspace cleanup](#post-merge-workspace-cleanup) **`--apply`** succeeded, developer chose **`cleanup-skip`**, or detect reported **`skipped_no_stale`**.
+4. [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) finished with **`deployStatus: done`** and **`deployTodoStatus: done`**.
+5. [Remainder inventory](#post-after-deploy-remainder-inventory) is **non-empty**.
+
+When any precondition fails, report one line what is missing; route to the missing step — do **not** open this gate.
+
+**Forbidden:** Starting inline **`plan-reconcile`**, setting **`prShipComplete`**, or closing the ship row when inventory is non-empty **without** passing this gate (or explicit developer message that names **`plan-reconcile`** / defer).
+
+#### Remainder inventory
+
+Build a numbered list for the recap and modal (omit steps already satisfied):
+
+| Order | Step id | When included |
+|-------|---------|----------------|
+| 1 | `plan-reconcile` | Plan-anchored, `prState: merged`, deploy verification **done**, `targetPlanPath` or `targetPlanSlug` resolves, and reconcile not already completed on this lane |
+| 2 | `archive-followups` | Subsumed by **`plan-reconcile`** when step 1 runs — do **not** list separately unless reconcile is skipped and archive/follow-ups still pending |
+| 3 | `pr-ship-complete` | After reconcile (or when reconcile skipped with documented reason) — set **`outputs.prShipComplete: true`**, **`outputs.shipPhase: done`**, **`outputs.rowStatus: closed`** |
+
+When only step 3 remains (reconcile already done), list step 3 alone. When nothing remains, **skip** this gate — use [Post-create-pr handoff gate](#post-create-pr-handoff-gate) or [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) defer as today.
+
+#### Batch authorization gate
+
+**Stop** before executing any inventory step. Use **one** **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *Coding session — confirm remaining ship work*). Recap must list the inventory verbatim.
+
+| Option id | Label (brief) | Authorizes on **next** turn |
+|-----------|---------------|-----------------------------|
+| `confirm-all-remaining` | Confirm — perform all listed steps | Run every inventory step in order without further modals (except hard stops / errors) |
+| `next-step-only` | Approve next step only — [first step name] | Run inventory step 1 only |
+| `defer-tail` | Defer remaining ship work | Keep `continuationStatus: active`; no tail steps |
+| `more-details` | More details for option _ | Elaborate; re-open this gate |
+
+**Do not** run inventory steps in the same assistant turn as this modal.
+
+**Spawned lane — remainder batch sentinel (binding):** **In order to use the AskQuestion modal**, emit **`MC_PHASED_RESPONSE_V1`** with the same option ids. Put the numbered inventory in **`display.markdown`**.
+
+#### Act after remainder batch pick
+
+Run on the **developer's response turn** — **not** in the same assistant turn as the modal.
+
+| Pick | Actions |
+|------|---------|
+| **`confirm-all-remaining`** | For each inventory step in order: execute per [Execute remainder step](#execute-remainder-step); stop on hard failure with `partial` outputs |
+| **`next-step-only`** | [Execute remainder step](#execute-remainder-step) for step 1 only; then [Per-step continuation gate](#per-step-continuation-gate) |
+| **`defer-tail`** | Recap deferred steps; keep `continuationStatus: active` |
+| **`more-details`** | Clarify; re-open batch gate |
+
+#### Execute remainder step
+
+| Step id | Procedure |
+|---------|-----------|
+| `plan-reconcile` | [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) — preconditions in that section must still hold |
+| `pr-ship-complete` | When reconcile completed (or skipped with dated note under **`## Follow-ups`** or §7): set **`outputs.prShipComplete: true`**, **`outputs.shipPhase: done`**, **`outputs.rowStatus: closed`**; include **`parentPlanPath`**, **`parentPlanSlug`**, **`parentIndex`** from spawn **`inputs`** when present |
+
+#### Per-step continuation gate
+
+After **`next-step-only`** completes one inventory step, open **one** modal (`modalTitle`: *Coding session — next remaining ship step*) on the **next** turn.
+
+1. Recap what finished and list **remaining** inventory (renumber from 1).
+2. Options:
+
+| Option id | Label (brief) |
+|-----------|---------------|
+| `approve-next-only` | Approve next step only — [next step name] |
+| `confirm-all-subsequent` | Confirm all remaining steps — [list steps 2…N] |
+| `defer-tail` | Defer remaining ship work |
+| `more-details` | More details for option _ |
+
+| Pick | Actions |
+|------|---------|
+| **`approve-next-only`** | Run the next single inventory step; repeat this gate until inventory empty |
+| **`confirm-all-subsequent`** | Run all remaining steps in order without further modals (except hard stops) |
+| **`defer-tail`** | Stop; keep `continuationStatus: active` |
+
+**Spawned lane — per-step sentinel (binding):** **`MC_PHASED_RESPONSE_V1`** with the same option ids; remaining steps listed in **`display.markdown`**.
 
 ### Plan-reconcile handoff (inline)
 
