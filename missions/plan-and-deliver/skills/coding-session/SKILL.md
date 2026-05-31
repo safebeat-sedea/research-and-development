@@ -140,6 +140,15 @@ MC_PHASED_RESPONSE_V1
 
 Default **`<recap>`** for pr-plan spawn: *Planning handoff complete (§§1–4). §§5–8 fill on this lane during implementation.*
 
+### Post-reload / cold session (binding)
+
+After Mission Control reload or window restart on **this** spawned **`coding-session`** lane:
+
+1. **You are already on the coding-session child lane** — warm-up and post-restore preamble identify **spawned child**, not Squad Leader.
+2. **Never** ask the developer to "switch to" or "continue in" the Coding session tab — they are messaging you here.
+3. **[Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy)**, worktree-open, and every other gate in this skill run **on this lane** — emit **`MC_PHASED_RESPONSE_V1`** here; do **not** redirect ship cut-point to another tab or to the Squad Leader.
+4. Re-read this SKILL.md and the prior transcript; resume from the last incomplete ship-chain step.
+
 ## Relationship to `pr-plan`
 
 | Concern | **`pr-plan`** | **`coding-session`** (this skill) |
