@@ -621,9 +621,27 @@ async function cmdPruneSessions(flags) {
 
 // ---------- subcommand: detect-stale-workspaces ----------
 
+async function resolveMainRepoRootFromWorktree(worktreePath) {
+  const common = await spawnGitOutput(worktreePath, [
+    'rev-parse',
+    '--path-format=absolute',
+    '--git-common-dir',
+  ]);
+  if (!common.ok) return null;
+  const absCommon = path.resolve(worktreePath, common.stdout);
+  const marker = `${path.sep}.git${path.sep}worktrees${path.sep}`;
+  const idx = absCommon.indexOf(marker);
+  if (idx >= 0) return absCommon.slice(0, idx);
+  if (absCommon.endsWith(`${path.sep}.git`) || absCommon.endsWith('.git')) {
+    return path.dirname(absCommon);
+  }
+  return worktreePath;
+}
+
 // `detect-stale-workspaces [--slug <slug>] [--json]`
 // Read-only: list sidecar worktrees[] whose path still exists on disk.
 // When prs[] is present, sets mergedPr true only if every linked PR is MERGED.
+// Sets remoteBranchGone when origin has no head for the worktree branch (read-only ls-remote).
 async function cmdDetectStaleWorkspaces(flags) {
   await ensureSedeaContext();
   const asJson = flags.json === true;
@@ -674,8 +692,18 @@ async function cmdDetectStaleWorkspaces(flags) {
       const br = await spawnGitOutput(wtPath, ['branch', '--show-current']);
       if (br.ok && br.stdout) branch = br.stdout;
 
+      let remoteBranchGone = null;
+      if (branch) {
+        const mainRoot = await resolveMainRepoRootFromWorktree(wtPath);
+        if (mainRoot) {
+          const remote = await spawnGitOutput(mainRoot, ['ls-remote', '--heads', 'origin', branch]);
+          if (remote.ok) remoteBranchGone = remote.stdout.trim().length === 0;
+        }
+      }
+
       const reasons = ['worktree_path_still_present'];
       if (mergedPr === true) reasons.push('linked_prs_merged');
+      if (remoteBranchGone === true) reasons.push('remote_branch_gone');
       if (plan.isArchived) reasons.push('plan_archived');
 
       candidates.push({
@@ -686,6 +714,7 @@ async function cmdDetectStaleWorkspaces(flags) {
         repo: wt.repo,
         branch,
         mergedPr,
+        remoteBranchGone,
         reason: reasons.join('; '),
       });
     }
@@ -698,7 +727,7 @@ async function cmdDetectStaleWorkspaces(flags) {
   log(`== detect-stale-workspaces (${candidates.length} candidate(s)) ==`);
   for (const c of candidates) {
     log(
-      `  ${c.slug}: ${c.repo}:${c.worktreePath} branch=${c.branch || '?'} mergedPr=${c.mergedPr} (${c.reason})`,
+      `  ${c.slug}: ${c.repo}:${c.worktreePath} branch=${c.branch || '?'} mergedPr=${c.mergedPr} remoteBranchGone=${c.remoteBranchGone} (${c.reason})`,
     );
   }
 }

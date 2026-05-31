@@ -143,12 +143,37 @@ async function resolveMainRepoRoot(worktreePath) {
 }
 
 /**
- * Branch delete eligibility: linked PR(s) MERGED (detect-stale-workspaces mergedPr)
- * and the remote tracking branch is gone (GitHub deleted head after merge).
+ * True when another registered worktree still has this branch checked out.
+ */
+async function branchCheckedOutOnOtherWorktree(mainRepoRoot, branch, excludeWorktreePath) {
+  const wt = await spawnGit(mainRepoRoot, ['worktree', 'list', '--porcelain']);
+  if (!wt.ok) return false;
+  const exclude = path.resolve(excludeWorktreePath);
+  let currentPath = null;
+  for (const line of wt.stdout.split('\n')) {
+    if (line.startsWith('worktree ')) {
+      currentPath = path.resolve(line.slice('worktree '.length).trim());
+      continue;
+    }
+    if (!line.startsWith('branch ') || currentPath === null) continue;
+    const b = line.slice('branch '.length).trim().replace(/^refs\/heads\//, '');
+    if (b === branch && currentPath !== exclude) return true;
+  }
+  return false;
+}
+
+/**
+ * Branch delete eligibility (post-merge / stale-worktree cleanup):
+ * 1. Primary: sidecar linked PR(s) MERGED (mergedPr) and remote head gone.
+ * 2. Fallback: worktree-linked branch (stale worktree candidate), sidecar prs[] empty
+ *    (mergedPr null), remote head gone, branch not checked out on another worktree.
  * Does not use merge-base / local "merged into origin/main" heuristics.
  */
-async function branchEligibleForDelete(mainRepoRoot, branch, candidate) {
-  if (candidate.mergedPr !== true) {
+async function branchEligibleForDelete(mainRepoRoot, branch, candidate, defaultBranch) {
+  if (!branch || branch === defaultBranch) {
+    return { ok: true, eligible: false, reason: 'default_branch' };
+  }
+  if (candidate.mergedPr === false) {
     return {
       ok: true,
       eligible: false,
@@ -168,13 +193,30 @@ async function branchEligibleForDelete(mainRepoRoot, branch, candidate) {
     return {
       ok: true,
       eligible: false,
-      reason: 'pr_merged_remote_branch_still_exists',
+      reason: candidate.mergedPr === true
+        ? 'pr_merged_remote_branch_still_exists'
+        : 'remote_branch_still_exists',
     };
+  }
+  if (candidate.mergedPr === true) {
+    return {
+      ok: true,
+      eligible: true,
+      reason: 'pr_merged_remote_branch_deleted',
+    };
+  }
+  const elsewhere = await branchCheckedOutOnOtherWorktree(
+    mainRepoRoot,
+    branch,
+    candidate.worktreePath,
+  );
+  if (elsewhere) {
+    return { ok: true, eligible: false, reason: 'branch_checked_out_elsewhere' };
   }
   return {
     ok: true,
     eligible: true,
-    reason: 'pr_merged_remote_branch_deleted',
+    reason: 'worktree_linked_remote_branch_gone',
   };
 }
 
@@ -337,7 +379,12 @@ async function main() {
     }
 
     if (c.branch && c.branch !== defaultBranch) {
-      const eligibility = await branchEligibleForDelete(main.mainRepoRoot, c.branch, c);
+      const eligibility = await branchEligibleForDelete(
+        main.mainRepoRoot,
+        c.branch,
+        c,
+        defaultBranch,
+      );
       const delAction = {
         action: 'branch-delete',
         mainRepoRoot: main.mainRepoRoot,

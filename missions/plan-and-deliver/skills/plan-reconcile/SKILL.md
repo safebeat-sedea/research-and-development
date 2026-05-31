@@ -249,7 +249,7 @@ On non-zero exit, stop and surface the error.
 
 **Idempotent fallback:** When **`detect-stale-workspaces`** returns no candidates (worktree already removed, **`mainPullStatus`** already **`success`** on this plan), report one line and skip **`--apply`** — do not treat as error.
 
-**Branch delete gate:** Same as **`post-reconcile-workspace-cleanup.mjs`** — linked PR(s) **`MERGED`** (`mergedPr: true`) **and** remote tracking branch absent; not merge-base into **`origin/main`**.
+**Branch delete gate:** Same as **`post-reconcile-workspace-cleanup.mjs`** — (1) **`mergedPr: true`** and remote head gone, or (2) worktree-linked fallback when **`prs[]`** empty, **`remoteBranchGone: true`**, branch not checked out elsewhere; not merge-base into **`origin/main`**.
 
 **Detect (read-only):**
 
@@ -261,7 +261,7 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
  --operations-user-id "$OPS_ID" detect-stale-workspaces [--slug <slug>] --json
 ```
 
-Each candidate includes `worktreePath`, `repo`, `branch`, `mergedPr` (when sidecar **`prs[]`** exists), and `reason`.
+Each candidate includes `worktreePath`, `repo`, `branch`, `mergedPr` (when sidecar **`prs[]`** exists), `remoteBranchGone`, and `reason`.
 
 **Dry-run git plan:**
 

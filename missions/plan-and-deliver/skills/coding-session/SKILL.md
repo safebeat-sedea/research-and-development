@@ -845,7 +845,12 @@ Run on this lane **after** `prState: merged` **and before** [After deploy deploy
 
 **Purpose:** Sync **`HOSTING_ROOT`** with **`origin/main`**, detach/remove the session worktree from Mission Control and git, delete the local feature branch when eligible, and rebuild native extensions on **`HOSTING_ROOT`** so the developer can **Developer: Reload Window** before After deploy verification — not from a stale worktree with **`main` behind**.
 
-**Branch delete gate (normative):** delete the local feature branch only when sidecar/**`gh`** reports linked PR(s) **`MERGED`** (`detect-stale-workspaces` **`mergedPr: true`**) **and** **`git ls-remote --heads origin <branch>`** is empty (remote head deleted after merge). Do **not** use **`git merge-base --is-ancestor`** or “safe to delete” local merge heuristics. When PR is merged but the remote branch still exists, **skip branch delete**, report one line, still remove worktree and pull **`main`** when authorized.
+**Branch delete gate (normative):** delete the local feature branch when **`post-reconcile-workspace-cleanup.mjs`** reports eligible — **not** merge-base / “safe to delete” heuristics.
+
+1. **Primary:** sidecar **`prs[]`** linked and every PR **`MERGED`** (`detect-stale-workspaces` **`mergedPr: true`**) **and** **`git ls-remote --heads origin <branch>`** is empty after merge.
+2. **Worktree-linked fallback:** stale worktree candidate (session branch from **`git worktree add -b`**) when sidecar **`prs[]`** is empty (**`mergedPr: null`**) **and** remote head is gone **and** the branch is not checked out on another worktree — reason **`worktree_linked_remote_branch_gone`**. Covers merged PRs never recorded in **`prs[]`** (worktree path is the linkage).
+
+When **`mergedPr: false`** (open PRs in sidecar) or remote head still exists, **skip branch delete**, report one line, still remove worktree and pull **`main`** when authorized. Dry-run JSON includes **`remoteBranchGone`** per candidate when detect ran.
 
 **Preconditions:** `prState: merged`; plan anchor resolves when applicable.
 
