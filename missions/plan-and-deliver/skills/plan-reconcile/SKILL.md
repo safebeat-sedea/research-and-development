@@ -318,7 +318,7 @@ Mutations are under **`.sedea/operations/`** (and possibly center git elsewhere)
 **Out of scope**
 
 - Creating worktrees (**`coding-session`**).
-- Editing plan frontmatter or sidecar YAML directly — **`plan-state.mjs`** is the sole writer for those; step 3.5 only edits **`## Follow-ups`** markdown bodies.
+- Editing plan frontmatter or sidecar YAML directly — **`plan-state.mjs`** is the sole writer for sidecar Plan Board fields (`status`, `archived`, `parent`, `worktrees`, `prs`, `session`) per **`.sedea/centers/sedea/rules/8_plan-board-contract.mdc`**; step 3.5 only edits **`## Follow-ups`** markdown bodies.
 - Promoting routed bullets into **Changes** / **Caveats** / **Delivery phases** — planning work the user does later.
 - Pushing fixes to individual PRs. If a flagged plan needs an amend, tell the user; do not silently **`gh`**-mutate from here.
 
