@@ -1,7 +1,11 @@
 #!/usr/bin/env node
-// Single writer for Plan Board sidecars + plan archival.
+// Plan Board sidecar writer for R&D plan-and-deliver (lifecycle + archive fields).
+// Normative contract: `.sedea/centers/sedea/rules/8_plan-board-contract.mdc`
 // Invoked by: coding-session skill, plan-reconcile, efficient-pr-shipping commit-and-push cadence, hosting repo automation.
 // Design contract: Sedea `.sedea/operations/` plan union (joint + optional per-user namespace).
+
+/** Plan lifecycle dot values (American spelling `canceled`). See rule 8 § Lifecycle. */
+const PLAN_BOARD_STATUSES = new Set(['not_started', 'started', 'completed', 'canceled']);
 
 import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
@@ -217,8 +221,7 @@ async function findPlanBySlug(slug) {
     const candidate = path.join(dir, `${slug}.plan.md`);
     if (await fileExists(candidate)) {
       const planDir = path.dirname(candidate);
-      const fm = await readPlanFrontmatter(candidate);
-      const isArchived = fm?.archived === true;
+      const isArchived = await resolvePlanArchived(candidate);
       return { slug, planPath: candidate, dir: planDir, isArchived };
     }
   }
@@ -240,8 +243,7 @@ async function listAllPlans() {
   }
   await Promise.all(
     out.map(async (p) => {
-      const fm = await readPlanFrontmatter(p.planPath);
-      p.isArchived = fm?.archived === true;
+      p.isArchived = await resolvePlanArchived(p.planPath);
     }),
   );
   return out;
@@ -292,7 +294,14 @@ async function readSidecarPlain(planPath) {
   if (!(await fileExists(statePath))) {
     return {
       statePath,
-      data: { worktrees: [], prs: [], session: null, parent: null },
+      data: {
+        worktrees: [],
+        prs: [],
+        session: null,
+        parent: null,
+        archived: false,
+        status: null,
+      },
     };
   }
   const src = await fs.readFile(statePath, 'utf8');
@@ -316,7 +325,20 @@ async function readSidecarPlain(planPath) {
     typeof raw.parent === 'string' && raw.parent.trim().length > 0
       ? raw.parent.trim()
       : null;
-  return { statePath, data: { worktrees, prs, session, parent } };
+  const archived = raw.archived === true;
+  const statusRaw = typeof raw.status === 'string' ? raw.status : null;
+  const status =
+    statusRaw && PLAN_BOARD_STATUSES.has(statusRaw) ? statusRaw : null;
+  return { statePath, data: { worktrees, prs, session, parent, archived, status } };
+}
+
+// Plan Board archive bucket: sidecar `archived` is authoritative (rule 8).
+// Legacy frontmatter `archived: true` is a read fallback until migrated away.
+async function resolvePlanArchived(planPath) {
+  const { data } = await readSidecarPlain(planPath);
+  if (data.archived) return true;
+  const fm = await readPlanFrontmatter(planPath);
+  return fm?.archived === true;
 }
 
 // Effective parent slug for a plan: sidecar `parent:` if set, else plan
@@ -451,6 +473,12 @@ async function cmdSetSession(flags) {
   session.flow = false;
   session.set('focusPath', focus);
   doc.set('session', session);
+  if (doc.get('archived') !== true && !(await resolvePlanArchived(plan.planPath))) {
+    const curStatus = doc.get('status');
+    if (curStatus === undefined || curStatus === null || curStatus === 'not_started') {
+      doc.set('status', 'started');
+    }
+  }
   await saveSidecar(statePath, doc);
   log(`session.focusPath set on ${statePath}`);
 }
@@ -742,8 +770,9 @@ function pathTargeted(candidate, target) {
 // `reconcile [--dry-run] [--prune-worktrees]` — iterate every active plan
 // (Sedea `.sedea/operations/{joint|<operationsUserId>}/plans/` and roadmap subdirs),
 // query `gh pr view` for every PR listed in the sidecar, and:
-//   all MERGED   → set frontmatter `archived: true` on <slug>.plan.md,
-//                  and append a bullet under `## Child plans` in the parent plan body.
+//   all MERGED   → set sidecar `archived: true` and `status: completed` on
+//                  <slug>.state.yaml (rule 8), and append a bullet under
+//                  `## Child plans` in the parent plan body.
 //   any CLOSED   → flag "closed without merge" in the report, leave alone.
 //   still OPEN / mixed → quiet; pl can re-run later.
 //
@@ -895,14 +924,15 @@ async function archivePlan(plan, prStates, planBySlug, dryRun) {
   await doArchive(plan, signalText, planBySlug, dryRun, { shippedPrs });
 }
 
-// Mechanical archive: set `archived: true` in plan frontmatter, then append a
-// bullet for this child under the parent's `## Child plans`. The sidecar stays
-// beside the plan file (same directory as active plans).
+// Mechanical archive: set sidecar `archived: true` and `status: completed`
+// (rule 8), then append a bullet for this child under the parent's
+// `## Child plans`. The sidecar stays beside the plan file (same directory
+// as active plans). Legacy frontmatter `archived:` is cleared when present.
 // signalText is free-form ("PR urls", body-inferred ship notes, etc.) and appears
 // after the em dash in the bullet. Used by reconcile (auto) and cmdArchive
-// (manual). Dry-run skips frontmatter and parent writes.
+// (manual). Dry-run skips sidecar and parent writes.
 // `opts.shippedPrs` (reconcile only) promotes the merged PR snapshot into
-// the plan's frontmatter as a permanent record; written before `archived:`.
+// the plan's frontmatter as a permanent record; written before sidecar archive.
 async function doArchive(plan, signalText, planBySlug, dryRun, opts = {}) {
   const shippedPrs = Array.isArray(opts.shippedPrs) ? opts.shippedPrs : null;
   if (shippedPrs && shippedPrs.length > 0) {
@@ -920,9 +950,17 @@ async function doArchive(plan, signalText, planBySlug, dryRun, opts = {}) {
     }
   }
 
-  const wroteArchived = await setPlanArchivedFlag(plan.planPath, true, { dryRun });
+  const wroteArchived = await setSidecarArchived(plan.planPath, true, { dryRun });
   if (wroteArchived) {
-    log(`  ${dryRun ? '[dry-run] would set' : 'set'} archived: true on ${plan.slug}`);
+    log(`  ${dryRun ? '[dry-run] would set' : 'set'} sidecar archived: true on ${plan.slug}`);
+  }
+  const wroteStatus = await setSidecarStatus(plan.planPath, 'completed', { dryRun });
+  if (wroteStatus) {
+    log(`  ${dryRun ? '[dry-run] would set' : 'set'} sidecar status: completed on ${plan.slug}`);
+  }
+  const clearedLegacyFm = await setPlanArchivedFlag(plan.planPath, false, { dryRun });
+  if (clearedLegacyFm) {
+    log(`  ${dryRun ? '[dry-run] would clear' : 'cleared'} legacy frontmatter archived: on ${plan.slug}`);
   }
   return { parentSlug: parentSlug || null };
 }
@@ -1037,7 +1075,8 @@ async function collectCandidates() {
   }
 
   // Classify every plan once so we can resolve parent readiness recursively.
-  // 'archived'  — frontmatter `archived: true` (reconcile/skill already done).
+  // 'archived'  — sidecar `archived: true` (rule 8; legacy frontmatter fallback
+  //               via resolvePlanArchived during migration).
   // 'permanent' — roadmap topic (never archived by design; never a candidate;
   //               never blocks an allDone parent).
   // 'ready'     — in plans/, allDone, no sidecar prs[], not a roadmap topic,
@@ -1261,7 +1300,9 @@ function shippedPrsEqual(a, b) {
   return true;
 }
 
-// Set or clear `archived:` in plan frontmatter (boolean true when archiving).
+// Set or clear legacy `archived:` in plan frontmatter (migration cleanup only).
+// Plan Board archive bucket is sidecar `archived` per rule 8 — prefer
+// setSidecarArchived for new writes.
 async function setPlanArchivedFlag(planPath, value, { dryRun } = {}) {
   return mutateFrontmatter(planPath, (doc) => {
     if (value === true) {
@@ -1425,15 +1466,48 @@ async function setSidecarParent(planPath, newParent, { dryRun } = {}) {
   return true;
 }
 
+// Set or clear sidecar `archived:` (Plan Board archive bucket — rule 8).
+async function setSidecarArchived(planPath, value, { dryRun } = {}) {
+  const want = value === true;
+  const { doc, statePath } = await loadSidecarDoc(planPath);
+  const cur = doc.get('archived');
+  if (want) {
+    if (cur === true) return false;
+    doc.set('archived', true);
+  } else {
+    if (cur === undefined || cur === false) return false;
+    doc.set('archived', false);
+  }
+  if (!dryRun) await saveSidecar(statePath, doc);
+  return true;
+}
+
+// Set sidecar plan lifecycle `status` (Plan Board dot — rule 8 § Lifecycle).
+async function setSidecarStatus(planPath, status, { dryRun } = {}) {
+  if (!PLAN_BOARD_STATUSES.has(status)) {
+    die(`setSidecarStatus: status must be one of not_started|started|completed|canceled (got "${status}")`);
+  }
+  const { doc, statePath } = await loadSidecarDoc(planPath);
+  const cur = doc.get('status');
+  if (cur === status) return false;
+  doc.set('status', status);
+  if (!dryRun) await saveSidecar(statePath, doc);
+  return true;
+}
+
 // ---------- subcommand: unarchive ----------
 
 // `unarchive --slug <slug> [--dry-run]` — inverse of the drag-drop
-// archive gesture. Clears frontmatter `archived:` on `<slug>.plan.md` and
-// strips the matching `- \`<slug>\` archived...` bullet from the current parent's
-// `## Child plans` section when that parent is still active (not archived).
-// Leaves sidecar `parent:` untouched (gesture = "put it back where it was",
-// not "reparent"). Idempotent: running on a plan without `archived: true`
-// prints a no-op note and exits 0.
+// archive gesture. Clears sidecar `archived:` on `<slug>.state.yaml` and
+// legacy frontmatter `archived:` when present. Does **not** change sidecar
+// `status` — archive/reconcile set `status: completed` and unarchive keeps it
+// intentionally (restore = back in the active tree, not re-open delivery).
+// Use `set-plan-status` when the developer wants a different lifecycle dot.
+// Strips the matching `- \`<slug>\` archived...` bullet from the current
+// parent's `## Child plans` section when that parent is still active (not
+// archived). Leaves sidecar `parent:` untouched (gesture = "put it back where
+// it was", not "reparent"). Idempotent: running on a plan without
+// `archived: true` prints a no-op note and exits 0.
 //
 // Archived parents: body left alone — matches `doArchive`'s rule that
 // archived parents are closed hierarchy. (If the user archived a subtree
@@ -1462,12 +1536,20 @@ async function cmdUnarchive(flags) {
     }
   }
 
+  await setSidecarArchived(plan.planPath, false, { dryRun });
   await setPlanArchivedFlag(plan.planPath, false, { dryRun });
+
+  const { data } = await readSidecarPlain(plan.planPath);
+  const statusPreserved = data.status ?? null;
 
   log(JSON.stringify({
     unarchived: slug,
     parent: parentSlug,
     bulletRemoved,
+    statusPreserved,
+    statusChanged: false,
+    lifecycleNote:
+      'unarchive clears archived only; completed from archive is intentional — use set-plan-status to change the Plan Board dot',
     dryRun,
   }));
 }
@@ -1662,6 +1744,32 @@ async function stripFrontmatterParent(planPath, { dryRun } = {}) {
     },
     { dryRun },
   );
+}
+
+// ---------- subcommand: set-plan-status ----------
+
+// `set-plan-status --slug <slug> --status <not_started|started|completed|canceled> [--dry-run]`
+// — write Plan Board lifecycle dot to sidecar only (rule 8).
+async function cmdSetPlanStatus(flags) {
+  const slug = requireString(flags, 'slug');
+  const rawStatus = requireString(flags, 'status');
+  if (!PLAN_BOARD_STATUSES.has(rawStatus)) {
+    die(
+      `set-plan-status: status must be one of not_started|started|completed|canceled (got "${rawStatus}")`,
+    );
+  }
+  const dryRun = flags['dry-run'] === true;
+  const plan = await findPlanBySlug(slug);
+  if (!plan) die(`set-plan-status: no plan with slug "${slug}"`);
+  if (
+    (await resolvePlanArchived(plan.planPath))
+    && rawStatus !== 'completed'
+    && rawStatus !== 'canceled'
+  ) {
+    die(`set-plan-status: plan "${slug}" is archived — unarchive first or set completed/canceled`);
+  }
+  const changed = await setSidecarStatus(plan.planPath, rawStatus, { dryRun });
+  log(JSON.stringify({ slug, status: rawStatus, changed, dryRun }));
 }
 
 // ---------- subcommand: set-todo-status ----------
@@ -1877,7 +1985,11 @@ Subcommands:
       Replace sidecar worktrees[] wholesale.
 
   set-session --slug <slug> --focus <abs>
-      Set sidecar session.focusPath.
+      Set sidecar session.focusPath; promotes sidecar status to started when
+      the plan is active and status is missing or not_started.
+
+  set-plan-status --slug <slug> --status <not_started|started|completed|canceled> [--dry-run]
+      Write Plan Board lifecycle dot to sidecar status only (rule 8).
 
   upsert-pr --slug <slug> --repo <basename> --number <n>
       Append {repo, number} to sidecar prs[] (idempotent).
@@ -1892,34 +2004,38 @@ Subcommands:
 
   reconcile [--dry-run] [--prune-worktrees]
       For every active plan with prs[]: gh pr view each entry; if all merged,
-      set frontmatter archived: true on the plan and note it under the parent
-      plan's ## Child plans section. Resolves org/repo from worktree git
-      remote or hosting repo basename (no static alias map). Flags
-      closed-without-merge and mixed states. --prune-worktrees also runs
+      set sidecar archived: true and status: completed (rule 8) and note the
+      plan under the parent plan's ## Child plans section. Resolves org/repo
+      from worktree git remote or hosting repo basename (no static alias map).
+      Flags closed-without-merge and mixed states. --prune-worktrees also runs
       prune-sessions --all.
 
   list-candidates [--json]
       Emit archive candidates that reconcile does NOT own (sidecar prs[]
-      empty). Surfaces plans with all todos done whose merged PRs only live
-      in body prose, or with no PR evidence in the body. Intended for the
-      plan-reconcile skill's interactive AskQuestion loop.
+      empty). Surfaces active (non-sidecar-archived) plans with all todos done
+      whose merged PRs only live in body prose, or with no PR evidence in the
+      body. Intended for the plan-reconcile skill's interactive AskQuestion loop.
 
   archive --slug <slug> --signal <text> [--parent <target>|--clear] [--dry-run]
-      Mechanical archive for one plan: set archived: true in plan frontmatter
-      and append "- <slug> archived -- <signal>" under the parent plan's
-      ## Child plans section. Sidecar stays beside the plan file. One slug per
-      call; idempotent. Optional --parent/--clear rewrites the sidecar parent:
-      before archival (drag-drop archive-to-new-parent gesture).
+      Mechanical archive for one plan: set sidecar archived: true and
+      status: completed, append "- <slug> archived -- <signal>" under the parent
+      plan's ## Child plans, and clear legacy frontmatter archived: when present.
+      Sidecar stays beside the plan file. One slug per call; idempotent.
+      Optional --parent/--clear rewrites the sidecar parent before archival
+      (drag-drop archive-to-new-parent gesture).
 
   reparent --slug <slug> (--parent <target-slug> | --clear) [--dry-run]
-      Rewrite a plan's frontmatter parent: value. Refuses cycles and
+      Rewrite a plan's sidecar parent: value. Refuses cycles and
       self-parenting. No-op when the value already matches. Used by the
       Plan Board drag-drop controller for same-archive-status drops.
 
   unarchive --slug <slug> [--dry-run]
-      Remove frontmatter archived: from the plan and strip the matching
-      "- <slug> archived..." bullet from the current parent's ## Child plans
-      section. Leaves sidecar parent: alone. Idempotent on already-active plans.
+      Clear sidecar archived: on the plan, remove legacy frontmatter archived:
+      when present, and strip the matching "- <slug> archived..." bullet from
+      the current parent's ## Child plans section. Sidecar status is preserved
+      (completed after archive is intentional; use set-plan-status to change
+      the lifecycle dot). Leaves sidecar parent: alone. Idempotent on
+      already-active plans.
 
   migrate-parent-to-sidecar [--dry-run]
       One-shot: for every plan under plans/ and plans/roadmap-topics/, copy
@@ -1967,6 +2083,9 @@ async function main() {
       break;
     case 'set-session':
       await cmdSetSession(flags);
+      break;
+    case 'set-plan-status':
+      await cmdSetPlanStatus(flags);
       break;
     case 'upsert-pr':
       await cmdUpsertPr(flags);
