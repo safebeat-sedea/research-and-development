@@ -6,8 +6,7 @@ description: >-
  features, Architectural design, Changes — including `### Decomposition
  assessment` and `### Complexity score (plan-scope signal)` under § 5) per
  Sedea's New Feature Development Process Master Plan template. Computes a
- complexity score from §4–§5; when **high**, stops and recommends user-journey
- splits before `delivery-phases`/`pr-breakdown`. Section 6 (Delivery phases | PR breakdown)
+ complexity score from §4–§5; when **high**, recommends Delivery phases via Route §6 to split into lower-complexity phase plans via `delivery-phases`/`phase-planner`. Section 6 (Delivery phases | PR breakdown)
  and section 7 (Caveats) stay as TBD stubs for follow-up turns. Use when the user
  opens a fresh planning chat from the "feature plan: design + changes"
  plan-board prompt, or says "planner" / "draft a master plan".
@@ -44,7 +43,7 @@ warmUpRules:
 
 **Normative execution (plan and deliver):** **Spawned only** on a **new child lane** — Squad Leader §5 emits **`AGENT_RUN_REQUEST_V1`**. End with **`AGENT_RESULT_RESPONSE_V1`** per **`## Completion (spawned)`**. Do **not** run as an inline skill on the Squad Leader lane. Decomposition skills (**`delivery-phases`**, **`pr-breakdown`**, **`new-plan`**) run **inline on the planner child lane** after §§1–5. See **`../README.md`** § *Normative execution mode*.
 
-This skill drives the **first** step of feature planning: read a PRD, **scaffold the Master Plan file**, draft sections 1 through 5 (Background, Benefits, Related features, Architectural design, Changes) directly into that file, then compute a **plan-scope complexity score** from what was written under §§ 4–5, persist it under § 5, and stop. Sections 6 (Delivery phases | PR breakdown) and 7 (Caveats) are filled in in follow-up turns once the user has reviewed the initial draft — **unless complexity is high**, in which case defer **§6 decomposition** until the scope is split (see Step 6c).
+This skill drives the **first** step of feature planning: read a PRD, **scaffold the Master Plan file**, draft sections 1 through 5 (Background, Benefits, Related features, Architectural design, Changes) directly into that file, then compute a **plan-scope complexity score** from what was written under §§ 4–5, persist it under § 5, and stop. Sections 6 (Delivery phases | PR breakdown) and 7 (Caveats) are filled in in follow-up turns once the user has reviewed the initial draft — when complexity is **high**, **Route §6 → Delivery phases** is the primary path to split design surface into lower-complexity phase plans (see Step 6c).
 
 The agent has enough context after step 4 to draft §§ 1–5 without further input from the user — these sections are inferable from the PRD plus the loaded architectural rules. Stopping at § 5 is deliberate: § 6 (Delivery phases | PR breakdown) is a separate planning conversation that benefits from a settled architectural picture first, and § 7 (Caveats) often only emerges once § 6 reveals constraints.
 
@@ -470,12 +469,14 @@ Use **exactly these three row labels** and **these two column headers**. Put **o
 
 When the band is **high**:
 
-1. **Do not** offer **§ 6 decomposition** (inline **`delivery-phases`** / **`pr-breakdown`**) in **AskQuestion** until the **overall score** is **≤ 20** — routing on this file as-is risks an oversized § 6.
-2. **Do** tell the user explicitly to **pause decomposition** until scope is narrower (revise §§ 4–5, or split the feature).
-3. **Split guidance (required)** — Propose **2–4** concrete slices framed as **user journeys / outcomes** for merchants or their customers (e.g. *"Merchants can configure campaign guardrails before launch"*, *"Shoppers see compliant previews in the app"*). Each slice should be shippable as a **separate planning conversation** (its own Master Plan under the same roadmap topic, or a future **Delivery phases** item that is outcome-titled). **Avoid** recommending splits that are only **topology** ("frontend vs backend", "this API vs that API", "repo A vs repo B") unless you **pair** each slice with **who gains what** so the human can still reason in hosting repo terms.
-4. Offer structured choice via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** (per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**) for **revise §4**, **revise §5**, optional **draft Caveats**, or **commit plans** — MUST use one message (AskQuestion or phased) with journey-split recap + modal when possible.
+1. **§6 is available — prefer Delivery phases.** A **high** score means §§4–5 carry a large design surface on **this** Master Plan. That is exactly when **mode #2 — Delivery phases** applies: inline **`delivery-phases`** drafts outcome-titled phase rows; each child gets **`phase-planner`** (scoped §§1–4 + **`### Decomposition assessment`**, **no** numeric withhold — see **`phase-planner/SKILL.md`** Step 5) and may further decompose per phase. **Do not** withhold **`route-6`** because the score is > 20 — that blocks the primary mitigation.
+2. **Routing guidance (required)** — Before Step 7, state explicitly: score > 20 → recommend **Route §6 → Delivery phases**; **PR breakdown** on this Master Plan usually **undersizes** the problem (skips the phase layer that absorbs complexity).
+3. **Optional alternative — separate Master Plans** — When the feature is really **multiple independent outcomes**, propose **2–4** user-journey slices shippable as **separate planning conversations** (each its own Master Plan under the same roadmap topic). Present this as an **alternative** to single-plan **Delivery phases**, **not** as a prerequisite before §6. **Avoid** topology-only splits ("frontend vs backend") unless each slice names **who gains what**.
+4. Proceed to **Step 7** — Step **7b** **must include `route-6`** at high band (same as low/medium).
 
 When band is **low** or **medium**, proceed to **Step 7**; the status line in Step 7a must mention complexity (e.g. *"Complexity: medium (overall score = 12) — §6 decomposition available in next AskQuestion."*).
+
+When band is **high**, Step 7a must say e.g. *"Complexity: high (overall score = 23) — Route §6 recommended → **Delivery phases** to split into lower-complexity phase plans via **`phase-planner`**."*
 
 ### Echo to chat
 
@@ -510,7 +511,7 @@ Invoke **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**. On the legacy split, run st
 
 **Inline `pr-plan` handoff pending (binding):** When **`spawnedPlans`** includes a PR plan whose inline merge reports **`implementationHandoffStatus`** in **`not-offered`**, **`offered`**, or **`spawned-coding-session`** (and no terminal **`coding-session`** yet), **omit** **`route-6`**, **`draft-7`**, and other master-plan options until §5c resolves or the **`coding-session`** child completes. Offer **`pr-plan`** §5c options (or continue waiting on an open **`coding-session`** child) on **this lane** — see Step **7c** *Pending inline `pr-plan` handoff*.
 
-**When complexity is low or medium (C ≤ 20)** — include at minimum:
+**Primary next moves (all complexity bands)** — include at minimum:
 
 | Option id (example) | Label (brief) | Action |
 |---------------------|---------------|--------|
@@ -520,9 +521,9 @@ Invoke **AskQuestion**, **`MC_PHASED_RESPONSE_V1`**. On the legacy split, run st
 | `commit-plans` | Commit plans (say *commit* in chat) | Remind sedea **6_git-commit-push-gate**; do not run git unless same message asks |
 | `more` | More details for option _ | Elaborate, then re-ask |
 
-**When complexity is high (C > 20)** — **omit** `route-6` until score ≤ 20. **Do not** add `route-6` because the user says *decompose anyway* unless they pick an explicit **accept decomposition risk** option you add after the Step 6c journey-split guidance (recap-only or in `display.markdown` when using phased). Even then, prefer **`revise`** / journey splits until score ≤ 20. The **Squad Leader** must **never** run **`delivery-phases`** or **`pr-breakdown`** — only this **planner** lane runs them inline after **`route-6`**.
+**When complexity is high (C > 20)** — **include `route-6`** (same as low/medium — do not withhold §6 at high band). In recap / **`display.markdown`**, recommend **Delivery phases** over **PR breakdown** and name the downstream chain (**`delivery-phases`** → **`new-plan`** → **`phase-planner`**). At Step **7c** route **AskQuestion**, list **Delivery phases** first with a brief label such as *Delivery phases — recommended (split into phase plans)* and **PR breakdown** second with caution such as *PR breakdown — skips phase layer; usually not for high band*. Also offer **revise §4**, **revise §5** when the user wants to narrow before decomposing. The **Squad Leader** must **never** run **`delivery-phases`** or **`pr-breakdown`** — only this **planner** lane runs them inline after **`route-6`**.
 
-Foreground **revise §4**, **revise §5**, optional **draft-7**, **commit-plans**, **more**. Include journey-split bullets from Step 6c in recap prose or **`display.markdown`** — not as a prose choice menu; options live in the modal.
+When band is high, optional separate-Master-Plan journey-split bullets from Step 6c may appear in recap / **`display.markdown`** as context — not as a prose choice menu; options live in the modal.
 
 Always include **More details for option _** per conduct.
 
@@ -627,11 +628,11 @@ After handling flags, return to **Step 7b**.
 
 ### Follow-up turns
 
-After each completed action, re-read the plan file and run **Step 7b** again with updated options. Decomposition remains available via `route-6` when band allows. Child list index **N** for **`new-plan`** is chosen via **AskQuestion** or snapshot per **30_planning-target-resolution**.
+After each completed action, re-read the plan file and run **Step 7b** again with updated options. Decomposition remains available via `route-6` at all complexity bands. Child list index **N** for **`new-plan`** is chosen via **AskQuestion** or snapshot per **30_planning-target-resolution**.
 
 ## Scope guard
 
-This skill writes the Master Plan file (`<slug>.plan.md` + `<slug>.state.yaml`) and populates §§ 1 through 5 in the initial turn (**§ 5 includes `### Decomposition assessment` and `### Complexity score (plan-scope signal)`**), computes the **plan-scope complexity table** per Step 6c, and when the **overall score** is **> 20** recommends user-journey splits before offering §6 decomposition in **AskQuestion**. It drafts §7 when the user selects that option, and runs **delivery-phases** or **pr-breakdown** **inline** when the user selects route §6. It does **not**:
+This skill writes the Master Plan file (`<slug>.plan.md` + `<slug>.state.yaml`) and populates §§ 1 through 5 in the initial turn (**§ 5 includes `### Decomposition assessment` and `### Complexity score (plan-scope signal)`**), computes the **plan-scope complexity table** per Step 6c, and when the **overall score** is **> 20** recommends **Route §6 → Delivery phases** (not withholding §6) to split into lower-complexity phase plans via **`phase-planner`**. It drafts §7 when the user selects that option, and runs **delivery-phases** or **pr-breakdown** **inline** when the user selects route §6. It does **not**:
 
 - Create worktrees or start implementation.
 - Modify code or content in the selected repos. Step 3b is the only repo touch this skill makes — it runs `git status --porcelain`, `git checkout <default-branch>`, and `git pull --ff-only` to sync each selected hosting repo to its default branch before loading architectural rules. It refuses to run on a dirty tree or a linked worktree, never stashes / commits / discards, and never falls back to a non-fast-forward pull.
