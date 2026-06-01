@@ -1499,12 +1499,14 @@ async function setSidecarStatus(planPath, status, { dryRun } = {}) {
 
 // `unarchive --slug <slug> [--dry-run]` — inverse of the drag-drop
 // archive gesture. Clears sidecar `archived:` on `<slug>.state.yaml` and
-// legacy frontmatter `archived:` when present; strips the matching
-// `- \`<slug>\` archived...` bullet from the current parent's
-// `## Child plans` section when that parent is still active (not archived).
-// Leaves sidecar `parent:` untouched (gesture = "put it back where it was",
-// not "reparent"). Idempotent: running on a plan without `archived: true`
-// prints a no-op note and exits 0.
+// legacy frontmatter `archived:` when present; when sidecar `status` is
+// `completed` (set by archive/reconcile), promotes it to `started` so the
+// Plan Board lifecycle dot matches an active restored plan (rule 8).
+// Strips the matching `- \`<slug>\` archived...` bullet from the current
+// parent's `## Child plans` section when that parent is still active (not
+// archived). Leaves sidecar `parent:` untouched (gesture = "put it back where
+// it was", not "reparent"). Idempotent: running on a plan without
+// `archived: true` prints a no-op note and exits 0.
 //
 // Archived parents: body left alone — matches `doArchive`'s rule that
 // archived parents are closed hierarchy. (If the user archived a subtree
@@ -1536,10 +1538,21 @@ async function cmdUnarchive(flags) {
   await setSidecarArchived(plan.planPath, false, { dryRun });
   await setPlanArchivedFlag(plan.planPath, false, { dryRun });
 
+  const { data } = await readSidecarPlain(plan.planPath);
+  let statusFrom = data.status;
+  let statusTo = statusFrom;
+  if (statusFrom === 'completed') {
+    statusTo = 'started';
+    await setSidecarStatus(plan.planPath, 'started', { dryRun });
+  }
+
   log(JSON.stringify({
     unarchived: slug,
     parent: parentSlug,
     bulletRemoved,
+    statusFrom: statusFrom ?? null,
+    statusTo,
+    statusChanged: statusFrom === 'completed' && statusTo === 'started',
     dryRun,
   }));
 }
@@ -2021,9 +2034,10 @@ Subcommands:
 
   unarchive --slug <slug> [--dry-run]
       Clear sidecar archived: on the plan, remove legacy frontmatter archived:
-      when present, and strip the matching "- <slug> archived..." bullet from
-      the current parent's ## Child plans section. Leaves sidecar parent: alone.
-      Idempotent on already-active plans.
+      when present, promote sidecar status from completed to started when
+      archive had set completed, and strip the matching "- <slug> archived..."
+      bullet from the current parent's ## Child plans section. Leaves sidecar
+      parent: alone. Idempotent on already-active plans.
 
   migrate-parent-to-sidecar [--dry-run]
       One-shot: for every plan under plans/ and plans/roadmap-topics/, copy
