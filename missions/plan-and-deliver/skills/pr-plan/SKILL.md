@@ -45,7 +45,7 @@ inputs:
     required: false
   autoContinue:
     type: boolean
-    description: When true, report implementation readiness after PR planning; this skill still does not start coding.
+    description: Legacy spawn hint only — does not skip §5c handoff or §5d spawn. When true, still run Step 5 through §5c (and §5d when the developer picks Start coding session).
     required: false
     default: true
 warmUpRules:
@@ -335,6 +335,16 @@ However:
 - If § 4 **Considered & rejected** is `_TBD_`, add a non-blocking `remainingTasks` note for `coding-session`.
 - If parent link is blocked, keep `continuationStatus: "active"` until **`plan-reconcile`** repairs it or the upstream agent explicitly accepts the partial state.
 - Do not run worktrees or implementation on this lane; spawn **`coding-session`** only per §5d.
+
+**`autoContinue` (frontmatter / spawn `inputs`):** Does **not** authorize skipping Step **5**, §5c, or auto-spawning **`coding-session`**. After §§1–4 are written, **always** run §5a → §5c on this lane (inline under **`new-plan`** or standalone). **`autoContinue: true`** only means readiness may be reported in **`outputs`** — implementation handoff still requires §5c **Start coding session** (or explicit **`defer`**) before §5d.
+
+**Forbidden after §§1–4 (binding — inline under `new-plan` or upstream on planner):**
+
+- Report **`## Completion (inline)`** to the invoker while **`implementationHandoffStatus`** is still **`not-offered`** (§5c not yet shown).
+- Bubble **`readyForImplementation: true`** upstream and return to **`planner`** Step **7b** master-plan menus without offering §5c on **this** lane first.
+- Treat Squad Leader §2 **existing PRD** intake (no session **`ad-hoc-prd`**) as permission to skip §5c — PRD source does **not** change the **`pr-plan`** → **`coding-session`** handoff chain.
+
+Set **`implementationHandoffStatus: "offered"`** when §5c modal is emitted; **`deferred`** when the developer picks **`defer`**; **`spawned-coding-session`** after §5d.
 
 ### 5c — Hand back (recap + structured choice)
 

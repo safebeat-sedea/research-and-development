@@ -296,8 +296,9 @@ Set `outputs.populatorApprovalStatus: "waived-upstream"` and one line: *Parent l
 
  1. Run **`pr-plan`** **inline** on this lane per [Inline handoff](#inline-handoff--new-plan--pr-plan-step-4).
  2. Merge inline completion fields; set `outputs.populatorSkill: "pr-plan"`, `outputs.populatorStatus` from inline handoff.
- 3. If inline **`pr-plan`** offered the §5c handoff menu or spawned **`coding-session`**, keep `continuationStatus: "active"` on this lane — follow-up turns continue inline **`pr-plan`** (§5c–§5e) before terminal **`AGENT_RESULT_RESPONSE_V1`**.
- 4. Do **not** emit **`AGENT_RUN_REQUEST_V1`** for **`pr-plan`**.
+ 3. **Stop on this lane after inline `pr-plan` drafts §§1–4** — run **`pr-plan`** §5c (and §5d when the developer picks **Start coding session**) **before** reporting terminal **`## Completion (inline)`** upstream. **Forbidden:** finishing auto-authorized populator handoff in one turn and bubbling “PR plan complete” without §5c.
+ 4. If inline **`pr-plan`** offered the §5c handoff menu or spawned **`coding-session`**, keep `continuationStatus: "active"` on this lane — follow-up turns continue inline **`pr-plan`** (§5c–§5e) before terminal **`AGENT_RESULT_RESPONSE_V1`**.
+ 5. Do **not** emit **`AGENT_RUN_REQUEST_V1`** for **`pr-plan`**.
 
  **`phase-planner`** (`childKind: "phase-planner"` or parent **`Delivery phases`**):
 
