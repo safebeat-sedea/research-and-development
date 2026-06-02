@@ -144,3 +144,5 @@ Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` on this
 Report the same `outputs` semantics in prose to the invoker on the **same lane** (or populate `outputs` on **`coding-session`** terminal lines when this skill runs inline there). Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section.
 
 **Primary path:** **`coding-session`** invokes this skill inline after attach and blocks implementation until **`outputs.bootstrapStatus: success`**. See [`../coding-session/SKILL.md`](../coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*.
+
+Before **`coding-session`** continues past Generic flow step 4: one recap line with `bootstrapStatus`, script exit code, mode (full / extensions-only / extensions-only-link), and failure tail when failed.
