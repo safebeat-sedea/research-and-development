@@ -949,7 +949,7 @@ Run on this lane **after** `prState: merged` **and before** [After deploy deploy
 1. **Primary:** sidecar **`prs[]`** linked and every PR **`MERGED`** (`detect-stale-workspaces` **`mergedPr: true`**) **and** **`git ls-remote --heads origin <branch>`** is empty after merge.
 2. **Worktree-linked fallback:** stale worktree candidate (session branch from **`git worktree add -b`**) when sidecar **`prs[]`** is empty (**`mergedPr: null`**) **and** remote head is gone **and** the branch is not checked out on another worktree — reason **`worktree_linked_remote_branch_gone`**. Covers merged PRs never recorded in **`prs[]`** (worktree path is the linkage).
 
-When **`mergedPr: false`** (open PRs in sidecar) or remote head still exists, **skip branch delete**, report one line, still remove worktree and pull **`main`** when authorized. Dry-run JSON includes **`remoteBranchGone`** per candidate when detect ran.
+When **`mergedPr: false`** (open PRs in sidecar) or remote head still exists, **skip branch delete**, report one line, still remove worktree and pull **`main`** when authorized. Dry-run JSON includes **`remoteBranchGone`** per candidate when detect ran. When dry-run reports **`skippedBranches`** with reason **`linked_prs_not_merged`** but **`remoteBranchGone: true`**, add one line: verify sidecar **`prs[].repo`** matches **`$(basename "$HOSTING_ROOT")`** (not the worktree directory name) — legacy mis-keys block **`mergedPr`** until corrected or scripts apply the hosting-repo fallback.
 
 **Preconditions:** `prState: merged`; plan anchor resolves when applicable.
 

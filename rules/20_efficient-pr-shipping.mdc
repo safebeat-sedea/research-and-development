@@ -52,7 +52,7 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
   --operations-user-id "$OPS_ID" resolve --cwd "$WORKTREE_ROOT"
 ```
 
-For **`upsert-pr --repo`**, use **`$(basename "$WORKTREE_ROOT")`** (the hosting repo worktree), not the primary hosting repo directory name when they differ.
+For **`upsert-pr --repo`**, use **`$(basename "$HOSTING_ROOT")`** — the **hosting repo git remote label** (for example `app`), **not** **`$(basename "$WORKTREE_ROOT")`**. Worktree directory names (for example `app-feat-02-…`) are ephemeral paths; sidecar **`prs[].repo`** must stay stable so **`plan-state.mjs`** reconcile and post-merge **`mergedPr`** detection still work after **`worktrees[]`** is pruned.
 
 ### `pr-review.py`
 
@@ -298,7 +298,7 @@ Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation 
    node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
      --operations-user-id "$OPS_ID" upsert-pr \
      --slug <slug-from-resolve> \
-     --repo "$(basename "$WORKTREE_ROOT")" \
+     --repo "$(basename "$HOSTING_ROOT")" \
      --number <number-from-gh>
    ```
 

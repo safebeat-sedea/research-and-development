@@ -121,7 +121,7 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
  --operations-user-id "$OPS_ID" upsert-pr \
  --slug <slug-from-resolve> \
- --repo "$(basename "$WORKTREE_ROOT")" \
+ --repo "$(basename "$HOSTING_ROOT")" \
  --number <pull_number-from-Step-0>
 ```
 

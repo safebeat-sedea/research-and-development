@@ -167,7 +167,19 @@ async function resolveFullRepoForReconcile(pr, worktrees, hostingRepoRoot) {
     if (g.ok) return { fullRepo: g.orgRepo, error: null };
     return { fullRepo: null, error: g.error };
   }
-  return { fullRepo: null, error: `unknown pr.repo "${pr.repo}" (no worktrees[].repo match, not hosting basename "${base}")` };
+  // Legacy sidecar rows keyed by worktree dirname (basename WORKTREE_ROOT) instead of
+  // hosting repo label — fall back to hosting origin when gh can resolve the PR number.
+  const hostingGit = await gitOriginOrgRepo(hostingRepoRoot);
+  if (hostingGit.ok) {
+    const res = await ghPrView(hostingGit.orgRepo, pr.number);
+    if (res.state !== 'ERROR') {
+      return { fullRepo: hostingGit.orgRepo, error: null };
+    }
+  }
+  return {
+    fullRepo: null,
+    error: `unknown pr.repo "${pr.repo}" (no worktrees[].repo match, not hosting basename "${base}")`,
+  };
 }
 
 let _hostingOrgRepoCache = null;
@@ -742,6 +754,7 @@ async function cmdDetectStaleWorkspaces(flags) {
         repo: wt.repo,
         branch,
         mergedPr,
+        linkedPrNumbers: data.prs.length > 0 ? data.prs.map((p) => p.number) : [],
         remoteBranchGone,
         reason: reasons.join('; '),
       });

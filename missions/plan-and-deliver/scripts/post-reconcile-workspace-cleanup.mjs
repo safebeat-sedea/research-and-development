@@ -162,6 +162,70 @@ async function branchCheckedOutOnOtherWorktree(mainRepoRoot, branch, excludeWork
   return false;
 }
 
+function parseGithubRemote(url) {
+  const u = String(url).trim();
+  const ssh = u.match(/^git@([^:]+):(.+?)(?:\.git)?$/);
+  if (ssh) return `${ssh[1]}/${ssh[2]}`;
+  try {
+    const parsed = new URL(u);
+    const parts = parsed.pathname.replace(/^\/+/, '').replace(/\.git$/, '');
+    if (parsed.hostname === 'github.com' && parts) return parts;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+async function hostingOrgRepo(mainRepoRoot) {
+  const r = await spawnGit(mainRepoRoot, ['remote', 'get-url', 'origin']);
+  if (!r.ok) return { ok: false, orgRepo: null, error: r.stderr || 'remote get-url failed' };
+  const orgRepo = parseGithubRemote(r.stdout);
+  if (!orgRepo) return { ok: false, orgRepo: null, error: `unrecognized remote.origin.url: ${r.stdout}` };
+  return { ok: true, orgRepo, error: null };
+}
+
+function spawnGh(args) {
+  return new Promise((resolve) => {
+    const child = spawn('gh', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d) => { stdout += d.toString(); });
+    child.stderr.on('data', (d) => { stderr += d.toString(); });
+    child.on('error', (err) => {
+      resolve({ ok: false, stdout: stdout.trim(), stderr: err.message, code: -1 });
+    });
+    child.on('close', (code) => {
+      resolve({
+        ok: code === 0,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        code: code ?? 1,
+      });
+    });
+  });
+}
+
+async function ghPrStateOnHosting(mainRepoRoot, prNumber) {
+  const remote = await hostingOrgRepo(mainRepoRoot);
+  if (!remote.ok) return { ok: false, state: null, error: remote.error };
+  const r = await spawnGh([
+    'pr',
+    'view',
+    String(prNumber),
+    '--repo',
+    remote.orgRepo,
+    '--json',
+    'state',
+  ]);
+  if (!r.ok) return { ok: false, state: null, error: r.stderr || r.stdout || 'gh pr view failed' };
+  try {
+    const j = JSON.parse(r.stdout);
+    return { ok: true, state: j.state || 'UNKNOWN', error: null };
+  } catch (err) {
+    return { ok: false, state: null, error: `gh json parse: ${err.message}` };
+  }
+}
+
 /**
  * Branch delete eligibility (post-merge / stale-worktree cleanup):
  * 1. Primary: sidecar linked PR(s) MERGED (mergedPr) and remote head gone.
@@ -173,13 +237,6 @@ async function branchEligibleForDelete(mainRepoRoot, branch, candidate, defaultB
   if (!branch || branch === defaultBranch) {
     return { ok: true, eligible: false, reason: 'default_branch' };
   }
-  if (candidate.mergedPr === false) {
-    return {
-      ok: true,
-      eligible: false,
-      reason: 'linked_prs_not_merged',
-    };
-  }
   const fetch = await spawnGit(mainRepoRoot, ['fetch', 'origin']);
   if (!fetch.ok) {
     return { ok: false, eligible: false, error: fetch.stderr || 'fetch failed' };
@@ -189,6 +246,36 @@ async function branchEligibleForDelete(mainRepoRoot, branch, candidate, defaultB
     return { ok: false, eligible: false, error: remote.stderr || 'ls-remote failed' };
   }
   const remoteBranchExists = remote.stdout.trim().length > 0;
+
+  if (candidate.mergedPr === false) {
+    if (
+      !remoteBranchExists
+      && Array.isArray(candidate.linkedPrNumbers)
+      && candidate.linkedPrNumbers.length > 0
+    ) {
+      let allMerged = true;
+      for (const n of candidate.linkedPrNumbers) {
+        const v = await ghPrStateOnHosting(mainRepoRoot, n);
+        if (!v.ok) return { ok: false, eligible: false, error: v.error };
+        if (v.state !== 'MERGED') {
+          allMerged = false;
+          break;
+        }
+      }
+      if (allMerged) {
+        return {
+          ok: true,
+          eligible: true,
+          reason: 'pr_merged_remote_branch_deleted_despite_sidecar_repo',
+        };
+      }
+    }
+    return {
+      ok: true,
+      eligible: false,
+      reason: 'linked_prs_not_merged',
+    };
+  }
   if (remoteBranchExists) {
     return {
       ok: true,
