@@ -231,7 +231,7 @@ After the report, close **this turn** with **AskQuestion** or **`MC_PHASED_RESPO
 
 ## Squad Leader bubble-up (detached lanes)
 
-Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result. When the review finishes, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** on **this lane**: recap recommendation + options such as **Copy Ship recap phrase for leader dispatch**, **I'm done on this review lane**, or **More details for option _** — include the exact **Ship recap — plan and deliver** phrase the developer should post on the leader dispatch (**`../../plan.mdc`** §8). Do not prose-only “post recap when ready” without structured choice.
+Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result. When the review finishes, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** on **this lane**: recap recommendation + options **I'm done on this review lane** and **More details for option _**. §8 progress reaches the Squad Leader via **`AGENT_RESULT_RESPONSE_V1`** terminal **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`) and Mission Control host sync — **not** developer paste on the leader dispatch (**`../../plan.mdc`** §8 *Policy — no manual recap*). Do not prose-only handoff without structured choice.
 
 | Outcome | `shipPhase` | `rowStatus` | Key `outputs` |
 |---------|-------------|-------------|---------------|
@@ -250,7 +250,7 @@ On **every** terminal `AGENT_RESULT_RESPONSE_V1` (including follow-up re-emits),
 | `remainingTasks` | When `rowStatus` is not `closed` |
 | `blockedReason` | When `rowStatus` is `blocked` (summarize blockers) |
 
-Mission Control writes `ship-ledger.v1.json` and may inject **Ship recap — plan and deliver** on the Squad Leader lane. Manual recap paste on the leader dispatch is still allowed.
+Mission Control writes `ship-ledger.v1.json` from child terminal **`outputs`** and may inject **Ship recap — plan and deliver** on the Squad Leader lane. Manual **Ship recap** paste on the leader dispatch is **forbidden** per **`../../plan.mdc`** §8 *Policy — no manual recap*; when host sync did not run, fix terminal **`outputs`** or route to **mission completeness triage** — do not nudge paste workaround.
 
 ## Completion (spawned)
 
