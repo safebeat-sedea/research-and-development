@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## Objectives
 
-The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `plan and deliver` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; branch names and the strategic hosting repo loop are in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** + **Cadence**). **This `plan.mdc`** remains canonical for dispatch protocol §§1–8, spawn ownership, and §8 ship ledger.
+The outcomes below span the **full cadence** (PRD → plans → implementation → PR → deploy → reconcile). **Not every step runs on the Squad Leader lane** for a `plan and deliver` dispatch — see **Squad operations** for who spawns whom. Skill procedures live under `missions/plan-and-deliver/skills/`; **worktree naming** and the strategic hosting-repo loop are in `.sedea/centers/research-and-development/docs/development-process.md` (**Protocol branches** + **Cadence** — *protocol branch* is skill routing, not git). **This `plan.mdc`** remains canonical for dispatch protocol §§1–8, spawn ownership, and §8 ship ledger.
 
 8. **§8 automation-only** — Squad Leader ship ledger rows update **exclusively** via Mission Control **host sync** from ship child **`AGENT_RESULT_RESPONSE_V1`** terminals (including **`coding-session`** re-emits for inline milestones). Manual **Ship recap** paste is **not** a supported §8 input path. Unscripted milestones are **mission gaps** — see §8 *Automation completeness*.
 
@@ -90,7 +90,7 @@ This diagram is the **dispatch ownership map**. It answers: which agent on this 
 | **Master Plan agent** | Child lane after §5 | **`delivery-phases`**, **`pr-breakdown`** inline via **AskQuestion** + skill load on the **master plan**; drafts §7 inline; ack-only while a **phase-planner** child owns a phase row | Replace Squad Leader ledger; resolve dispatch; phase-scoped decomposition on this lane while **phase-planner** is active |
 | **Phase plan agent** | Child lane after inline **`new-plan`** | Owns **phase delivery** on its lane: route approval, inline **`delivery-phases`** / **`pr-breakdown`**, **`pr-plan`**, nested **`phase-planner`**, **`coding-session`** until **`phaseShipComplete`** or explicit defer/abandon | **`MC_DISPATCH_RESOLVED_V1`**; Master Plan §6 menus for the same phase while this lane is active |
 | **Downstream skill agents** | Further child lanes | **`phase-planner`** spawn from inline **`new-plan`** on planner; nested **`phase-planner`** from phase inline tree; **`coding-session`** → `pre-pr-review` | `MC_DISPATCH_RESOLVED_V1` |
-| **Detached branches** | Often separate session / phrase | Invoked via `development-process.md` branch names | Automatic Squad Leader spawn from §§1–5 |
+| **Detached branches** | Often separate session / phrase | Invoked via `development-process.md` protocol branch names | Automatic Squad Leader spawn from §§1–5 |
 
 **Host rules:** each `AGENT_RUN_REQUEST_V1` opens a child lane; parent waits for `AGENT_RESULT_RESPONSE_V1` when the skill says so. Squad Leader **§7** tracks planning `activeLanes`, `openLedgerEntries`, `spawnedPlans`, `remainingTasks`; **§8** tracks ship rows per PR plan — it does not re-run detached child skills from the leader lane.
 

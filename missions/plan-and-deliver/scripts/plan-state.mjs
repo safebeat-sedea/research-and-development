@@ -681,7 +681,7 @@ async function resolveMainRepoRootFromWorktree(worktreePath) {
 // `detect-stale-workspaces [--slug <slug>] [--json]`
 // Read-only: list sidecar worktrees[] whose path still exists on disk.
 // When prs[] is present, sets mergedPr true only if every linked PR is MERGED.
-// Sets remoteBranchGone when origin has no head for the worktree branch (read-only ls-remote).
+// Sets remoteHeadGone when origin has no head for the worktree name (read-only ls-remote).
 async function cmdDetectStaleWorkspaces(flags) {
   await ensureSedeaContext();
   const asJson = flags.json === true;
@@ -728,22 +728,22 @@ async function cmdDetectStaleWorkspaces(flags) {
       const wtPath = path.resolve(wt.path);
       if (!pathExistsSync(wtPath)) continue;
 
-      let branch = null;
+      let worktreeName = null;
       const br = await spawnGitOutput(wtPath, ['branch', '--show-current']);
-      if (br.ok && br.stdout) branch = br.stdout;
+      if (br.ok && br.stdout) worktreeName = br.stdout;
 
-      let remoteBranchGone = null;
-      if (branch) {
+      let remoteHeadGone = null;
+      if (worktreeName) {
         const mainRoot = await resolveMainRepoRootFromWorktree(wtPath);
         if (mainRoot) {
-          const remote = await spawnGitOutput(mainRoot, ['ls-remote', '--heads', 'origin', branch]);
-          if (remote.ok) remoteBranchGone = remote.stdout.trim().length === 0;
+          const remote = await spawnGitOutput(mainRoot, ['ls-remote', '--heads', 'origin', worktreeName]);
+          if (remote.ok) remoteHeadGone = remote.stdout.trim().length === 0;
         }
       }
 
       const reasons = ['worktree_path_still_present'];
       if (mergedPr === true) reasons.push('linked_prs_merged');
-      if (remoteBranchGone === true) reasons.push('remote_branch_gone');
+      if (remoteHeadGone === true) reasons.push('remote_head_gone');
       if (plan.isArchived) reasons.push('plan_archived');
 
       candidates.push({
@@ -752,10 +752,10 @@ async function cmdDetectStaleWorkspaces(flags) {
         planArchived: plan.isArchived === true,
         worktreePath: wtPath,
         repo: wt.repo,
-        branch,
+        worktreeName,
         mergedPr,
         linkedPrNumbers: data.prs.length > 0 ? data.prs.map((p) => p.number) : [],
-        remoteBranchGone,
+        remoteHeadGone,
         reason: reasons.join('; '),
       });
     }
@@ -768,7 +768,7 @@ async function cmdDetectStaleWorkspaces(flags) {
   log(`== detect-stale-workspaces (${candidates.length} candidate(s)) ==`);
   for (const c of candidates) {
     log(
-      `  ${c.slug}: ${c.repo}:${c.worktreePath} branch=${c.branch || '?'} mergedPr=${c.mergedPr} remoteBranchGone=${c.remoteBranchGone} (${c.reason})`,
+      `  ${c.slug}: ${c.repo}:${c.worktreePath} worktreeName=${c.worktreeName || '?'} mergedPr=${c.mergedPr} remoteHeadGone=${c.remoteHeadGone} (${c.reason})`,
     );
   }
 }

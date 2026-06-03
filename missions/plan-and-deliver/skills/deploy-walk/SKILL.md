@@ -28,9 +28,9 @@ inputs:
     type: string
     description: Git repository URL.
     required: false
-  branchName:
+  worktreeName:
     type: string
-    description: Feature branch that produced the PR (worktree or post-merge verification).
+    description: Worktree name that produced the PR (worktree or post-merge verification).
     required: false
   mergeSha:
     type: string
@@ -128,7 +128,7 @@ When `upstreamSkill` is **`coding-session`** and `deployWalkScope` is **`before-
 | **Blocked** | Any Before-deploy step remains `[ ]` without skip/block resolution → report `blockedStep` in inline outputs |
 | **Handback** | Parent **`coding-session`** continues to [Pre-PR review authorization](../coding-session/SKILL.md#pre-pr-review-authorization) — not **`create-pr`** |
 
-Use `worktreePath` / `branchName` from inline context for command context in step presentations. PR merge fields (`prUrl`, `mergeSha`, …) are optional and usually absent.
+Use `worktreePath` / `worktreeName` from inline context for command context in step presentations. PR merge fields (`prUrl`, `mergeSha`, …) are optional and usually absent.
 
 On inline start, run [Inline walk bootstrap](#inline-walk-bootstrap) — do not wait for `deploy-walk present 1`.
 
