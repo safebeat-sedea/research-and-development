@@ -17,7 +17,7 @@ inputs:
     type: string
     description: Absolute hosting repo worktree path.
     required: true
-  branchName:
+  worktreeName:
     type: string
     description: Branch to create the PR from.
     required: true
@@ -65,15 +65,15 @@ inputs:
 
 ### Standalone dispatch (stop immediately)
 
-If Mission Control opened a session whose only intent is **`create-pr`** / *open a PR* with **no** active **`coding-session`** context (`worktreePath`, `branchName`, `baseRef`, pre-PR **go**, PR plan when anchored):
+If Mission Control opened a session whose only intent is **`create-pr`** / *open a PR* with **no** active **`coding-session`** context (`worktreePath`, `worktreeName`, `baseRef`, pre-PR **go**, PR plan when anchored):
 
 1. **Stop** — do not run gates or **`gh pr create`**.
 2. Tell the developer **`create-pr`** is **inline-only** on the **`coding-session`** lane.
 3. Direct them to open or return to **`coding-session`** (detached phrase, snapshot, or **`plan and deliver`** ship path) and complete the ship chain through **`pre-pr-review`** → **Create-PR handoff after go** in [`coding-session/SKILL.md`](../coding-session/SKILL.md).
 
-**Execution owner:** the active **coding-session agent** runs this skill inline. Do **not** spawn a separate PR-creating child lane. The coding-session lane has worktree, branch, diff, PR plan, pre-PR review outputs, and developer approvals needed to open a PR safely.
+**Execution owner:** the active **coding-session agent** runs this skill inline. Do **not** spawn a separate PR-creating child lane. The coding-session lane has worktree, worktree name ref, diff, PR plan, pre-PR review outputs, and developer approvals needed to open a PR safely.
 
-**Required upstream context:** `prePrReviewRecommendation: "go"`; `worktreePath`, `branchName`, `baseRef`; optional `targetPlanPath` / `targetPlanSlug`; `diffSummary` and pre-PR flags when available. If context is missing, recover on **`coding-session`** before running this procedure.
+**Required upstream context:** `prePrReviewRecommendation: "go"`; `worktreePath`, `worktreeName`, `baseRef`; optional `targetPlanPath` / `targetPlanSlug`; `diffSummary` and pre-PR flags when available. If context is missing, recover on **`coding-session`** before running this procedure.
 
 **Post-PR lifecycle:** merge checks, After-deploy **`deploy-walk`**, and inline **`plan-reconcile`** are owned by **`coding-session`** ([Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate), [After deploy deploy-walk handoff](../coding-session/SKILL.md#after-deploy-deploy-walk-handoff), [Plan-reconcile handoff (inline)](../coding-session/SKILL.md#plan-reconcile-handoff-inline)) — not this skill.
 
@@ -90,10 +90,10 @@ Gates use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sed
 Before creating or preparing a PR:
 
 1. Verify `prePrReviewRecommendation` is exactly `go`. If not, stop; PR creation is blocked until review passes.
-2. Verify `worktreePath`, `branchName`, and `baseRef` are present.
-3. Verify the worktree branch matches `branchName`.
+2. Verify `worktreePath`, `worktreeName`, and `baseRef` are present.
+3. Verify the worktree name ref matches `worktreeName` (`git branch --show-current`).
 4. Verify the committed diff exists: `git diff <baseRef>...HEAD` is non-empty.
-5. Verify the branch is pushed or push it only if the developer / **`coding-session`** explicitly authorized push. If push is not authorized, emit a copy-pasteable PR prompt (below) and report `partial` with `remainingTasks`.
+5. Verify the worktree is pushed or push it only if the developer / **`coding-session`** explicitly authorized push. If push is not authorized, emit a copy-pasteable PR prompt (below) and report `partial` with `remainingTasks`.
 
 When authorized to create the PR, you **may** run `gh pr create`. If creation is not authorized, produce the PR prompt below and set `continuationStatus: "active"` — do not call `gh pr create`.
 
@@ -101,17 +101,17 @@ When authorized to create the PR, you **may** run `gh pr create`. If creation is
 
 When direct PR creation is not authorized, generate a copy-paste prompt for a future **`coding-session`** ship pass. Gather:
 
-1. **Current branch**: `git branch --show-current`
-2. **Base branch**: from `git merge-base` / tracking parent (e.g. `main`).
+1. **Current worktree name ref**: `git branch --show-current`
+2. **Integration line**: from `git merge-base` / tracking parent (e.g. `main`).
 3. **Repo URL**: `git remote get-url origin`
 4. **Changes summary**: `git diff <base>...HEAD` plus session context — **reviewer-complete** per rule **20** § *Comprehensive PR descriptions*.
 
 Print inside a fenced code block:
 
 ```
-Create a PR for the branch I pushed: `<current-branch>`
+Create a PR for the worktree I pushed: `<current-worktree-name>`
 In the <repo-url> repo
-The base branch is `<base-branch>`
+The integration line is `<integration-line>`
 
 Use past tense for the PR title.
 
@@ -132,7 +132,7 @@ Merge these fields into **`coding-session`** `outputs` via **`## Completion (inl
 - `targetPlanPath`
 - `targetPlanSlug`
 - `worktreePath`
-- `branchName`
+- `worktreeName`
 - `baseRef`
 - `repoUrl`
 - `prUrl`

@@ -249,7 +249,7 @@ On non-zero exit, stop and surface the error.
 
 **Idempotent fallback:** When **`detect-stale-workspaces`** returns no candidates (worktree already removed, **`mainPullStatus`** already **`success`** on this plan), report one line and skip **`--apply`** — do not treat as error.
 
-**Branch delete gate:** Same as **`post-reconcile-workspace-cleanup.mjs`** — (1) **`mergedPr: true`** and remote head gone, or (2) worktree-linked fallback when **`prs[]`** empty, **`remoteBranchGone: true`**, branch not checked out elsewhere; not merge-base into **`origin/main`**.
+**Worktree name ref cleanup gate:** Same as **`post-reconcile-workspace-cleanup.mjs`** — (1) **`mergedPr: true`** and remote head gone, or (2) worktree-linked fallback when **`prs[]`** empty, **`remoteHeadGone: true`**, worktree name not checked out elsewhere; not merge-base into **`origin/main`**.
 
 **Detect (read-only):**
 
@@ -261,7 +261,7 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
  --operations-user-id "$OPS_ID" detect-stale-workspaces [--slug <slug>] --json
 ```
 
-Each candidate includes `worktreePath`, `repo`, `branch`, `mergedPr` (when sidecar **`prs[]`** exists), `remoteBranchGone`, and `reason`.
+Each candidate includes `worktreePath`, `repo`, `worktreeName`, `mergedPr` (when sidecar **`prs[]`** exists), `remoteHeadGone`, and `reason`.
 
 **Dry-run git plan:**
 
@@ -274,7 +274,7 @@ Present the JSON **`actions`** list in the **same turn** as the required **AskQu
 
 | Option id (illustrative) | Label (brief) |
 |--------------------------|---------------|
-| `cleanup-apply` | Run workspace cleanup (worktree + merged branch + pull main) |
+| `cleanup-apply` | Run workspace cleanup (worktree + worktree name ref + pull main) |
 | `cleanup-skip` | Skip git cleanup this pass |
 | `cleanup-dry-run-only` | Dry-run only — no git mutations |
 | `more-details` | More details for option _ |
@@ -291,9 +291,9 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
  --operations-user-id "$OPS_ID" --apply [--slug <slug>]
 ```
 
-The script runs **`git worktree remove`**, deletes local feature branches when PR merged **and** remote head is gone (not merge-base heuristics), **`git pull origin <defaultBranch>`** on **`HOSTING_ROOT`**, **`./scripts/rebuild-native-extensions.sh`** when present (so the developer can reload the window), and **`plan-state.mjs prune-sessions --all`**.
+The script runs **`git worktree remove`**, drops local worktree name refs when PR merged **and** remote head is gone (not merge-base heuristics), **`git pull origin <defaultIntegrationLine>`** on **`HOSTING_ROOT`**, **`./scripts/rebuild-native-extensions.sh`** when present (so the developer can reload the window), and **`plan-state.mjs prune-sessions --all`**.
 
-3. Summarise **`cleanedWorktrees`**, **`deletedBranches`**, **`skippedBranches`**, **`mainPullStatus`**, and any **`errors`** from the script JSON.
+3. Summarise **`cleanedWorktrees`**, **`deletedWorktreeNames`**, **`skippedWorktreeNames`**, **`mainPullStatus`**, and any **`errors`** from the script JSON.
 
 **Primary path:** **`coding-session`** [Post-merge workspace cleanup](../coding-session/SKILL.md#post-merge-workspace-cleanup) runs **`--apply`** after PR merge and before After deploy walk. This §5 subsection is the **idempotent fallback** when that pass was skipped or deferred.
 
@@ -342,7 +342,7 @@ When run inline on **`coding-session`**, report these fields in prose via **`## 
 - `outputs.rowStatus` — per bubble-up semantics below
 - `outputs.blockedReason` — when `rowStatus` is `blocked`
 - `outputs.cleanedWorktrees` — when §5 cleanup ran
-- `outputs.deletedBranches` — when §5 cleanup ran
+- `outputs.deletedWorktreeNames` — when §5 cleanup ran
 - `outputs.mainPullStatus` — when §5 cleanup ran
 
 Stop when the target plan is archived or explicitly not archive-eligible with no remaining follow-up triage, or when flagged plans / postponed follow-ups / manual routing remain (`continuationStatus: active` on **`coding-session`**). Do not auto-invoke other skills.

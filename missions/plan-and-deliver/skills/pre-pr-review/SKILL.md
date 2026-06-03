@@ -25,7 +25,7 @@ inputs:
     type: string
     description: Absolute hosting repo worktree path to review.
     required: true
-  branchName:
+  worktreeName:
     type: string
     description: Branch being reviewed.
     required: true
@@ -60,7 +60,7 @@ warmUpRules:
 
 # Pre-PR Review
 
-**Who runs this:** a fresh **pre-PR reviewer agent** lane spawned by **`coding-session`** after developer implementation approval, **commit**, and inline **Before deploy** **`deploy-walk`** (or documented skip). The reviewer must have no carry-over from the coding agent that changed the branch.
+**Who runs this:** a fresh **pre-PR reviewer agent** lane spawned by **`coding-session`** after developer implementation approval, **commit**, and inline **Before deploy** **`deploy-walk`** (or documented skip). The reviewer must have no carry-over from the coding agent that changed the worktree.
 
 This pass complements, and does not replace, the later GitHub-surface **reviewer agent**.
 
@@ -74,7 +74,7 @@ Required inputs:
 
 1. `anchorType`: `plan` or `free-form`.
 2. `worktreePath`: absolute worktree path.
-3. `branchName`: branch being reviewed.
+3. `worktreeName`: worktree name being reviewed.
 4. `baseRef`: remote base ref, usually `origin/main`.
 
 For `anchorType: "plan"`, `targetPlanPath` is required and must point to a per-PR plan. If the file is a Master Plan or Phase plan, stop with `failure`; this review requires the PR plan that owns the implementation scope.
@@ -83,7 +83,7 @@ If any required input is missing, stop with `failure`. Do not ask the developer 
 
 ## Step 2 — Fresh reviewer lane
 
-Confirm this is a fresh reviewer lane. Do not reuse context from the coding agent that implemented the branch. If the lane already contains implementation edits or coding-agent tool history, stop with `aborted` and request a fresh `pre-pr-review` spawn.
+Confirm this is a fresh reviewer lane. Do not reuse context from the coding agent that implemented the worktree. If the lane already contains implementation edits or coding-agent tool history, stop with `aborted` and request a fresh `pre-pr-review` spawn.
 
 ## Step 3 — Load standards and rules
 
@@ -206,7 +206,7 @@ End with a child result containing:
 - `outputs.targetPlanPath`
 - `outputs.targetPlanSlug`
 - `outputs.worktreePath`
-- `outputs.branchName`
+- `outputs.worktreeName`
 - `outputs.baseRef`
 - `outputs.recommendation` (`go` | `no-go`)
 - `outputs.blockers`

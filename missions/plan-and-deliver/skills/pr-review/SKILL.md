@@ -12,15 +12,15 @@ description: >-
 
 ### Standalone dispatch (stop immediately)
 
-If Mission Control opened a session whose only intent is **`pr-review`** / *triage PR comments* with **no** active **`coding-session`** context (`prUrl`, worktree, branch, PR plan, pre-PR history):
+If Mission Control opened a session whose only intent is **`pr-review`** / *triage PR comments* with **no** active **`coding-session`** context (`prUrl`, worktree, worktree name, PR plan, pre-PR history):
 
 1. **Stop** — do not run Steps 1–5 or **`pr-review.py`**.
 2. Tell the developer **`pr-review`** is **inline-only** on the **`coding-session`** lane.
 3. Direct them to open or return to **`coding-session`** (detached phrase, snapshot, or **`plan and deliver`** ship path) with PR identity loaded, then invoke triage from that lane.
 
-**Execution owner:** the active **coding-session agent** runs this skill inline. Do not spawn a separate `pr-review` agent. The coding-session lane has the implementation context, worktree, branch, PR plan, prior pre-PR review findings, and developer approvals needed to evaluate and fix PR comments safely.
+**Execution owner:** the active **coding-session agent** runs this skill inline. Do not spawn a separate `pr-review` agent. The coding-session lane has the implementation context, worktree, worktree name, PR plan, prior pre-PR review findings, and developer approvals needed to evaluate and fix PR comments safely.
 
-**Required upstream context:** `prUrl` or `prNumber`, repository identity, worktree path, branch name, linked PR plan when available, and coding-session ledger state. If this context is missing, return to `coding-session` to recover it before running PR review.
+**Required upstream context:** `prUrl` or `prNumber`, repository identity, worktree path, worktree name, linked PR plan when available, and coding-session ledger state. If this context is missing, return to `coding-session` to recover it before running PR review.
 
 ## Structured choice (Mission Control)
 
@@ -80,7 +80,7 @@ Supported `command` values: `threads`, `reply`, `resolve`, `minimize`, `pr-for-b
 
 ### GitHub access
 
-**All** GitHub reads and writes for this skill use **`pr-review.py`** via the two-step **`PR_REVIEW_INPUT`** workflow (§ *Input file and script*). In Step 0 you may use `git` / `gh` in the **worktree** for branch or URL resolution; prefer **`pr-for-branch`** in the script when resolving the PR from the current branch.
+**All** GitHub reads and writes for this skill use **`pr-review.py`** via the two-step **`PR_REVIEW_INPUT`** workflow (§ *Input file and script*). In Step 0 you may use `git` / `gh` in the **worktree** for worktree name or URL resolution; prefer **`pr-for-branch`** in the script when resolving the PR from the current worktree name ref (`git branch --show-current` returns the worktree name).
 
 Superseded paths (token/config lookup only — **not** for listing threads or posting replies): GitHub MCP server ids such as **`github`** or **`user-github`** in **`.sedea/mcp.json`**. Those tools duplicate **`pr-review.py`** and inflate agent context.
 
@@ -93,7 +93,7 @@ Optionally followed by a PR URL (e.g. *run pr-review on https://github.com/…/p
 Determine the PR to review using the **first match**:
 1. A URL is provided after `pr-review` → parse `owner`, `repo`, `pull_number` from it.
 2. A PR was already reviewed earlier in this chat → reuse that `owner`, `repo`, `pull_number`.
-3. Neither above → get the current branch (`git branch --show-current`), parse `owner`/`repo` from the git remote (`git remote get-url origin`), then look up the open PR via the `pr-for-branch` script command.
+3. Neither above → read the current worktree name ref (`git branch --show-current`), parse `owner`/`repo` from the git remote (`git remote get-url origin`), then look up the open PR via the `pr-for-branch` script command.
 
 Always confirm which PR is being reviewed (print URL and title) before proceeding.
 
@@ -125,7 +125,7 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
  --number <pull_number-from-Step-0>
 ```
 
-Skip silently when `resolve` exits non-zero (session has no plan) or when `pull_number` is unknown (Step 0 fell through every branch). Never block **`pr-review`** on a helper failure — log and continue with Step 1.
+Skip silently when `resolve` exits non-zero (session has no plan) or when `pull_number` is unknown (Step 0 fell through every resolution path). Never block **`pr-review`** on a helper failure — log and continue with Step 1.
 
 **Capture the resolved slug + full `planPath`** (or the lack thereof) for Step 3a. After `resolve`, parse the path segment immediately after `.sedea/operations/` — it is either **`joint`** or the **user uuid** — and edit that same `<slug>.plan.md` (sidecar `<slug>.state.yaml` sits beside it). Re-running `resolve` later only to recover the path wastes a shell call.
 

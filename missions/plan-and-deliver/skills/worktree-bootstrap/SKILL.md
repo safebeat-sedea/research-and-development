@@ -25,9 +25,9 @@ inputs:
     type: string
     description: PR plan slug when plan-anchored.
     required: false
-  branchName:
+  worktreeName:
     type: string
-    description: Feature branch name in the worktree.
+    description: Worktree name (`-b` on `git worktree add`) in the worktree.
     required: false
   bootstrapSkipFlags:
     type: array
@@ -114,7 +114,7 @@ When spawned by **`coding-session`**, populate at least:
 - `outputs.worktreePath`
 - `outputs.hostingRoot`
 - `outputs.targetPlanPath`, `outputs.targetPlanSlug` (echo when supplied)
-- `outputs.branchName` (echo when supplied)
+- `outputs.worktreeName` (echo when supplied)
 - `outputs.bootstrapStatus` — `success` | `failed`
 - `outputs.bootstrapFailureReason` — when failed
 - `outputs.bootstrapSkipFlags` — array used, or `[]`

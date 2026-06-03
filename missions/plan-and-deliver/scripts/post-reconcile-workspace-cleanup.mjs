@@ -227,29 +227,29 @@ async function ghPrStateOnHosting(mainRepoRoot, prNumber) {
 }
 
 /**
- * Branch delete eligibility (post-merge / stale-worktree cleanup):
+ * Worktree name ref cleanup eligibility (post-merge / stale-worktree cleanup):
  * 1. Primary: sidecar linked PR(s) MERGED (mergedPr) and remote head gone.
- * 2. Fallback: worktree-linked branch (stale worktree candidate), sidecar prs[] empty
- *    (mergedPr null), remote head gone, branch not checked out on another worktree.
+ * 2. Fallback: worktree-linked name (stale worktree candidate), sidecar prs[] empty
+ *    (mergedPr null), remote head gone, name not checked out on another worktree.
  * Does not use merge-base / local "merged into origin/main" heuristics.
  */
-async function branchEligibleForDelete(mainRepoRoot, branch, candidate, defaultBranch) {
-  if (!branch || branch === defaultBranch) {
-    return { ok: true, eligible: false, reason: 'default_branch' };
+async function branchEligibleForDelete(mainRepoRoot, worktreeName, candidate, defaultIntegrationLine) {
+  if (!worktreeName || worktreeName === defaultIntegrationLine) {
+    return { ok: true, eligible: false, reason: 'default_integration_line' };
   }
   const fetch = await spawnGit(mainRepoRoot, ['fetch', 'origin']);
   if (!fetch.ok) {
     return { ok: false, eligible: false, error: fetch.stderr || 'fetch failed' };
   }
-  const remote = await spawnGit(mainRepoRoot, ['ls-remote', '--heads', 'origin', branch]);
+  const remote = await spawnGit(mainRepoRoot, ['ls-remote', '--heads', 'origin', worktreeName]);
   if (!remote.ok) {
     return { ok: false, eligible: false, error: remote.stderr || 'ls-remote failed' };
   }
-  const remoteBranchExists = remote.stdout.trim().length > 0;
+  const remoteHeadExists = remote.stdout.trim().length > 0;
 
   if (candidate.mergedPr === false) {
     if (
-      !remoteBranchExists
+      !remoteHeadExists
       && Array.isArray(candidate.linkedPrNumbers)
       && candidate.linkedPrNumbers.length > 0
     ) {
@@ -266,7 +266,7 @@ async function branchEligibleForDelete(mainRepoRoot, branch, candidate, defaultB
         return {
           ok: true,
           eligible: true,
-          reason: 'pr_merged_remote_branch_deleted_despite_sidecar_repo',
+          reason: 'pr_merged_remote_head_gone_despite_sidecar_repo',
         };
       }
     }
@@ -276,34 +276,34 @@ async function branchEligibleForDelete(mainRepoRoot, branch, candidate, defaultB
       reason: 'linked_prs_not_merged',
     };
   }
-  if (remoteBranchExists) {
+  if (remoteHeadExists) {
     return {
       ok: true,
       eligible: false,
       reason: candidate.mergedPr === true
-        ? 'pr_merged_remote_branch_still_exists'
-        : 'remote_branch_still_exists',
+        ? 'pr_merged_remote_head_still_exists'
+        : 'remote_head_still_exists',
     };
   }
   if (candidate.mergedPr === true) {
     return {
       ok: true,
       eligible: true,
-      reason: 'pr_merged_remote_branch_deleted',
+      reason: 'pr_merged_remote_head_gone',
     };
   }
   const elsewhere = await branchCheckedOutOnOtherWorktree(
     mainRepoRoot,
-    branch,
+    worktreeName,
     candidate.worktreePath,
   );
   if (elsewhere) {
-    return { ok: true, eligible: false, reason: 'branch_checked_out_elsewhere' };
+    return { ok: true, eligible: false, reason: 'worktree_name_checked_out_elsewhere' };
   }
   return {
     ok: true,
     eligible: true,
-    reason: 'worktree_linked_remote_branch_gone',
+    reason: 'worktree_linked_remote_head_gone',
   };
 }
 
@@ -393,14 +393,14 @@ async function runNativeExtensionsRebuild(hostingRoot, dryRun) {
   });
 }
 
-const USAGE = `Usage: post-reconcile-workspace-cleanup [--operations-user-id <id>] [--dry-run | --apply] [--slug <slug>] [--default-branch <name>]
+const USAGE = `Usage: post-reconcile-workspace-cleanup [--operations-user-id <id>] [--dry-run | --apply] [--slug <slug>] [--default-integration-line <name>]
 
   --dry-run   Print planned git actions (default). Does not mutate git or sidecars.
-  --apply     Run git worktree remove, branch delete (PR merged + remote branch gone), hosting pull,
+  --apply     Run git worktree remove, local worktree name ref cleanup (PR merged + remote head gone), hosting pull,
               rebuild-native-extensions.sh (when present), prune-sessions.
               Agent must call sedea_remove_worktree_folder for each worktreePath before --apply.
 
-  --default-branch <name>  Integration branch (default: main).
+  --default-integration-line <name>  Integration line on origin (default: main). Legacy flag: --default-branch.
 `;
 
 async function main() {
@@ -414,7 +414,12 @@ async function main() {
   const flags = parseFlags(rest);
   const dryRun = flags.apply !== true;
   const slug = typeof flags.slug === 'string' ? flags.slug : null;
-  const defaultBranch = typeof flags['default-branch'] === 'string' ? flags['default-branch'] : 'main';
+  const defaultIntegrationLine =
+    typeof flags['default-integration-line'] === 'string'
+      ? flags['default-integration-line']
+      : typeof flags['default-branch'] === 'string'
+        ? flags['default-branch']
+        : 'main';
 
   const hostingRoot = findSedeaRepoRoot(SCRIPT_DIR);
   if (!hostingRoot) die('could not find hosting repo root (.sedea/)');
@@ -422,12 +427,12 @@ async function main() {
   const candidates = await detectCandidates(hostingRoot, operationsUserId, slug);
   const report = {
     dryRun,
-    defaultBranch,
+    defaultIntegrationLine,
     hostingRoot,
     candidates,
     actions: [],
     cleanedWorktrees: [],
-    deletedBranches: [],
+    deletedWorktreeNames: [],
     errors: [],
     mcpReminder:
       'Before --apply: invoke sedea_remove_worktree_folder for each worktreePath (Mission Control MCP).',
@@ -465,17 +470,18 @@ async function main() {
       report.cleanedWorktrees.push(c.worktreePath);
     }
 
-    if (c.branch && c.branch !== defaultBranch) {
+    const worktreeName = c.worktreeName || c.branch;
+    if (worktreeName && worktreeName !== defaultIntegrationLine) {
       const eligibility = await branchEligibleForDelete(
         main.mainRepoRoot,
-        c.branch,
+        worktreeName,
         c,
-        defaultBranch,
+        defaultIntegrationLine,
       );
       const delAction = {
-        action: 'branch-delete',
+        action: 'worktree-name-ref-delete',
         mainRepoRoot: main.mainRepoRoot,
-        branch: c.branch,
+        worktreeName,
         eligible: eligibility.eligible === true,
         reason: eligibility.reason || eligibility.error,
         mergedPr: c.mergedPr,
@@ -483,33 +489,33 @@ async function main() {
       };
       report.actions.push(delAction);
       if (!dryRun && eligibility.ok && eligibility.eligible) {
-        const del = await spawnGit(main.mainRepoRoot, ['branch', '-D', c.branch]);
-        if (del.ok) report.deletedBranches.push(c.branch);
+        const del = await spawnGit(main.mainRepoRoot, ['branch', '-D', worktreeName]);
+        if (del.ok) report.deletedWorktreeNames.push(worktreeName);
         else {
           report.errors.push({
             slug: c.slug,
-            branch: c.branch,
-            error: del.stderr || 'branch delete failed',
+            worktreeName,
+            error: del.stderr || 'worktree name ref cleanup failed',
           });
         }
       } else if (!dryRun && eligibility.ok && !eligibility.eligible) {
-        report.skippedBranches = report.skippedBranches || [];
-        report.skippedBranches.push({
+        report.skippedWorktreeNames = report.skippedWorktreeNames || [];
+        report.skippedWorktreeNames.push({
           slug: c.slug,
-          branch: c.branch,
+          worktreeName,
           reason: eligibility.reason || 'not eligible',
         });
       } else if (!dryRun && !eligibility.ok) {
         report.errors.push({
           slug: c.slug,
-          branch: c.branch,
-          error: eligibility.error || 'branch eligibility check failed',
+          worktreeName,
+          error: eligibility.error || 'worktree name ref eligibility check failed',
         });
       }
     }
   }
 
-  const sync = await syncHostingDefaultBranch(hostingRoot, defaultBranch, dryRun);
+  const sync = await syncHostingDefaultBranch(hostingRoot, defaultIntegrationLine, dryRun);
   report.actions.push(...(sync.actions || []));
   report.mainPullStatus = sync.pullStatus || sync.error || null;
   if (!sync.ok && !dryRun) {

@@ -42,7 +42,7 @@ Per-PR plans under the **`.sedea/operations/`** union (**`.sedea/operations/<ope
 
 ### Plan-anchored PRs (before commit and push)
 
-When the work is driven by a **per-PR plan** linked from the Plan Board (or otherwise in scope for the active worktree):
+When the work is driven by a **per-PR plan** linked from the Plan Board (or otherwise in scope for the active **worktree**):
 
 1. Read that plan's **`## 5. Repo rules impact`** (or **`## N. Repo rules impact`** if the plan uses the legacy 7-section numbering).
 2. For every bullet that names a path under **`.cursor/rules/*.mdc`** in the **hosting repo** (`user-auth`, `payments-web`, etc.) and calls for an **update** / **extend** / **add**, implement that **`.mdc` change in the same PR worktree** before review / rule **20** § *Commit and push cadence*, unless the bullet explicitly defers it — then **edit the plan's §5** so the deferral is honest.
