@@ -239,7 +239,7 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 | Check | Action |
 |-------|--------|
 | `outputs.continuationOwner: ad-hoc-prd-agent` and `outputs.continuationStatus: active` | **Acknowledge only** on the leader lane — PRD approval / revision runs on the **Ad-Hoc PRD** child lane (see **`ad-hoc-prd`** steps 5–7). Do **not** duplicate approval **AskQuestion** here. |
-| `outputs.continuationStatus: terminal` and `outputs.developerApprovedPrd: true` with `prdRef` | Continue to §4 with the approved Ad-Hoc PRD |
+| `outputs.continuationStatus: terminal` and `outputs.developerApprovedPrd: true` with `prdRef` | **Auto-chain §4 → §5 on the same leader turn:** compile seed from approved outputs (`prdRef`, `prdTitle`, …), run §5 spawn preflight, emit **`AGENT_RUN_REQUEST_V1`** for **`planner`**. **Forbidden:** leader-lane **AskQuestion** to re-approve PRD, seed review gate, or “confirm spawn planner” before emit. |
 | `outputs.continuationStatus: terminal` without `developerApprovedPrd: true` | Close with **AskQuestion** on the leader lane: retry §3, continue on child lane, or abandon branch — do not prose-only stop |
 | `status: partial` / missing `prdRef` / missing required inputs | Close with **AskQuestion** to collect missing fields or retry per **`ad-hoc-prd`** **`## Completion (spawned)`** — appropriate lane owns collection |
 
@@ -332,7 +332,7 @@ Do **not** invent PRD content from the URL alone. Do **not** call **`author-prd`
 - **Expected output:** Child agent result with `status: success` or `partial`, `outputs.prdPath`, `outputs.prdRef`, `outputs.prdTitle`, `outputs.developerApprovedPrd`, `outputs.missingFields`, `outputs.complexityGuard`, `outputs.activeLanes`, `outputs.openLedgerEntries`, `outputs.remainingTasks`, `outputs.continuationOwner`, and `outputs.continuationStatus`.
 - **Next-step resolution:**
   - Child result with `continuationOwner: ad-hoc-prd-agent` and `continuationStatus: active` → acknowledge on the leader lane only; developer continues approve / revise on the **Ad-Hoc PRD** child lane.
-  - Child result `terminal` with `developerApprovedPrd: true` and `prdRef` → continue to §4 planning seed for **`planner`**.
+  - Child result `terminal` with `developerApprovedPrd: true` and `prdRef` → **auto-chain** §4 planning seed and §5 **`planner`** spawn on the same leader turn (see **§3 resume** — no leader re-approval).
   - Child result `partial` with missing fields → collect missing inputs (child lane when the skill is active; leader lane only when the child cannot run), then retry or switch PRD source.
   - Child result `failure`, `aborted`, `abandoned`, or no `prdRef` when approval was expected → close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`**: retry, switch to linked PRD, or abandon this branch.
 
@@ -343,7 +343,7 @@ Do **not** invent PRD content from the URL alone. Do **not** call **`author-prd`
 3. Announce that the **Squad Leader** is waiting for the child lane because **`planner`** requires a **developer-approved** PRD artifact; close the turn with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**.
 4. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId` (host delivers as silent UserSend).
 5. Apply **§3 resume** above. The **Ad-Hoc PRD agent** owns recap, **AskQuestion** approval, and revision (skill steps 5–7) — do **not** run a duplicate approval gate on the leader lane.
-6. Continue to §4 only when the child result is `continuationStatus: terminal`, `outputs.developerApprovedPrd: true`, and `outputs.prdRef` is readable. Do not treat the first post-write child result (`continuationStatus: active`) as approval.
+6. Continue to §4 only when the child result is `continuationStatus: terminal`, `outputs.developerApprovedPrd: true`, and `outputs.prdRef` is readable. Do not treat the first post-write child result (`continuationStatus: active`) as approval. When those conditions hold, **do not end the leader turn** until §5 **`planner`** spawn is emitted or a §4 data-gap **AskQuestion** (missing title/parent only) blocks spawn preflight.
 
 ### 4. Collect planning seed
 
@@ -357,6 +357,7 @@ Do **not** invent PRD content from the URL alone. Do **not** call **`author-prd`
   - Parent missing or unresolved **and** Hub parent not present in opening message → use **AskQuestion** to collect parent slug/path or `null` for a new roadmap/root plan, then resume this step.
   - Parent pre-seeded from Hub (§ *Hub parent in opening message*) → **do not** run parent **AskQuestion**; continue when title and PRD are set.
   - Related documents absent → record none and continue; related documents are optional.
+  - **Ad-Hoc PRD branch (§3 terminal approve):** when required seed fields are complete (or Hub parent pre-seeded), **continue immediately to §5** on the same turn — **no** leader approval between child PRD approve and **`planner`** spawn.
 
 #### Hub parent in opening message
 
@@ -386,7 +387,9 @@ If both slug and path appear, prefer the **`@path`** for **`Parent`** in the see
    - **Hub path first:** If § *Hub parent in opening message* applies, parse **`Parent`** from the opening message and apply the echo line above; **skip** parent **AskQuestion**.
    - **Otherwise:** Use hints from the developer message; when parent is still missing or unresolved, use **AskQuestion** per **Next-step resolution**.
 4. Collect optional `Related` entries only when the developer provides them.
-5. Echo the compiled seed block for review.
+5. **Seed echo vs auto-chain:**
+   - **§3 Ad-Hoc PRD** with terminal approved result: optional one-line seed summary; **do not** wait for developer confirmation before §5.
+   - **§2 linked PRD:** when title and parent are resolved, proceed to §5 without a separate approval gate; use **AskQuestion** only for missing title/parent per **Next-step resolution**.
 6. Preserve the seed for §5 **`planner`** handoff.
 
 **Seed shape**

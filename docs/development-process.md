@@ -102,7 +102,7 @@ flowchart TD
 | Route | When | Mission / phrase | Artifact | Next |
 | --- | --- | --- | --- | --- |
 | **A — Full PRD** | Structured doc **outside** active **`plan and deliver`** planning | **`prd`** — **`create prd`** / **`manage prd`** | **`.sedea/operations/<operationsUserId>/docs/`** via **`author-prd`** | New **`plan and deliver`** + `@path` → §2 |
-| **B — Ad-hoc PRD** | Short blurb; **already on** **`plan and deliver`** | **`plan and deliver`** §1 opt **2** → spawn **`ad-hoc-prd`** | **`ad_hoc_<slug>_<hex>.ad-hoc-prd.md`** under **`<operationsUserId>/docs/`** only | Child approves → §4–§5 spawn **`planner`** |
+| **B — Ad-hoc PRD** | Short blurb; **already on** **`plan and deliver`** | **`plan and deliver`** §1 opt **2** → spawn **`ad-hoc-prd`** | **`ad_hoc_<slug>_<hex>.ad-hoc-prd.md`** under **`<operationsUserId>/docs/`** only | Child approves on Ad-Hoc PRD lane → Squad Leader **auto-chains** §4 seed + §5 **`planner`** spawn same turn (no leader re-approval) |
 | **C — Existing PRD** | File, `@path`, or fetchable URL | **`plan and deliver`** §1 opt **1** → §2 | Link or path (may be outside **`operations/`**) | §4 seed → §5 spawn **`planner`** |
 | **D — Blocked URL** | §2 cannot fetch external PRD | **`plan and deliver`** (or **`prd`** per modal) | Readable body required | **`plan.mdc`** §2 *Auth-blocked or unreadable PRD* |
 
@@ -151,6 +151,7 @@ flowchart TD
 | **`create prd`** while already on **`plan and deliver`** §1–2 | §1 option **2** → **`ad-hoc-prd`**, or finish **`prd`** first then new **`plan and deliver`** + `@path` — § *PRD routing (canonical)* |
 | Squad Leader collects **title only**, spawns **`author-prd`**, child invents scope | **`prd/plan.mdc`** §**2.5** intake on Squad Leader; §3 handoff includes **`prdDescription`** + **`sourceMaterials`** |
 | Spawn **`planner`** from **`new-plan`** or run **`pr-plan`** on a standalone child without **`new-plan-agent`** | **`planner`** = Squad Leader §5 **spawn only**; **`pr-plan`** = **inline** under **`new-plan`** — **`skills/README.md`** § *Normative execution mode* |
+| Leader **AskQuestion** after Ad-Hoc PRD child approve (seed review / confirm spawn) | **Forbidden** — auto-chain §4→§5 on same leader turn; PRD approval stays on **Ad-Hoc PRD** child lane (**`plan.mdc`** §3 resume) |
 
 ### Agent glossary — step and section labels
 
