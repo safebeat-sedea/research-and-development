@@ -2,6 +2,13 @@
 // Post-ship git + worktree cleanup (destructive). Invoked by coding-session post-merge
 // cleanup and plan-reconcile §5 (idempotent fallback). Agent must call
 // sedea_remove_worktree_folder before --apply removes worktrees.
+//
+// WORKTREE REMOVAL OWNERSHIP (binding): --apply removes ONLY paths passed via
+// --slug-detected candidates from plan-state.mjs detect-stale-workspaces for this
+// session/plan — never arbitrary paths from `git worktree list`. Agents must satisfy
+// all preconditions in .sedea/centers/sedea/rules/0_hosting-repo.mdc § Worktree
+// ownership and R&D rule 20 § Worktree removal ownership (binding) before --apply.
+// Do not remove worktrees another developer, dispatch, lane, or session owns.
 // Detect-only listing: plan-state.mjs detect-stale-workspaces.
 
 import * as fs from 'node:fs/promises';

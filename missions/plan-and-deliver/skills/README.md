@@ -91,6 +91,19 @@ Field-level `outputs` and `continuationStatus` rules: each skill’s **`## Compl
 
 **`pr-plan` → `coding-session`:** sequential skills on **different lanes**. **`pr-plan`** drafts §§ 1–4 and may sketch §§ 5–8; after **AskQuestion** **Start coding session**, **`pr-plan`** emits **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** (§5d). The **child lane** then owns worktrees, workspace attach, **implementation in the worktree** (default), §§ 5–8 fill, and ship execution — not prompt-only handoff unless **`promptOnly: true`** or **Defer implementation**. Detached **`coding-session`** entry may use prompt-only or implement on that detached lane after layer 2. See **`pr-plan/SKILL.md`** § *Handoff to coding-session* and **`coding-session/SKILL.md`** § *Execution mode after worktree attach*.
 
+### Worktree removal ownership (binding)
+
+**Do not remove worktrees you do not own.** Applies to every ship skill on **`coding-session`** and **`plan-reconcile`** §5.
+
+| Source | Contract |
+|--------|----------|
+| [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership* | Four preconditions before detach/remove |
+| [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc) § *Worktree removal ownership (binding)* | R&D ship lanes |
+| **`coding-session/SKILL.md`** § *Post-merge workspace cleanup* | Primary post-merge owner |
+| **`plan-reconcile/SKILL.md`** §5 | Idempotent fallback only |
+
+**Forbidden:** **`git worktree remove`**, **`git worktree prune`**, **`sedea_remove_worktree_folder`** on paths **this pass** did not create and mount; repo-wide cleanup from **`git worktree list`**; **`git worktree remove`** on **`HOSTING_ROOT`**. **`git worktree list` is read-only** when ownership is unclear — stop and use structured choice.
+
 ## Ship spawn (detached / coding-session chain)
 
 These skills run on **detached** or **nested** lanes (often **not** the Squad Leader). They use **domain-specific section titles** for long procedures; each dual-mode file has **`## Completion (spawned)`** (host terminal line) and **`## Completion (inline)`** (prose only, no sentinel). Detailed `outputs` lists live in the section named in the **Outputs section** column.

@@ -93,7 +93,7 @@ Append each entry in `bootstrapSkipFlags` only when the parent documented develo
 
 **Submodule behavior (fast bootstrap default):** initializes every **`.sedea/`** path listed in **`.gitmodules`** (for example **`.sedea/centers/research-and-development/`**). If init leaves an empty center tree and the primary clone has a populated checkout, the script **seeds** that path from **`HOSTING_ROOT`**. Pass **`--skip-submodules`** only when the parent documented a manual seed (see **`.cursor/rules/dot-sedea.mdc`** § *Push before worktrees*).
 
-**Forbidden on this lane:** `git worktree add` / `remove`, `sedea_add_worktree_folder`, hosting-repo product edits, `gh pr create`, spawning other plan-and-deliver skills.
+**Forbidden on this lane:** `git worktree add` / `remove` / `prune`, `sedea_add_worktree_folder` / `sedea_remove_worktree_folder`, hosting-repo product edits, `gh pr create`, spawning other plan-and-deliver skills. **Worktree removal ownership:** bootstrap never removes worktrees — see rule **20** § *Worktree removal ownership (binding)* and [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*.
 
 ## Step 3 — Report outcome
 

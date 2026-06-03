@@ -106,6 +106,8 @@ Four **sequential** steps on the **`coding-session`** lane after the [Worktree-o
 
 **Not a conflict:** `git worktree add` creates the directory; **`sedea_add_worktree_folder`** adds that path to the Mission Control / editor workspace. **`worktree-bootstrap`** assumes both are done and **forbids** repeating steps 1 or 3 on its lane.
 
+**Removal is the mirror:** post-merge detach/remove applies **only** to the **`WORKTREE_ROOT`** from steps 1–3 on **this pass** — see § *Post-merge workspace cleanup* and rule **20** § *Worktree removal ownership (binding)*. **Do not remove worktrees you do not own.**
+
 ## Hard rules — git worktree vs workbench attach (binding)
 
 Agents repeatedly call **`sedea_add_worktree_folder`** instead of **`git worktree add`**, or skip MCP attach after creating the worktree. On **every** **`coding-session`** lane these rules are **non-negotiable**:
@@ -942,7 +944,9 @@ Run on the **developer's response turn** — **not** in the same assistant turn 
 
 Run on this lane **after** `prState: merged` **and before** [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff). Normative entry: [Act after post-create-pr pick](#act-after-post-create-pr-pick) (**`spawn-after-deploy-walk`** or **`check-pr-status`** → merged), or explicit developer message (*pull main*, *remove worktree*, *post-merge cleanup*) when merge is already confirmed.
 
-**Purpose:** Sync **`HOSTING_ROOT`** with **`origin/main`**, detach/remove the session worktree from Mission Control and git, drop the local worktree name ref when eligible, and rebuild native extensions on **`HOSTING_ROOT`** so the developer can **Developer: Reload Window** before After deploy verification — not from a stale worktree with **`main` behind**.
+**Worktree removal ownership (binding).** **Do not remove worktrees you do not own.** Apply **`sedea_remove_worktree_folder`**, **`git worktree remove`**, and any cleanup script **`--apply`** **only** to **this pass’s** **`WORKTREE_ROOT`** when **all** preconditions in [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership* and [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc) § *Worktree removal ownership (binding)* hold. **`WORKTREE_ROOT`** must be the exact path from **this pass’s** **`git worktree add`** — **not** inferred from **`git worktree list`**, sidecar **`worktrees[]`**, or stale entries alone. **Forbidden:** repo-wide **`git worktree prune`**; removing paths another developer, dispatch, lane, or session created; **`git worktree remove`** on **`HOSTING_ROOT`**; hand-deleting directories while still mounted. **`git worktree list` is read-only** when ownership is unclear — stop and use structured choice. **`post-reconcile-workspace-cleanup.mjs --apply`** removes **only** candidates from **`detect-stale-workspaces`** for **this plan/session** after the gate above.
+
+**Purpose:** Sync **`HOSTING_ROOT`** with **`origin/main`**, detach/remove **this session’s** worktree from Mission Control and git, drop the local worktree name ref when eligible, and rebuild native extensions on **`HOSTING_ROOT`** so the developer can **Developer: Reload Window** before After deploy verification — not from a stale worktree with **`main` behind**.
 
 **Worktree name ref cleanup gate (normative):** drop the local worktree name ref when **`post-reconcile-workspace-cleanup.mjs`** reports eligible — **not** merge-base / “safe to delete” heuristics.
 
@@ -984,6 +988,8 @@ Present **`actions`**, **`skippedWorktreeNames`** (when worktree name ref cleanu
 Only **`cleanup-apply`** authorizes **`--apply`**.
 
 **Apply (after MCP detach):**
+
+Confirm **all** ownership preconditions (§ *Worktree removal ownership (binding)* above) for **each** candidate before step 1. **Forbidden:** **`--apply`** on paths not from **`detect-stale-workspaces`** for **this session**; repo-wide cleanup.
 
 1. For **each** candidate **`worktreePath`**, invoke MCP **`sedea_remove_worktree_folder`** with `{ "path": "<absolute-worktree-root>" }` **before** git removal (rule **20** § *Detach merged worktrees*).
 2. Run:

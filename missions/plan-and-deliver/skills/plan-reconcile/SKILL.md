@@ -245,6 +245,8 @@ On non-zero exit, stop and surface the error.
 
 ### 5. Post-ship workspace cleanup
 
+**Worktree removal ownership (binding).** This §5 fallback runs **only** when [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership* and rule **20** § *Worktree removal ownership (binding)* preconditions pass for **each** candidate path. **Do not remove worktrees you do not own.** **`detect-stale-workspaces`** + **`--apply`** are not permission to remove arbitrary entries from **`git worktree list`**. When ownership is unclear, stop and use structured choice.
+
 **Primary owner:** [coding-session post-merge workspace cleanup](../coding-session/SKILL.md#post-merge-workspace-cleanup) on the ship chain **after PR merge and before After deploy** `deploy-walk`. Run this subsection when archive/reconcile work for this pass is done, when the developer explicitly requests workspace cleanup on a reconcile lane, or as an **idempotent fallback** when post-merge cleanup was skipped or deferred on **`coding-session`**.
 
 **Idempotent fallback:** When **`detect-stale-workspaces`** returns no candidates (worktree already removed, **`mainPullStatus`** already **`success`** on this plan), report one line and skip **`--apply`** — do not treat as error.
@@ -282,6 +284,8 @@ Present the JSON **`actions`** list in the **same turn** as the required **AskQu
 Only **`cleanup-apply`** authorizes **`--apply`**.
 
 **Apply (after MCP detach):**
+
+**Worktree removal ownership (binding).** Before step 1, confirm **all** preconditions in [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership* and rule **20** § *Worktree removal ownership (binding)* for **each** candidate **`worktreePath`**. **Forbidden:** **`--apply`** on paths not returned by **`detect-stale-workspaces`** for **this reconcile pass**; repo-wide cleanup from **`git worktree list`**; removing worktrees another session owns. If unsure, stop — **`git worktree list` is read-only**.
 
 1. For **each** candidate **`worktreePath`**, invoke MCP **`sedea_remove_worktree_folder`** with `{ "path": "<absolute-worktree-root>" }` **before** git removal (rule **20** § *Detach merged worktrees*).
 2. Run:

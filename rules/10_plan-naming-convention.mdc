@@ -73,6 +73,8 @@ Worktree naming depends on the **hosting repo** that receives the code change, n
 
 Do **not** copy stacked **hosting repo** examples such as `feat/token-auth` or bare `improve/logger` onto a **separate hosting repo** — use `feat/01-token-auth` on the primary hosting repo when stacked on `main`. Do **not** use the forbidden busy-work prefix from any center naming rule.
 
+**Naming is not removal permission.** Choosing or documenting a worktree name does **not** authorize **`git worktree remove`**, **`git worktree prune`**, or **`sedea_remove_worktree_folder`** on that path. Removal requires **worktree ownership** preconditions — see [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Worktree removal ownership (binding)* and [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*.
+
 ## When tempted to reach for the forbidden word
 
 Stop and ask: *what is actually better after this change?* That answer is the title.

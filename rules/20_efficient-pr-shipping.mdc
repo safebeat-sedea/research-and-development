@@ -11,6 +11,29 @@ Sedea's workflow for shipping multi-PR plans fast.
 
 User-facing git execution for implementation and ship uses **worktrees** only — not **`git checkout -b`** on the primary hosting clone. Each PR maps to one worktree; the **worktree name** is the `-b` argument on **`git worktree add`** (see [`.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc`](.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc)). **Attach order:** shell **`git worktree add`** → **`sedea_add_worktree_folder`** → tracked edits; detach **`sedea_remove_worktree_folder`** before **`git worktree remove`** per [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) and rule **6**.
 
+## Worktree removal ownership (binding)
+
+**Do not remove, detach, or prune worktrees you do not own.** Canonical preconditions and forbidden patterns: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*; [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc) § *Post-merge worktree cleanup*; rule **7** § *After PR merge (worktree cleanup)*.
+
+On every R&D ship lane (**`coding-session`**, **`plan-reconcile`** §5 fallback, Squad Leader handoff), **`git worktree remove`**, **`git worktree prune`**, and **`sedea_remove_worktree_folder`** apply **only** to **`WORKTREE_ROOT`** for **this pass** when **all** of the following hold:
+
+| # | Precondition |
+|---|--------------|
+| **1** | **This pass** ran **`git worktree add`** for that absolute path (layer 2 worktree-open on **`coding-session`**, or mission-owned git on this lane). |
+| **2** | **`WORKTREE_ROOT`** is the **exact** path from that step — **not** inferred from **`git worktree list`**, plan sidecar **`worktrees[]`**, or “stale” entries alone. |
+| **3** | **`sedea_remove_worktree_folder`** runs **only** when **this pass** called **`sedea_add_worktree_folder`** for **that same** path. |
+| **4** | The developer confirmed **this** PR merged **or** explicitly approved removing **this** path (structured choice or clear wording in the **same** message). |
+
+**Forbidden (agent failure):**
+
+- **`git worktree remove`**, **`git worktree prune`**, or **`sedea_remove_worktree_folder`** on any path that fails a precondition above.
+- “Cleaning up” worktrees the developer, another Mission Control dispatch, another agent lane, or a prior session created — **`git worktree list` is read-only** unless all four preconditions pass for **that** path.
+- Post-merge or “tidy up” cleanup targeting **every** worktree on the repo instead of **only** **this pass’s** **`WORKTREE_ROOT`**.
+- **`git worktree remove`** on **`HOSTING_ROOT`** or any path that is not **this pass’s** **`WORKTREE_ROOT`**.
+- Deleting worktree directories by hand while they remain Sedea workspace folders or while another party may still use them.
+
+**If unsure** whether a path is yours for **this pass**, **stop** and use structured choice — **do not remove**. **`post-reconcile-workspace-cleanup.mjs --apply`** may remove **only** paths returned for **this plan/session** by **`detect-stale-workspaces`** after the ownership gate above — never arbitrary paths from **`git worktree list`**.
+
 ## Squad Leader on HOSTING_ROOT vs agent sessions in worktrees
 
 There are two kinds of agent sessions:
@@ -229,9 +252,15 @@ flowchart TD
 | **`full`** | Default; cold primary; submodule/auth unknown; **`vscode/src`** edits | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"` |
 | **`extensions-only-link`** | Warm primary; overlay **`extensions-only-link`**; extension / rule / doc work only | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT" --extensions-only --link-vsc-build-artifacts-from "$HOSTING_ROOT"` |
 
-**Submodule preconditions:** **`--extensions-only`** skips submodule init. Acceptable only when **`.sedea/`** is already populated in the worktree or you seed from primary and attest **`--skip-submodules`**. Full bootstrap fetches submodule SHAs from the **committed** gitlink on the worktree's base ref — not from the primary working tree. Push order: [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Push before worktrees (mandatory)* and § *Operations submodule pin-drift*.
+**Submodule preconditions:** **`--extensions-only`** skips submodule init. Acceptable only when **`.sedea/`** is already populated in the worktree or you seed from primary and attest **`--skip-submodules`**. Full bootstrap fetches submodule SHAs from the **committed** gitlink on the worktree's base ref — not from the primary working tree. Push order: [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Push before worktrees (mandatory)* and § *Submodule pins*; after center **`defaultBranch`** merges, § *Center submodule pin promotion (hosting repo)* below.
 
 **Worktree skew:** After **`git pull`** on the primary clone, linked **`vscode/out`** may advance while the worktree ref lags. Re-run **`rebuild-native-extensions.sh`** in the worktree when extension sources change; unfetchable submodule SHA → fix push order before retry.
+
+## Center submodule pin promotion (hosting repo)
+
+When changes under a **non-built-in** center submodule (for example **`.sedea/centers/research-and-development/`**) merge to that center's **`defaultBranch`**, agents **must** run [`.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md`](.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md) **inline** on the hosting-repo lane so **`origin/main`** records the new gitlink. Local pointer drift on the primary clone is **not** enough for worktree bootstrap — see § *Dirty hosting repo before `git worktree add`* and [`.sedea/centers/research-and-development/docs/development-process.md`](docs/development-process.md) § *Center submodule git (two repositories)*.
+
+Pin the center **`defaultBranch`** tip only. Git is **skill-owned** per [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc) § *Submodule pin promotion (skill-owned)*. Canonical semantics: [`.sedea/centers/sedea/rules/3_center.mdc`](.sedea/centers/sedea/rules/3_center.mdc) § *Git repo semantics*.
 
 **Launch from worktree (after bootstrap success):**
 
@@ -247,13 +276,13 @@ Hub activation must reference **`$WORKTREE_ROOT/extensions/`**, not the primary 
 **Agent verification (minimum before ship chain):** **`bootstrapStatus: success`**; smoke shows **`vscode/out`** + extension **`node_modules`**; optional **`SKIP_BUILD=1 VSCODE_SKIP_PRELAUNCH=1`** launch confirms worktree extension paths. Full checklist: **dot-sedea** § *Fast bootstrap verification checklist*.
 
 
-**Detach merged worktrees from the workbench.** After a PR merges, on the **`coding-session`** lane run [Post-merge workspace cleanup](../missions/plan-and-deliver/skills/coding-session/SKILL.md#post-merge-workspace-cleanup) **before** After deploy `deploy-walk`: invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree. Pull **`origin/main`** on **`HOSTING_ROOT`** in the same cleanup pass, then run **`./scripts/rebuild-native-extensions.sh`** when present so extension builds match **`main`** before **Developer: Reload Window**.
+**Detach merged worktrees from the workbench.** After a PR merges, on the **`coding-session`** lane run [Post-merge workspace cleanup](../missions/plan-and-deliver/skills/coding-session/SKILL.md#post-merge-workspace-cleanup) **before** After deploy `deploy-walk` — **only** for **this pass’s** **`WORKTREE_ROOT`** when § *Worktree removal ownership (binding)* preconditions all pass. Invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree. Pull **`origin/main`** on **`HOSTING_ROOT`** in the same cleanup pass, then run **`./scripts/rebuild-native-extensions.sh`** when present so extension builds match **`main`** before **Developer: Reload Window**.
 
 Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetch origin main:main`) fails when `main` is already checked out in another worktree.
 
 - For each **independent** PR, emit a `git worktree add … -b <worktree-name> origin/main` command. These can be created and worked on immediately.
 - For each **dependent** PR, emit the command but comment that it should be created only after the predecessor merges.
-- Include cleanup for after PRs merge: for each retired worktree, **`sedea_remove_worktree_folder`** with that worktree's **absolute** path (Mission Control first), then **`git worktree remove`** and **`git worktree prune`**.
+- Include cleanup for after PRs merge: for **this session’s** retired **`WORKTREE_ROOT` only** (§ *Worktree removal ownership (binding)*), **`sedea_remove_worktree_folder`** with that worktree's **absolute** path (Mission Control first), then **`git worktree remove`** for **that path only** — **never** repo-wide **`git worktree prune`** or removal of other agents’ worktrees.
 - In the **Worktree setup** narrative, after each `git worktree add`, tell the Squad Leader to invoke **`sedea_add_worktree_folder`** with that worktree's **absolute** path, then let **coding-session** run **`worktree-bootstrap` inline** (mandatory wait before implementation) per [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*.
 
 ### Dirty hosting repo before `git worktree add`
@@ -352,9 +381,9 @@ git worktree add ../app-improve-02-logger -b improve/02-logger origin/main
 # Depends on PR 1 — after feat/01-token-auth merges
 # git worktree add ../app-feat-03-session-refresh -b feat/03-session-refresh origin/main
 
-Cleanup after merge:
-# sedea_remove_worktree_folder (absolute path), then git worktree remove …
-git worktree prune
+Cleanup after merge (this pass's WORKTREE_ROOT only — § Worktree removal ownership):
+# sedea_remove_worktree_folder (absolute path), then git worktree remove <that-path-only>
+# Never repo-wide git worktree prune or paths you do not own
 ```
 
 Example B — **hosting repo** (e.g. `user-auth`; no two-digit stack index unless that repo's rules require it):

@@ -43,9 +43,34 @@ R&D delivery agents are governed by:
 
 **Audits and gap reports** must **not** flag missing mission-level rule files under this center. To change **this center's** process or rules, use **`improve center rules`** on **`research-and-development`** (`center-maintenance` on the **sedea** center). For **Sedea platform** governance (hosting layout, git gate, Safeguard), use **`improve center rules`** on **`sedea`**. To change **repo** agent guidance in a hosting repo, use **`.cursor/rules/*.mdc`** per **`.sedea/centers/research-and-development/rules/40_maintain-rules.mdc`** and per-PR plan **§ 5. Repo rules impact**.
 
+### Center submodule git (two repositories)
+
+Non-built-in centers (including **`research-and-development`**) are **separate git repositories** submodule-pinned in the hosting repo. Agents must treat **center-repo git** and **hosting-repo gitlink promotion** as two steps — not one.
+
+| Repository | What ships | Typical mission / skill |
+|------------|------------|-------------------------|
+| **Center repo** (e.g. `.sedea/centers/research-and-development/`) | Changes under center **`rules/`**, **`docs/`**, **`missions/`**, **`skills/`**, **`center.yaml`** | **`improve center rules`** / **`improve mission`** on **sedea** — **`center-maintenance`** / **`mission-maintenance`**; commit/push/PR in the **center** repo |
+| **Hosting repo** (gitlink on **`main`**) | Submodule pointer after the center **`defaultBranch`** advances | **Mandatory:** run [`.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md`](.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md) **inline** after the center content PR **merges** to **`defaultBranch`** |
+
+**After center merge (binding):** When a center-repo PR merges and the hosting repo should adopt the new revision, agents **must** run **promote-center-submodule-pin** **inline** on the hosting-repo lane — Git Data API pin-only PR → merge → **`git pull origin main`** on **`HOSTING_ROOT`**. Pin the center **`defaultBranch`** tip only (from **`.sedea/centers/centers.yaml`**) — never a feature-branch SHA. See [`.sedea/centers/sedea/rules/3_center.mdc`](.sedea/centers/sedea/rules/3_center.mdc) § *Git repo semantics*; [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc) § *Submodule pin promotion (skill-owned)*.
+
+Do **not** hand-commit hosting-repo submodule gitlinks or rely on local **`git submodule update`** alone when **`origin/main`** should record the new pin — unless the user explicitly directs a different workflow.
+
+Built-in **`sedea`** center is **not** submodule-pinned; this subsection does not apply to it.
+
 ### Git governance (worktree-only)
 
 Implementation and ship use **git worktrees** only — not **`git checkout -b`** on the primary hosting clone. Each coding-ready PR maps to **one worktree**; the **worktree name** is the `-b` argument on **`git worktree add`**. Naming: **`.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`** and **`.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc`**. Setup, attach, commit/push, and post-merge cleanup: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** and **`.sedea/centers/sedea/rules/0_hosting-repo.mdc`**, **6**, **7**. **Attach order:** `git worktree add` → **`sedea_add_worktree_folder`** → edits; **`sedea_remove_worktree_folder`** before **`git worktree remove`**.
+
+**Worktree removal ownership (binding).** Agents **must not** remove, detach, or prune worktrees they do not own. A worktree name and a path on **`git worktree list`** are **not** permission to remove that path.
+
+| Rule | Topic |
+|------|--------|
+| **`.sedea/centers/sedea/rules/0_hosting-repo.mdc`** § *Worktree ownership* | Four preconditions before **`sedea_remove_worktree_folder`** / **`git worktree remove`** |
+| **`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`** § *Post-merge worktree cleanup* | Consent + **this pass’s** path only |
+| **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Worktree removal ownership (binding)* | R&D ship lanes (**`coding-session`**, **`plan-reconcile`** §5) |
+
+**Forbidden:** **`git worktree remove`**, **`git worktree prune`**, or **`sedea_remove_worktree_folder`** on worktrees created by another developer, dispatch, agent lane, or prior session; repo-wide “cleanup” from **`git worktree list`**; **`git worktree remove`** on **`HOSTING_ROOT`**; hand-deleting worktree directories while still mounted in Sedea. **`git worktree list` is read-only** when ownership is unclear — stop and use structured choice. Post-merge cleanup removes **only** **this pass’s** **`WORKTREE_ROOT`** after merge consent (see **`coding-session/SKILL.md`** § *Post-merge workspace cleanup*).
 
 **`center.yaml` `skillEntries` sync (manifest hygiene).** Mission Control discovers skills on disk; **`skillEntries`** in **`.sedea/centers/research-and-development/center.yaml`** is for audits and maintenance. When you **add, rename, or remove** a `SKILL.md` under any mission `skills/` tree, update that mission's `skillEntries` list in the same change. From the **hosting repo root**:
 
