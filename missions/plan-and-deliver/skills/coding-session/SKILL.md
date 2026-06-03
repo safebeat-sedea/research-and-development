@@ -434,6 +434,7 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
  git diff --stat -- <submodule-path>
  ```
  **Proceed** when each affected submodule shows only a **2 insertions(+), 2 deletions(-)** gitlink change and no other paths appear in that stat. Routine submodule pin updates do **not** block worktree creation.
+ - **Publishing pin to `origin/main`** — Local gitlink drift or a primary-clone submodule checkout update does **not** ship the pin. After a **center-repo** PR merges to **`defaultBranch`**, agents **must** run [`.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md`](.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md) **inline** on the hosting-repo lane — see **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Center submodule pin promotion (hosting repo)*.
  - **Still blocking** — **Stop** when porcelain includes **any** path outside those `.sedea/` submodule gitlink lines (for example `extensions/`, `packages/`, other tracked application source), when `git diff --stat` shows content changes inside a submodule (not pointer-only), or when the hosting repo has non-empty porcelain that is not explained by allowed submodule gitlinks alone.
  - Do **not** stash, commit, discard, or clean the user's WIP to clear a blocking dirty tree.
  - If `baseRef` input is supplied, it must be a remote integration ref such as `origin/main`; do not accept a local-only ref for worktree creation.
