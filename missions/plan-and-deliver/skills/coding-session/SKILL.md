@@ -929,6 +929,7 @@ When inline **`create-pr`** completes with a PR URL/number (or the developer ret
 |-----------|---------------|--------------|
 | `start-pr-review` | Start inline PR review | Run [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) on **next** turn |
 | `check-pr-status` | Check PR merge status | Refresh `prState` / `mergeSha` / `mergedAt` via `gh` or repo tooling; re-open this gate |
+| `rebase-onto-main` | Rebase onto origin/main | On **next** turn, [Rebase onto origin/main after PR creation](#rebase-onto-origin-main-after-pr-creation) |
 | `spawn-after-deploy-walk` | PR merged — start After deploy deploy-walk | On **next** turn, [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) when merge confirmed |
 | `defer-ship` | Defer next ship step | Keep `continuationStatus: active`; no spawn |
 | `more-details` | More details for option _ | Elaborate; ask again |
@@ -942,7 +943,7 @@ When inline **`create-pr`** completes with a PR URL/number (or the developer ret
 
 ```
 MC_PHASED_RESPONSE_V1
-{"version":1,"display":{"markdown":"<recap>"},"askQuestion":{"modalTitle":"Coding session — PR opened, next step","questions":[{"id":"post-create-pr","prompt":"What should we do next with this PR?","allowMultiple":false,"options":[{"id":"start-pr-review","label":"Start inline PR review"},{"id":"check-pr-status","label":"Check PR merge status"},{"id":"spawn-after-deploy-walk","label":"PR merged — start After deploy deploy-walk"},{"id":"defer-ship","label":"Defer next ship step"},{"id":"more-details","label":"More details for option _"}]}]}}
+{"version":1,"display":{"markdown":"<recap>"},"askQuestion":{"modalTitle":"Coding session — PR opened, next step","questions":[{"id":"post-create-pr","prompt":"What should we do next with this PR?","allowMultiple":false,"options":[{"id":"start-pr-review","label":"Start inline PR review"},{"id":"check-pr-status","label":"Check PR merge status"},{"id":"rebase-onto-main","label":"Rebase onto origin/main"},{"id":"spawn-after-deploy-walk","label":"PR merged — start After deploy deploy-walk"},{"id":"defer-ship","label":"Defer next ship step"},{"id":"more-details","label":"More details for option _"}]}]}}
 ```
 
 ### Act after post-create-pr pick
@@ -953,9 +954,29 @@ Run on the **developer's response turn** — **not** in the same assistant turn 
 |------|---------|
 | **`start-pr-review`** | [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) |
 | **`check-pr-status`** | Query PR state; update `outputs`; when **`merged`**, run [Post-merge workspace cleanup](#post-merge-workspace-cleanup) **auto-apply** on **next** turn |
+| **`rebase-onto-main`** | [Rebase onto origin/main after PR creation](#rebase-onto-origin-main-after-pr-creation) |
 | **`spawn-after-deploy-walk`** | When merge confirmed: [Post-merge workspace cleanup](#post-merge-workspace-cleanup) **auto-apply** on **next** turn, then [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) after cleanup completes or is skipped |
 | **`defer-ship`** | Stop with recap; `continuationStatus: active` |
 | **`more-details`** | Clarify; re-open gate |
+
+### Rebase onto origin/main after PR creation
+
+Run on the **developer's response turn** after they choose **`rebase-onto-main`** at [Post-create-pr handoff gate](#post-create-pr-handoff-gate). Requires an active session **`WORKTREE_ROOT`** and open PR (`prUrl` / `prNumber` known).
+
+1. From **`WORKTREE_ROOT`**: `git fetch origin main`.
+2. Rebase the session branch onto **`origin/main`**: `git rebase origin/main` (cwd **`WORKTREE_ROOT`**).
+3. **Conflict** — report conflicted paths in one recap; do **not** auto-abort or auto-resolve. Re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) on the **next** turn.
+4. **Success** — one-line recap (old/new base when useful). When the branch has an upstream (open PR), use **one** **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** before push:
+
+| Option id | Label (brief) | Agent action |
+|-----------|---------------|--------------|
+| `rebase-push-force-with-lease` | Push rebased branch (`--force-with-lease`) | `git push --force-with-lease` from **`WORKTREE_ROOT`**; update `outputs`; re-open post-create-pr gate |
+| `rebase-defer-push` | Defer push — local rebase only | Keep local rebase; re-open post-create-pr gate |
+| `more-details` | More details for option _ | Elaborate; ask again |
+
+5. When the developer did not pick a forward path after rebase (or after push/defer), re-open [Post-create-pr handoff gate](#post-create-pr-handoff-gate).
+
+**Forbidden:** `git rebase` on **`HOSTING_ROOT`** checked-out tree; repo-wide cleanup; push without explicit developer consent on this lane.
 
 ### Post-merge workspace cleanup
 
