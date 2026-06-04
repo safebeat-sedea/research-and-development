@@ -263,6 +263,17 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 
 **Nested spawns.** The **Master Plan agent** (and decomposition agents) may emit further **`AGENT_RUN_REQUEST_V1`** lines on child lanes. The Squad Leader does **not** duplicate those spawns; it only consumes **terminal or updated** child results that bubble up through §7.
 
+**Spawn run-request display metadata (binding).** Every **`AGENT_RUN_REQUEST_V1`** on this mission — Squad Leader §§3 and 5 and nested planning/ship spawns — must satisfy **`missions/plan-and-deliver/skills/README.md`** § *Universal spawn preflight* (including display-metadata rows) and [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../../rules/50_mission-control-display-metadata-discipline.mdc) § *Spawn discipline (parents)*:
+
+| Field | Rule |
+|-------|------|
+| **`name`** | Topic-specific label (feature title, plan slug, PR concern) — **not** generic placeholders such as "Child agent" alone |
+| **`description`** | One-line summary of the child lane's work |
+| **`slug`** | Dispatch-unique; stable enough for reload |
+| **Leader scope** | Squad Leader updates **dispatch** chrome only — **not** child slot titles (rule **9** § *Authority table*) |
+
+**Dispatch display refresh (Squad Leader).** When dispatch scope is readable (opening command, Hub **`missionInputs`**, or confirmed feature title from §4), call MCP **`mission_control_update_dispatch_display`** with non-empty **`dispatchTitle`** (≤64 chars) and optional **`dispatchDescription`** / **`dispatchHoverDescription`** (≤512 chars). **Skip** when current dispatch chrome already matches. **Forbidden:** **`mission_control_update_lane_display`** to relabel **child** slots from the leader lane; hand-editing **`dispatch-tab.v1.json`**. See [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc).
+
 ### 1. Establish PRD source
 
 - **Type:** Branching logic
@@ -276,10 +287,11 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 **Procedure**
 
 1. Match `plan and deliver` on the opening message (case-insensitive).
-2. Use **AskQuestion** (per Sedea conduct — includes the standard *More details for option _* escape hatch) to ask where the PRD will come from:
+2. When scope is readable from the opening message (feature title, Hub parent, or command remainder), run **Dispatch display refresh** (above) — **skip** when chrome already matches.
+3. Use **AskQuestion** (per Sedea conduct — includes the standard *More details for option _* escape hatch) to ask where the PRD will come from:
    1. **PRD link or file** — Confluence, Google Docs, or `@path` in the workspace.
    2. **Ad-hoc task description** — Short blurb the agent uses to draft an ad-hoc PRD via **`ad-hoc-prd`** (see development-process § *PRD routing (canonical)* and protocol branches table — not **`create prd`** on the **`prd`** mission).
-3. Apply the branch for the confirmed choice (see **Next-step resolution** above). Do not engage downstream protocol branches from partial or ambiguous answers.
+4. Apply the branch for the confirmed choice (see **Next-step resolution** above). Do not engage downstream protocol branches from partial or ambiguous answers.
 
 **Out of scope for this step:** **`new-plan`** indexed-child expansion (and downstream **`phase-planner`** / **`pr-plan`**) — those use **AskQuestion** per **30_planning-target-resolution** § *Sedea input channel* and often a separate session command (not `plan and deliver` §1–2 PRD intake).
 
@@ -339,11 +351,12 @@ Do **not** invent PRD content from the URL alone. Do **not** call **`author-prd`
 **Procedure**
 
 1. Compile child inputs from §1: `createIntent: true`, `title` when known, `details` from the ad-hoc task description, `operationsUserId` from Mission Control context, and any optional roadmap or related hints.
-2. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Ad-Hoc PRD agent** using the `ad-hoc-prd` skill path and compiled inputs.
-3. Announce that the **Squad Leader** is waiting for the child lane because **`planner`** requires a **developer-approved** PRD artifact; close the turn with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**.
-4. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId` (host delivers as silent UserSend).
-5. Apply **§3 resume** above. The **Ad-Hoc PRD agent** owns recap, **AskQuestion** approval, and revision (skill steps 5–7) — do **not** run a duplicate approval gate on the leader lane.
-6. Continue to §4 only when the child result is `continuationStatus: terminal`, `outputs.developerApprovedPrd: true`, and `outputs.prdRef` is readable. Do not treat the first post-write child result (`continuationStatus: active`) as approval. When those conditions hold, **do not end the leader turn** until §5 **`planner`** spawn is emitted or a §4 data-gap **AskQuestion** (missing title/parent only) blocks spawn preflight.
+2. Run **`skills/README.md`** § *Universal spawn preflight* (including display metadata). Set **`name`** / **`description`** from the ad-hoc task title and summary — not generic child placeholders.
+3. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Ad-Hoc PRD agent** using the `ad-hoc-prd` skill path and compiled inputs.
+4. Announce that the **Squad Leader** is waiting for the child lane because **`planner`** requires a **developer-approved** PRD artifact; close the turn with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**.
+5. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId` (host delivers as silent UserSend).
+6. Apply **§3 resume** above. The **Ad-Hoc PRD agent** owns recap, **AskQuestion** approval, and revision (skill steps 5–7) — do **not** run a duplicate approval gate on the leader lane.
+7. Continue to §4 only when the child result is `continuationStatus: terminal`, `outputs.developerApprovedPrd: true`, and `outputs.prdRef` is readable. Do not treat the first post-write child result (`continuationStatus: active`) as approval. When those conditions hold, **do not end the leader turn** until §5 **`planner`** spawn is emitted or a §4 data-gap **AskQuestion** (missing title/parent only) blocks spawn preflight.
 
 ### 4. Collect planning seed
 
@@ -432,7 +445,9 @@ Related (optional):
 
    **Stop** and surface a one-line fix list when any required key is missing, renamed, or nested under the wrong parent key. Do **not** emit `AGENT_RUN_REQUEST_V1` until preflight passes.
 
-3. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Master Plan agent** using the `planner` skill path, a **new** `correlationId`, dispatch-unique `slug`, and the preflight **`inputs`** from step 2. See **`planner/SKILL.md`** § *Spawn contract* for a valid example line and failure modes.
+   Set **`name`** from **`featurePlanningTitle`** (or PRD title) and **`description`** to a one-line Master Plan drafting summary — not generic "Planner" / "Child agent" placeholders alone (README § *Universal spawn preflight* display-metadata rows).
+
+3. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Master Plan agent** using the `planner` skill path, a **new** `correlationId`, dispatch-unique `slug`, topic-specific **`name`** / **`description`**, and the preflight **`inputs`** from step 2. See **`planner/SKILL.md`** § *Spawn contract* for a valid example line and failure modes.
 4. Emit **`AGENT_RUN_REQUEST_V1`**, announce that the **Squad Leader** is waiting because later protocol steps need the produced plan path and complexity result, and close the turn with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**.
 5. Stop protocol execution until Mission Control delivers `AGENT_RESULT_RESPONSE_V1` for the same `correlationId`.
 6. Validate that returned outputs include a readable Master Plan path, complexity band, continuation owner/status, and ledger-shaped arrays (`activeLanes`, `openLedgerEntries`, `spawnedPlans`, `remainingTasks`) before continuing.

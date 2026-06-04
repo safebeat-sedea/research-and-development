@@ -79,6 +79,17 @@ If there is no resolved target, **stop** and emit a fresh *Where we are now in t
 
 Acknowledge in one line: *"Target plan: `<slug>`."*
 
+## Refresh lane display (when stale)
+
+After the target phase slug is confirmed (end of Step 1):
+
+1. Compare the visible tab **title** / **hover** to this lane's work (phase slug, parent index, delivery concern).
+2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with non-empty **`title`** and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)).
+3. **Skip** when spawn labels already match scope.
+4. **Forbidden:** **`mission_control_update_dispatch_display`** from a child lane.
+
+See [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Child lane — refresh own slot when labels are stale*.
+
 ### 1a — Verify the body's template state
 
 Read the target plan in full and apply:

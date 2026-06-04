@@ -189,6 +189,9 @@ Run this checklist **before** every `AGENT_RUN_REQUEST_V1` emit on any lane (Squ
 | 5 | Emit **one physical line**: sentinel + JSON on the **same** line. No markdown fences, no `{...}` placeholders, no prose after the JSON — the host must parse it. |
 | 6 | **`skillPath`** must resolve under **`.sedea/centers/research-and-development/`** for this mission’s skills (or the correct center path when spawning cross-center). |
 | 7 | On failure (no child lane, immediate child validation error, or silent host reject): stop, name the failing checklist row, fix keys/paths/JSON, mint a **new** `correlationId`, and re-emit — do not guess. |
+| 8 | **`name`** — topic-specific child label (feature title, plan slug, PR concern); **not** generic placeholders such as "Child agent" alone |
+| 9 | **`description`** — one-line summary of the child lane's work scope |
+| 10 | Display metadata is **initial** slot copy — spawned children refresh **own** slot via **`mission_control_update_lane_display`** when labels are stale (rule **9**; rule **50** § *Child lane*) |
 
 Skill-specific **`inputs`** tables and paste-ready examples live in each **`SKILL.md`** (for example **`planner`** § *Spawn contract*). **`plan and deliver`** Squad Leader §5 adds a **planner** seed → **`inputs`** mapping before the §5 spawn step.
 

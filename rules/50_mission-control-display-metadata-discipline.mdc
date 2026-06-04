@@ -32,7 +32,7 @@ When emitting **`AGENT_RUN_REQUEST_V1`** on **plan-and-deliver** or other R&D sp
 3. Follow **`missions/plan-and-deliver/skills/README.md`** § *Universal spawn preflight* — display metadata is part of spawn quality, not a post-hoc fix.
 4. **Squad Leader** lanes update **dispatch** chrome only via **`mission_control_update_dispatch_display`** — see rule **9**; do not relabel child slots from the leader lane.
 
-PR **3** (mission spawn skill steps) extends README preflight and skill steps; this rule states the R&D baseline until those land.
+PR **3** mission spawn skill steps in **`plan.mdc`**, **`skills/README.md`**, and spawn-heavy **`SKILL.md`** files extend this baseline.
 
 ---
 

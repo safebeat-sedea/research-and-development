@@ -51,6 +51,17 @@ The procedure below is a hard contract — do **not** skip steps, re-order them,
 
 **Worktree removal ownership (binding).** This skill is planning-only — it does **not** create or remove hosting-repo worktrees. **Do not remove worktrees you do not own.** **`git worktree list` is read-only** unless rule **0** § *Worktree ownership* preconditions hold for **that** path. Ship worktrees belong to **`coding-session`** on a separate lane.
 
+## Refresh lane display (when stale)
+
+After **`featurePlanningTitle`** / Master Plan scope is clear (before or right after Step 1 warm-up):
+
+1. Compare the visible tab **title** / **hover** to this lane's work (feature title, **`masterPlanSlug`** when known).
+2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with non-empty **`title`** and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)).
+3. **Skip** when spawn labels already match scope.
+4. **Forbidden:** **`mission_control_update_dispatch_display`** from a child lane.
+
+See [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Child lane — refresh own slot when labels are stale*.
+
 ## Spawn contract (`AGENT_RUN_REQUEST_V1`)
 
 Cross-check every emit against **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`** § *Universal spawn preflight* before the host parses the line.

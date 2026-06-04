@@ -425,10 +425,11 @@ Run only when the developer chose **`start-coding-session`** and §5a readiness 
  - `planningHandoffApproved: true` when `readyForImplementation: true` (layer 1 consent from §5c **Start coding session**)
 3. **Emit exactly one** child-spawn line (valid JSON on the same line; new UUID per spawn):
 
+ - Cross-check **`../README.md`** § *Universal spawn preflight* (including display-metadata rows **8–10**).
  - `skillPath`: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`
- - `name`: `Coding session`
+ - `name`: topic-specific label from §1 single concern or **`targetPlanSlug`** — **not** generic "Coding session" alone when a sharper label fits (≤64 chars)
  - `slug`: `coding-session-<targetPlanSlug>` (unique per dispatch)
- - `description`: Worktree and implementation handoff after pr-plan
+ - `description`: one-line implementation scope (for example *Worktree and implementation for PR N …*)
  - `inputs`: `targetPlanPath`, `targetPlanSlug`, `readyForImplementation`, `planningHandoffApproved: true` (only when `readyForImplementation: true`), `planningHandoffMode: "sections-1-4-complete"` (required when `readyForImplementation: true`), `repoPath`, `ledgerParent`, `upstreamSkill: "pr-plan"`; include `parentPlanPath`, `parentPlanSlug`, `parentIndex` when known
  - Optional `warmUpRules`: merge **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** if not already loaded from skill frontmatter
 
