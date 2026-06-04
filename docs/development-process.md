@@ -135,8 +135,8 @@ Sedea **`.plan.md`** files are **delivery anchors** for Mission Control ship (Ma
 
 | Dispatch path | §4 **`Parent`** default | §4 parent **AskQuestion** | Scope traceability |
 | --- | --- | --- | --- |
-| **Manual `plan and deliver`** in Mission Control | **`null`** (root delivery plan) | **No** — compile seed with **`Parent: null`** unless the developer explicitly names a link in the same message | Optional **`Related:`** lines only when the developer supplies `@path` or URLs |
-| **Centers** mission launch from Hub (no Hub plan parent) | **`null`** | **No** | Same — **`Related:`** optional |
+| **Manual `plan and deliver`** in Mission Control | **`null`** (root delivery plan) | **No** — compile seed with **`Parent: null`** unless the developer explicitly names a **`Parent`** slug, `@path`, or plan path in the same message (see **`plan.mdc`** §4) | Optional **`Related:`** lines for external PM or doc links when the developer supplies them — separate from **`Parent`** |
+| **Centers** mission launch from Hub (no Hub plan parent) | **`null`** | **No** — same default; explicit **`Parent`** override only when named in the same message | **`Related:`** optional per **`plan.mdc`** §4 *External PM scope* |
 | **Legacy — Start New Plan** from Sedea Hub `top_level_topic` row *(sunset; see Master Plan phase 2–3)* | Hub **`missionInputs.parentSlug`** until host strip lands | **Skipped** when opening message still includes **`### Parent (Sedea Hub)`** (see **`plan.mdc`** §4 *Legacy Hub parent*) | Do **not** treat Hub topic rows as the long-term parent model |
 
 **Normative contract (agents):** New **`plan and deliver`** dispatches default **`Parent: null`** in the §4 seed. Do **not** prompt for a roadmap topic, **`top_level_topic`**, or plan-tree parent unless the developer explicitly overrides **`Parent`** in the same message. Prefer **`Related:`** for external PM or doc links.
