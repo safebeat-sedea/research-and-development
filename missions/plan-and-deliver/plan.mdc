@@ -15,7 +15,7 @@ The outcomes below span the **full cadence** (PRD → plans → implementation �
 
 ### Cadence reference (all branches — not Squad Leader protocol steps)
 
-Logical **milestones** across planning and ship — **not** a strict spawn order. **`pr-review`** usually runs **inline on `coding-session`** while the PR is open (often before or after **`create-pr`** on the same lane). **`deploy-walk` completion does not start `plan-reconcile`** — reconcile requires a separate explicit start (rule **20** § *deploy-walk vs plan-reconcile*).
+**Planning** milestones below are logical — not strict spawn order. **`coding-session` ship chain** is **normative step order** on the implementation lane (inline · spawn · gate · procedure). **`pr-review`** runs **inline** after **`create-pr`** while the PR is open. **`plan-reconcile`** requires an **explicit start** — not auto after **`deploy-walk`** (rule **20** § *deploy-walk vs plan-reconcile*).
 
 ```mermaid
 flowchart TB
@@ -27,25 +27,38 @@ flowchart TB
     DEC --> CHILD[new-plan inline → pr-plan inline or phase-planner spawn]:::branch
   end
 
-  subgraph pre["Pre-merge ship — detached lanes"]
-    CSB[coding-session]:::branch
-    PPRB[pre-pr-review]:::branch
-    REVB[pr-review]:::branch
-    CHILD --> CSB
-    CSB -.->|inline before-deploy| DWB
-    CSB --> PPRB
-    CSB -.->|inline create-pr| CPRB[create-pr]:::branch
-    CSB -.->|inline pr-review| REVB
+  CHILD --> CSB[coding-session]
+```
+
+**Ship chain** (after implement on **`coding-session`** lane — same diagram in **`skills/coding-session/SKILL.md`** § *Ship chain after implementation*):
+
+```mermaid
+flowchart TB
+  classDef inline fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+  classDef spawn fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef proc fill:#f1f5f9,stroke:#64748b,color:#0f172a
+
+  subgraph CS["coding-session lane"]
+    direction LR
+    CUT["Ship cut-point<br/>review · approve · commit"]:::gate
+    BDW["Before deploy<br/>deploy-walk inline"]:::inline
+    CPR["create-pr"]:::inline
+    PRV["pr-review"]:::inline
+    WAIT["Wait merge<br/>post-create-pr gate"]:::gate
+    PMC["Cleanup<br/>pull · detach worktree"]:::proc
+    ADW["After deploy<br/>deploy-walk inline"]:::inline
+    REC["plan-reconcile<br/>explicit start"]:::inline
+    CUT --> BDW --> CPR
+    CPR --> PRV --> WAIT --> PMC --> ADW --> REC
   end
 
-  subgraph post["Post-merge — detached; reconcile not auto-chained"]
-    RECB[plan-reconcile]:::branch
-    CSB -.->|inline after-merge| DWB
-    DWB[deploy-walk]:::branch
-    CPRB -.->|after PR merge| DWB
-    DWB -.->|separate explicit start| RECB
-    CSB -.->|inline reconcile| RECB
+  subgraph CHILD["spawned child lane"]
+    PPR["pre-pr-review"]:::spawn
   end
+
+  BDW -->|spawn| PPR
+  PPR -->|result go| CPR
 ```
 
 Approval gates and developer choices happen inside each skill.
@@ -157,18 +170,22 @@ flowchart TB
   subgraph impl["Detached — protocol branches not SL spawns"]
     NOTE["developer phrase / snapshot / other lane"]:::detached
     CS["coding-session"]:::detached
-    PPR["pre-pr-review"]:::detached
+    PPR["pre-pr-review spawn"]:::detached
+    BDW["deploy-walk Before"]:::child
     CPR["create-pr inline"]:::child
     PRV["pr-review inline"]:::child
-    DW["deploy-walk inline"]:::child
+    PMC["post-merge cleanup"]:::child
+    ADW["deploy-walk After"]:::child
     REC["plan-reconcile inline"]:::child
     NOTE --> CS
     PP -.->|Start coding session| CS
-    CS --> PPR
-    CS -.->|inline| CPR
-    CS -.->|inline| PRV
-    CS -.->|inline before/after merge| DW
-    CS -.->|inline after deploy| REC
+    CS --> BDW
+    BDW --> PPR
+    PPR --> CPR
+    CPR --> PRV
+    PRV --> PMC
+    PMC --> ADW
+    ADW --> REC
   end
 
   S7 -.->|ledger tracks| mpLane

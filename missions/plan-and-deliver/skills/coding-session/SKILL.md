@@ -584,29 +584,47 @@ Post-merge **worktree removal**, **`HOSTING_ROOT` `git pull origin main`**, and 
 Normative order on the **spawned implementation lane** — **do not** skip steps or jump to **`create-pr`** before **`pre-pr-review`**, and **do not** skip **Before deploy** after commit.
 
 ```mermaid
-flowchart LR
- IMPL[Implement — no commit] --> CUT[Ship cut-point gate]
- CUT --> BDW[Inline deploy-walk — Before deploy]
- BDW --> PPR[Auto-spawn pre-pr-review]
- PPR --> FB{actionable findings?}
- FB -->|yes| RFG[Review feedback gate]
- FB -->|no go| CPR[Auto inline create-pr]
- RFG --> CPR
- CPR --> MERGE[Wait merge]
- MERGE --> PMC[Auto post-merge cleanup]
- PMC --> ADW[Inline deploy-walk — After deploy]
- ADW --> REM[Post–After deploy remainder authorization]
+flowchart TB
+  classDef inline fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+  classDef spawn fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef proc fill:#f1f5f9,stroke:#64748b,color:#0f172a
+
+  subgraph CS["coding-session lane"]
+    direction LR
+    CUT["Ship cut-point<br/>review · approve · commit"]:::gate
+    BDW["Before deploy<br/>deploy-walk inline"]:::inline
+    CPR["create-pr"]:::inline
+    PRV["pr-review"]:::inline
+    WAIT["Wait merge<br/>post-create-pr gate"]:::gate
+    PMC["Cleanup<br/>pull · detach worktree"]:::proc
+    ADW["After deploy<br/>deploy-walk inline"]:::inline
+    REC["plan-reconcile<br/>explicit start"]:::inline
+    CUT --> BDW --> CPR
+    CPR --> PRV --> WAIT --> PMC --> ADW --> REC
+  end
+
+  subgraph CHILD["spawned child lane"]
+    PPR["pre-pr-review"]:::spawn
+  end
+
+  BDW -->|spawn| PPR
+  PPR -->|result go| CPR
 ```
 
-| Step | Section | Commit required? | Modal? |
-|------|---------|------------------|--------|
-| 1 | [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) | **No** for review — combined modal covers approve + commit + Before deploy inline | **Yes** |
-| 2 | [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) | **Yes** — after cut-point **Act** (commit when needed, then inline walk) | **No** (manual §7 step only) |
-| 3 | [Auto-spawn pre-pr-review](#auto-spawn-pre-pr-review) + [Pre-PR review handoff](#pre-pr-review-handoff) | **Yes** — Before deploy resolved or skipped | **No** — auto-spawn on next turn |
-| 4 | [Inline create-pr (auto on clean go)](#inline-create-pr-auto-on-clean-go) or [Create-PR handoff after go](#create-pr-handoff-after-go) | After **`pre-pr-review`** **go** | **No** on clean **go** without proposed follow-ups; **Yes** when **`hasProposedFollowUps`**, **`actionablePrePrFindings`**, or **`proceed-create-pr`** (Create-PR handoff only when follow-ups exist or developer chose **`proceed-create-pr`** with follow-ups) |
-| 5 | [Post-merge workspace cleanup](#post-merge-workspace-cleanup) | **No** — after **`prState: merged`**, before After deploy | **No** — auto **`--apply`** when authorized; modal on failure/unclear ownership only |
-| 6 | [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) | **No** — post-merge cleanup done or skipped | **No** (manual §7 step only) |
-| 7 | [Post–After deploy remainder authorization](#post-after-deploy-remainder-authorization) | **No** — one batch or per-step approval before tail ship work | **Yes** when inventory non-empty |
+Pre-ship setup on this lane (not shown): implement → [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy). **`worktree-bootstrap`** runs **inline** before implement.
+
+| Step | Section | Mode | Commit required? | Modal? |
+|------|---------|------|------------------|--------|
+| 1 | [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) | gate | **No** for review — combined modal covers approve + commit + Before deploy inline | **Yes** |
+| 2 | [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) | inline | **Yes** — after cut-point **Act** (commit when needed, then inline walk) | **No** (manual §7 step only) |
+| 3 | [Auto-spawn pre-pr-review](#auto-spawn-pre-pr-review) + [Pre-PR review handoff](#pre-pr-review-handoff) | spawn | **Yes** — Before deploy resolved or skipped | **No** — auto-spawn on next turn |
+| 4 | [Inline create-pr (auto on clean go)](#inline-create-pr-auto-on-clean-go) or [Create-PR handoff after go](#create-pr-handoff-after-go) | inline | After **`pre-pr-review`** **go** | **No** on clean **go** without proposed follow-ups; **Yes** when **`hasProposedFollowUps`**, **`actionablePrePrFindings`**, or **`proceed-create-pr`** |
+| 5 | Inline **`pr-review`** (see skill path in **`plan.mdc`** §8) | inline | **No** — after PR exists | **No** — triage on coding lane |
+| 6 | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — wait merge | gate | **No** | **Yes** at post-create-pr gate |
+| 7 | [Post-merge workspace cleanup](#post-merge-workspace-cleanup) | procedure | **No** — after **`prState: merged`**, before After deploy | **No** — auto **`--apply`** when authorized; modal on failure/unclear ownership only |
+| 8 | [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) | inline | **No** — post-merge cleanup done or skipped | **No** (manual §7 step only) |
+| 9 | [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) | inline | **No** — explicit start; not auto from deploy-walk | **Yes** when reconcile inventory requires picks; [Post–After deploy remainder authorization](#post-after-deploy-remainder-authorization) may batch tail work first |
 
 **Forbidden on this lane:** `git commit` before ship cut-point approval; **`git commit`**, Before deploy **`deploy-walk`**, or ship cut-point while `outputs.bootstrapStatus` is `pending` or `failed`; spawn **`pre-pr-review`** while the tree is dirty; run inline **`create-pr`** before steps 2–3 complete; treat ad-hoc Before-deploy checkbox edits as a substitute for step 2 inline **`deploy-walk`** when §7 has unchecked Before-deploy items; **three separate AskQuestions** for approve → commit → Before deploy when [Combined authorization](#combined-authorization) applies; prose-only ship cut-point handoff (*pick Ship cut-point*, *stay advisory*, *tell me when*) without parseable **`MC_PHASED_RESPONSE_V1`** on that turn; [Create-PR handoff after go](#create-pr-handoff-after-go) or any modal with **`approve-followups-create-pr`** when **`hasProposedFollowUps`** is **false** after clean **`go`**.
 

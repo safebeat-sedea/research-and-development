@@ -470,7 +470,7 @@ The large loop diagram below includes planning, **ship chain**, feedback, and pl
 
 ### Cadence reference (skill order — same as plan-and-deliver mission plan)
 
-Logical **milestones** — **not** strict spawn order. **`pr-review`** is usually **inline on `coding-session`** (open PR). **`plan-reconcile`** is **not** auto-started after **`deploy-walk`** (rule **20**, **`plan-reconcile/SKILL.md`** § *Not auto-started from deploy-walk*).
+**Planning** milestones below are logical — not strict spawn order. **`coding-session` ship chain** is **normative step order** on the implementation lane (inline · spawn · gate · procedure). **`pr-review`** runs **inline** after **`create-pr`** while the PR is open. **`plan-reconcile`** requires an **explicit start** — not auto after **`deploy-walk`** (rule **20**, **`plan-reconcile/SKILL.md`** § *Not auto-started from deploy-walk*).
 
 ```mermaid
 flowchart TB
@@ -482,25 +482,38 @@ flowchart TB
  DEC --> CHILD[new-plan → phase-planner or pr-plan]:::branch
  end
 
- subgraph pre["Pre-merge ship — detached lanes"]
- CSB[coding-session]:::branch
- PPRB[pre-pr-review]:::branch
- CPRB[create-pr]:::branch
- REVB[pr-review]:::branch
- CHILD --> CSB
- CSB -.->|inline before-deploy| DWB
- CSB --> PPRB
- CSB -.->|inline create-pr| CPRB
- CSB -.->|inline pr-review| REVB
+ CHILD --> CSB[coding-session]
+```
+
+**Ship chain** (after implement — matches **`plan-and-deliver/plan.mdc`** *Cadence reference* and **`coding-session/SKILL.md`** § *Ship chain after implementation*):
+
+```mermaid
+flowchart TB
+ classDef inline fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+ classDef spawn fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+ classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+ classDef proc fill:#f1f5f9,stroke:#64748b,color:#0f172a
+
+ subgraph CS["coding-session lane"]
+ direction LR
+ CUT["Ship cut-point<br/>review · approve · commit"]:::gate
+ BDW["Before deploy<br/>deploy-walk inline"]:::inline
+ CPR["create-pr"]:::inline
+ PRV["pr-review"]:::inline
+ WAIT["Wait merge<br/>post-create-pr gate"]:::gate
+ PMC["Cleanup<br/>pull · detach worktree"]:::proc
+ ADW["After deploy<br/>deploy-walk inline"]:::inline
+ REC["plan-reconcile<br/>explicit start"]:::inline
+ CUT --> BDW --> CPR
+ CPR --> PRV --> WAIT --> PMC --> ADW --> REC
  end
 
- subgraph post["Post-merge — reconcile not auto-chained"]
- DWB[deploy-walk]:::branch
- RECB[plan-reconcile]:::branch
- CSB -.->|inline after-merge| DWB
- CSB -.->|inline reconcile| RECB
- DWB -.->|not auto-chained| RECB
+ subgraph CHILD["spawned child lane"]
+ PPR["pre-pr-review"]:::spawn
  end
+
+ BDW -->|spawn| PPR
+ PPR -->|result go| CPR
 ```
 
 ### Hosting repo development loop (planning + ship + feedback)
