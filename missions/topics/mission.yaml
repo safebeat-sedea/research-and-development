@@ -1,5 +1,0 @@
-name: Topics
-description: Create root-level topic plans in the Sedea operations plan tree.
-commands:
-  - phrase: create topic
-    description: Create a root-level topic plan from a name, description, and optional objectives.

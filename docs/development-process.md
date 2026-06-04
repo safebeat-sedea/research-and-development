@@ -33,7 +33,7 @@ Single catalogue of **what we use** in this process. Later sections still spell 
 
 ### Center and mission governance
 
-This center does **not** ship **`missions/<missionSlug>/rules/*.mdc`** for **`plan-and-deliver`**, **`prd`**, or **`topics`**. That is **intentional**, not incomplete setup. Sedea treats mission rules as **optional** (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Rules* — absence is normal).
+This center does **not** ship **`missions/<missionSlug>/rules/*.mdc`** for **`plan-and-deliver`** or **`prd`**. That is **intentional**, not incomplete setup. Sedea treats mission rules as **optional** (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Rules* — absence is normal).
 
 R&D delivery agents are governed by:
 

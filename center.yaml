@@ -55,13 +55,6 @@ missions:
       - manage prd
     skillEntries:
       - missions/prd/skills/author-prd/SKILL.md
-  - slug: topics
-    plan: missions/topics/plan.mdc
-    skills: missions/topics/skills/
-    commands:
-      - create topic
-    skillEntries:
-      - missions/topics/skills/create-topic-plan/SKILL.md
 
 centerSkills:
   readme: missions/plan-and-deliver/skills/README.md

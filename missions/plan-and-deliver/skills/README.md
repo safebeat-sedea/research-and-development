@@ -256,7 +256,7 @@ Do **not** re-add omitted paths to **`pre-pr-review`** frontmatter without re-ch
 
 Mission Control **`skillResolver`** parses YAML frontmatter with strict unique keys. **`inputs`** must use **2-space** nesting (input name → field keys), not single-space flat keys — flat `inputs` breaks spawn with `skill-not-found` / duplicate key errors.
 
-**Canonical shape** — copy from **`missions/topics/skills/create-topic-plan/SKILL.md`**:
+**Canonical shape** — copy from **`missions/prd/skills/author-prd/SKILL.md`**:
 
 ```yaml
 inputs:
@@ -277,7 +277,7 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/v
 
 ### Adding or removing a skill
 
-When you add, rename, or remove a protocol branch under `missions/plan-and-deliver/skills/<name>/SKILL.md` (or under **`prd`** / **`topics`** missions), update the same change set:
+When you add, rename, or remove a protocol branch under `missions/plan-and-deliver/skills/<name>/SKILL.md` (or under the **`prd`** mission), update the same change set:
 
 1. **`center.yaml`** — add or remove the repo-relative path under that mission's **`skillEntries`** (and **`development-process.md`** § *Protocol branches* when the branch is user-facing).
 2. **Verify** from the hosting repo root:
