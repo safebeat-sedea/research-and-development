@@ -129,15 +129,21 @@ flowchart TD
 
 **Referenced skills:** **`ad-hoc-prd`**, **`author-prd`**.
 
-### Sedea Hub Start New Plan vs Centers dispatch
+### Root delivery plans vs legacy Hub parent intake
 
-| Dispatch path | `missionInputs` on Hub command | Squad Leader §4 parent **AskQuestion** |
-| --- | --- | --- |
-| **Start New Plan** on a Sedea Hub `top_level_topic` row (`parentSlug === null`) | `parentSlug` required; Hub host resolves `parentPlanPath` into `dispatch.yaml` | **Skipped** when opening message includes **`### Parent (Sedea Hub)`** and **`Parent:`** line (see **`plan-and-deliver/plan.mdc`** §4 *Hub parent in opening message*) |
-| **Centers** mission launch from Hub (no parent context) | Omitted — Hub skips `missionInputs` validation when mission `plan.mdc` has no Hub block | **Unchanged** — parent **AskQuestion** when `Parent` not in opening message |
-| Manual **`plan and deliver`** in Mission Control (no Hub queue) | N/A | **Unchanged** |
+Sedea **`.plan.md`** files are **delivery anchors** for Mission Control ship (Master Plan → PR plans → **`coding-session`**). **Scope and backlog** live in **external PM tools** (JIRA, Trello, ClickUp, Asana, …); traceability uses optional **`Related:`** entries in the **`planner`** seed — **not** a Sedea parent tree or Hub roadmap topic.
 
-**Contract:** Only **`plan and deliver`** declares **`## Hub missionInputs`** in **`plan.mdc`** (keys `parentSlug`, `parentPlanPath`). Hub host reads that block generically; Mission Control renders **Parent** in the opening message when `missionInputs` is present (merged PRs **hub-start-new-plan**, **mc-parent-opening**). This PR (**plan-deliver-hub-intake**) adds §4 skip logic and Squad Leader echo — not Hub menu or MC template code.
+| Dispatch path | §4 **`Parent`** default | §4 parent **AskQuestion** | Scope traceability |
+| --- | --- | --- | --- |
+| **Manual `plan and deliver`** in Mission Control | **`null`** (root delivery plan) | **No** — compile seed with **`Parent: null`** unless the developer explicitly names a link in the same message | Optional **`Related:`** lines only when the developer supplies `@path` or URLs |
+| **Centers** mission launch from Hub (no Hub plan parent) | **`null`** | **No** | Same — **`Related:`** optional |
+| **Legacy — Start New Plan** from Sedea Hub `top_level_topic` row *(sunset; see Master Plan phase 2–3)* | Hub **`missionInputs.parentSlug`** until host strip lands | **Skipped** when opening message still includes **`### Parent (Sedea Hub)`** (see **`plan.mdc`** §4 *Legacy Hub parent*) | Do **not** treat Hub topic rows as the long-term parent model |
+
+**Normative contract (agents):** New **`plan and deliver`** dispatches default **`Parent: null`** in the §4 seed. Do **not** prompt for a roadmap topic, **`top_level_topic`**, or plan-tree parent unless the developer explicitly overrides **`Parent`** in the same message. Prefer **`Related:`** for external PM or doc links.
+
+**Legacy Hub `missionInputs`:** **`plan-and-deliver/plan.mdc`** still declares a trimmed **`## Hub missionInputs`** block until Mission Control host strip (Master Plan **phase 2**) and Hub UI removal (**phase 3**). See that section for sunset keys — do not extend Hub parent intake in new governance text.
+
+**Implementation phases (Master Plan *Remove Sedea Hub plans box*):** This table is the **governance narrative** (phase 1). Host code and Hub UI follow in later phases — docs lead code; agents must not reintroduce topic-parent defaults while implementing those slices.
 
 ### Agent UX pitfalls (easy mis-runs)
 
