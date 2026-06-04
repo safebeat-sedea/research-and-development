@@ -15,6 +15,8 @@ layout:
 docs:
   - path: docs/development-process.md
     summary: Protocol branch catalogue, planning modes, hosting repo cadence; canonical PR sizing sync contract (§ PR sizing — test cases and kinds of changes). Squad dispatch contract lives in plan-and-deliver/plan.mdc.
+  - path: docs/mission-control-display-metadata-host-spec.md
+    summary: Pointer to hosting-repo Mission Control additive display fields, MCP tools, max lengths, and stale-tab recovery (authority in sedea rule 9).
 
 rules:
   - path: rules/10_plan-naming-convention.mdc
@@ -22,6 +24,7 @@ rules:
   - path: rules/30_planning-target-resolution.mdc
   - path: rules/31_operations-user-id.mdc
   - path: rules/40_maintain-rules.mdc
+  - path: rules/50_mission-control-display-metadata-discipline.mdc
 
 missions:
   - slug: plan-and-deliver

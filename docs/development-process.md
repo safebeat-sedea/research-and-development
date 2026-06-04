@@ -152,6 +152,12 @@ flowchart TD
 | Squad Leader collects **title only**, spawns **`author-prd`**, child invents scope | **`prd/plan.mdc`** §**2.5** intake on Squad Leader; §3 handoff includes **`prdDescription`** + **`sourceMaterials`** |
 | Spawn **`planner`** from **`new-plan`** or run **`pr-plan`** on a standalone child without **`new-plan-agent`** | **`planner`** = Squad Leader §5 **spawn only**; **`pr-plan`** = **inline** under **`new-plan`** — **`skills/README.md`** § *Normative execution mode* |
 | Leader **AskQuestion** after Ad-Hoc PRD child approve (seed review / confirm spawn) | **Forbidden** — auto-chain §4→§5 on same leader turn; PRD approval stays on **Ad-Hoc PRD** child lane (**`plan.mdc`** §3 resume) |
+| **Child lane** calls **`mission_control_update_dispatch_display`** | **Forbidden** — dispatch chrome is Squad Leader scope only; child refreshes **own** slot via **`mission_control_update_lane_display`** — [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc); [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../rules/50_mission-control-display-metadata-discipline.mdc) |
+| **Squad Leader** renames a **child** agent tab via dispatch MCP or prose | **Forbidden** — leader uses **`mission_control_update_dispatch_display`** for dispatch title/hover; child lane self-service via lane MCP — rule **9** § *Forbidden* |
+| **Chat-only** tab rename ("call it X in the UI") with no MCP on owning lane | **Stop** — durable labels persist through governed MCP; see [`.sedea/centers/research-and-development/docs/mission-control-display-metadata-host-spec.md`](mission-control-display-metadata-host-spec.md) § *Stale tab title recovery* |
+| Tab title stale after reload | **Orientation** — re-read spawn context; owning lane runs correct MCP per role — not Alignment Safeguard; rule **50** + host-spec doc § *Stale tab title recovery* |
+
+**Host spec (additive fields):** [`.sedea/centers/research-and-development/docs/mission-control-display-metadata-host-spec.md`](mission-control-display-metadata-host-spec.md) — bundle field names, max lengths, hosting-repo implementation pointers. Authority table remains [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc) only.
 
 ### Agent glossary — step and section labels
 

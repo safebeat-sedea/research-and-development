@@ -1,0 +1,77 @@
+---
+description: >-
+  R&D Mission Control display metadata — spawn discipline, child lane refresh,
+  Squad Leader dispatch scope. Cross-references sedea authority rule 9; does not
+  duplicate the authority table.
+alwaysApply: true
+---
+
+# Mission Control display metadata discipline (R&D)
+
+Mission Control persists **dispatch-level** and **per-lane (slot)** display labels in the dispatch bundle. The **normative authority table**, MCP tool names, field max lengths, and forbidden cross-slot writes live only in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc). This rule adds **R&D center** spawn and refresh discipline for **plan-and-deliver** and related dispatches — read rule **9** first when behavior conflicts.
+
+---
+
+## Authority cross-reference (do not duplicate)
+
+| Topic | Read |
+|-------|------|
+| Who may update what (child vs Squad Leader) | [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc) § *Authority table* |
+| MCP tools and max lengths | Same file § *MCP tools* |
+| Host additive field names and persistence | [`.sedea/centers/research-and-development/docs/mission-control-display-metadata-host-spec.md`](docs/mission-control-display-metadata-host-spec.md) |
+| Agent UX pitfalls (display / spawn) | [`.sedea/centers/research-and-development/docs/development-process.md`](docs/development-process.md) § *Agent UX pitfalls* |
+
+---
+
+## Spawn discipline (parents)
+
+When emitting **`AGENT_RUN_REQUEST_V1`** on **plan-and-deliver** or other R&D spawn paths:
+
+1. Set **`name`** to a short, topic-specific label (not generic placeholders like "Child agent" alone).
+2. Include **`description`** (and optional spawn metadata the host maps to initial slot copy) so the Agents strip is readable before the child runs.
+3. Follow **`missions/plan-and-deliver/skills/README.md`** § *Universal spawn preflight* — display metadata is part of spawn quality, not a post-hoc fix.
+4. **Squad Leader** lanes update **dispatch** chrome only via **`mission_control_update_dispatch_display`** — see rule **9**; do not relabel child slots from the leader lane.
+
+PR **3** (mission spawn skill steps) extends README preflight and skill steps; this rule states the R&D baseline until those land.
+
+---
+
+## Child lane — refresh own slot when labels are stale
+
+On a **spawned child** lane after the skill topic is clear:
+
+1. Compare the visible tab title / hover to the work you are actually doing (skill path, plan slug, PR concern).
+2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with non-empty **`title`** and, when useful, **`hoverDescription`** / **`description`** (respect max lengths in rule **9**).
+3. **Skip** the MCP call when spawn labels already match the skill scope.
+4. **Forbidden:** **`mission_control_update_dispatch_display`** from a child lane; editing **`dispatch-tab.v1.json`** or lane JSON by hand; asking the developer to rename tabs in the UI as a substitute.
+
+---
+
+## Squad Leader — dispatch chrome only
+
+On the **Squad Leader** lane for **`plan and deliver`** (and other leader-led dispatches):
+
+1. Update **`dispatchTitle`**, **`dispatchDescription`**, and **`dispatchHoverDescription`** via **`mission_control_update_dispatch_display`** when dispatch scope is clear — not child agent tab titles.
+2. Update **leader slot row** copy via **`mission_control_update_lane_display`** only when patching the **leader's own** slot — not another agent's slot.
+3. **Forbidden:** Using dispatch MCP to relabel child slots; prose-only "rename the coding-session tab to …" without the child lane calling lane MCP.
+
+---
+
+## Stale tab title recovery (orientation)
+
+When the user asks why a tab still shows an old title after reload:
+
+1. Re-read spawn context and rule **9** — durable labels come from **`dispatch-tab.v1.json`** (and governed MCP updates), not chat prose.
+2. **Child lanes** refresh **own** slot via **`mission_control_update_lane_display`** when the child owns the correction.
+3. **Squad Leader** refreshes **dispatch** chrome via **`mission_control_update_dispatch_display`** when the dispatch scope label is wrong.
+4. If MCP fails or the wrong lane owns the update, use structured choice once — do not guess cross-slot permissions from **`git worktree list`** or transcript alone.
+
+Full recovery steps: [`.sedea/centers/research-and-development/docs/mission-control-display-metadata-host-spec.md`](docs/mission-control-display-metadata-host-spec.md) § *Stale tab title recovery*.
+
+---
+
+## Related rules
+
+- Platform authority: [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)
+- Spawn contracts: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`](../missions/plan-and-deliver/skills/README.md)
+- Efficient shipping / MCP attach: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc)
