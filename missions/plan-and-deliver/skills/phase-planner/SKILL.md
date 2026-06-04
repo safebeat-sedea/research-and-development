@@ -474,6 +474,41 @@ When Mission Control delivers a child result from **`phase-planner`** or **`codi
 
 Silence or missing downstream metadata is not completion; return `partial` and keep the phase row open.
 
+## Step 5f — Implementation handoff after inline pr-plan skip (binding)
+
+When inline **`pr-plan`** merges into this lane with **`prPlanHandoffSkipped: true`** and **`implementationHandoffStatus: not-offered`**, **this phase-planner lane owns the next implementation handoff** — not the Master Plan lane, not a detached **`coding-session`** entry, and not prose redirect.
+
+**Trigger:** inline **`new-plan`** / **`pr-breakdown`** completed inline **`pr-plan`** with **`skipPrPlanHandoffModal: true`** (typical after **`approve-list`** auto-expand of PR index **1**).
+
+**Forbidden:**
+
+- Telling the developer to start **`coding-session`** on another lane, open a detached session, or return to **`planner`** Step **7b** without offering spawn on **this** lane first.
+- Treating **`skipPrPlanHandoffModal`** or the README spawn table as a permanent ban on **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** from **`phase-planner`**.
+- Running **`coding-session`** procedures (worktrees, edits, ship chain) inline on this lane — spawn only.
+
+**Required:** Close the turn with structured choice (**`MC_PHASED_RESPONSE_V1`** or **AskQuestion** tool) per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**. **`display.markdown`** recap: PR plan link, **`readyForImplementation`**, and that §5c was skipped on the inline **`pr-plan`** turn only.
+
+| Option id | Label | Action |
+|-----------|-------|--------|
+| `start-coding-session` | Start coding session — spawn PR N | Run **§5f spawn** below when §5a-equivalent readiness passes |
+| `reenter-pr-plan-5c` | Re-enter inline pr-plan §5c | Load **`pr-plan/SKILL.md`** inline on **this** lane for the same **`targetPlanPath`** and run §5c modal |
+| `defer` | Defer implementation | No spawn; keep **`continuationStatus: active`** |
+| `more-details` | More details for option _ | Elaborate; re-offer |
+
+**Explicit developer demand to implement** (including strong wording after drift) counts as authorization to run **§5f spawn** — do not require **`planner`** §7b or detached entry first.
+
+### §5f spawn — `coding-session` from phase-planner
+
+When the developer picks **`start-coding-session`** (or explicit implement authorization) and planning readiness passes, emit **`AGENT_RUN_REQUEST_V1`** using the same payload contract as **`pr-plan/SKILL.md`** §5d:
+
+1. Resolve **`targetPlanPath`**, **`targetPlanSlug`**, **`parentPlanPath`**, **`parentPlanSlug`**, **`parentIndex`**, **`ledgerParent`**, **`repoPath`** from the inline **`pr-plan`** merge / phase subtree ledger.
+2. Set **`planningHandoffApproved: true`** when **`readyForImplementation: true`**; pass **`planningHandoffMode: sections-1-4-complete`**.
+3. Set **`upstreamSkill: "phase-planner"`** (not **`pr-plan`**) in spawn **`inputs`**.
+4. Cross-check **`../README.md`** § *Universal spawn preflight*; **`skillPath`**: **`coding-session/SKILL.md`** under this mission.
+5. Announce spawn; keep **`continuationStatus: active`**; aggregate child results per Step **5e**.
+
+**Do not** re-run inline **`pr-plan`** §5c on the same turn unless the developer picked **`reenter-pr-plan-5c`**.
+
 ## Phase delivery ownership (binding)
 
 After §§ 1–4 are drafted on this lane, **this phase-planner child lane owns phase delivery** until one of the terminal conditions below. The **Master Plan agent** (`planner` lane) must **not** re-offer §6 route menus, **`pr-breakdown`** approval, or phase-scoped expand options for the same phase while this lane is active.
