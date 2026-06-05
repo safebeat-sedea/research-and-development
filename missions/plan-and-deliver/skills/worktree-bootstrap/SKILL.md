@@ -1,8 +1,9 @@
 ---
 name: worktree-bootstrap
 description: >-
- Run scripts/bootstrap-worktree-dev.sh on a fresh git worktree after Mission
- Control attach. Normative path: **inline** on the **`coding-session`** lane — the parent
+ Prepare a fresh git worktree after Mission Control attach per hosting-repo
+ dot-sedea bootstrap mode (script-bootstrap, full, extensions-only-link, or
+ submodule-init). Normative path: **inline** on the **`coding-session`** lane — the parent
  waits for bootstrap success before any implementation. Spawned execution is an exception
  only when a protocol step explicitly requires a child lane. Does not commit, spawn
  deploy-walk, or run the ship chain — those wait for bootstrap success on the parent.
@@ -15,7 +16,7 @@ inputs:
     required: true
   hostingRoot:
     type: string
-    description: Absolute path to the hosting repo that contains scripts/bootstrap-worktree-dev.sh (HOSTING_ROOT).
+    description: Absolute path to the primary hosting clone (HOSTING_ROOT) — parent of .sedea/ on disk; must contain scripts/bootstrap-worktree-dev.sh when dot-sedea selects a script bootstrap mode.
     required: true
   targetPlanPath:
     type: string
@@ -32,8 +33,9 @@ inputs:
   bootstrapSkipFlags:
     type: array
     description: >-
-      Optional --skip-* flags (for example --skip-electron) only when the developer
-      attested partial setup on the parent lane before spawn.
+      Optional --skip-* flags only when dot-sedea and the hosting bootstrap script
+      document attested partial setup on the parent lane (ignored on repos whose
+      script accepts but does not honor skip flags).
     required: false
     default: []
   ledgerParent:
@@ -53,7 +55,16 @@ warmUpRules:
 
 # Worktree bootstrap
 
-This skill runs **`./scripts/bootstrap-worktree-dev.sh`** on **`WORKTREE_ROOT`** from **`HOSTING_ROOT`**. It prepares a fresh worktree: **`.sedea/` center submodules** (`git submodule update --init` for paths under `.sedea/` in `.gitmodules`, with primary-clone seed fallback when init leaves an empty tree), **`.sedea/operations`** copy from the primary clone, linked primary **vscode** build artifacts, native extension sync/rebuild, and smoke checks. It does **not** run full **vscode compile** or **electron smoke** on the default fast-bootstrap path.
+This skill prepares a fresh **`WORKTREE_ROOT`** after Mission Control attach. **Read dot-sedea first** — [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Worktree bootstrap mode* and § *Fast bootstrap verification checklist* on the active hosting repo, then follow [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc) § *Bootstrap profiles*.
+
+| dot-sedea mode | What this skill runs |
+|----------------|----------------------|
+| **`script-bootstrap`** | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"` from **primary** **`HOSTING_ROOT`** — linear phases per that repo's **`--help`** (orchestrator repos) |
+| **`full`** | Bootstrap script, full path (**sedea-ai/app** overlay) |
+| **`extensions-only-link`** | Bootstrap script with `--extensions-only --link-vsc-build-artifacts-from "$HOSTING_ROOT"` |
+| **`submodule-init`** | `git submodule update --init --recursive` under **`WORKTREE_ROOT`** when no bootstrap script applies |
+
+Vscode compile, linked **`vscode/out`**, and extension sync apply **only** on **`full`** / **`extensions-only-link`** overlays — not on every script repo.
 
 **Normative invocation:** **`coding-session`** runs this skill **inline** on the same lane after worktree attach and **waits** for `outputs.bootstrapStatus: success` before implementation. Spawn (`AGENT_RUN_REQUEST_V1`) is **not** the default — use only when a protocol step explicitly requires a spawned bootstrap child; the parent must still wait for success before implementing.
 
@@ -72,26 +83,33 @@ Then invoke **`worktree-bootstrap`** inline with **`worktreePath`** and **`hosti
 
 This skill does not own approval modals. When the script fails and a retry path needs a developer pick, use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act*.
 
-## Step 1 — Validate inputs
+## Step 1 — Validate inputs and resolve mode
 
 Required:
 
-- `worktreePath` — absolute worktree directory (exists, is a git worktree).
-- `hostingRoot` — absolute hosting repo root containing `scripts/bootstrap-worktree-dev.sh`.
+- `worktreePath` — absolute worktree directory (exists, is a linked git worktree).
+- `hostingRoot` — absolute **primary** hosting clone path the parent lane supplies (must contain **`scripts/bootstrap-worktree-dev.sh`** when a script mode applies).
 
-If either path is missing or the script is absent at `hostingRoot`, stop with `failure` and `outputs.bootstrapStatus: failed`, `outputs.bootstrapFailureReason` naming the gap.
+1. Read **`.cursor/rules/dot-sedea.mdc`** § *Worktree bootstrap mode* when present on the hosting repo.
+2. Set `outputs.bootstrapMode` to the dot-sedea mode: `script-bootstrap` | `full` | `extensions-only-link` | `submodule-init`.
+3. When dot-sedea is absent and **`./scripts/bootstrap-worktree-dev.sh`** exists on **`hostingRoot`**, default `outputs.bootstrapMode` to **`full`** (script overlay per rule **20**).
+4. When the mode requires the bootstrap script and the file is absent at **`hostingRoot`**, stop with `failure` and `outputs.bootstrapStatus: failed`, `outputs.bootstrapFailureReason` naming the missing script path.
+5. When the mode is **`submodule-init`** and no script exists, proceed to step 2 — do not fail solely for a missing script.
+
+**Note:** **`WORKTREE_ROOT`** may not contain the bootstrap script on disk; **`HOSTING_ROOT`** is the primary clone cwd for script invocation.
 
 ## Step 2 — Run bootstrap
 
-From **`HOSTING_ROOT`**:
+| `outputs.bootstrapMode` | Command (from **`HOSTING_ROOT`** unless noted) |
+|-------------------------|-----------------------------------------------|
+| **`script-bootstrap`** | `./scripts/bootstrap-worktree-dev.sh "<worktreePath>"` — append `bootstrapSkipFlags` only when dot-sedea documents honored skip flags |
+| **`full`** | `./scripts/bootstrap-worktree-dev.sh "<worktreePath>"` + attested `bootstrapSkipFlags` when applicable |
+| **`extensions-only-link`** | `./scripts/bootstrap-worktree-dev.sh "<worktreePath>" --extensions-only --link-vsc-build-artifacts-from "<hostingRoot>"` + attested flags when applicable |
+| **`submodule-init`** | `cd "<worktreePath>" && git submodule update --init --recursive` — seed empty `.sedea/centers/*` from **`hostingRoot`** when init leaves an empty tree (see dot-sedea) |
 
-```bash
-./scripts/bootstrap-worktree-dev.sh "<absolute-worktree-path>" [optional --skip-* flags]
-```
+The bootstrap script is idempotent where the hosting repo documents idempotency — safe to re-run after partial failure.
 
-Append each entry in `bootstrapSkipFlags` only when the parent documented developer attestation. The script is idempotent — safe to re-run after partial failure.
-
-**Submodule behavior (fast bootstrap default):** initializes every **`.sedea/`** path listed in **`.gitmodules`** (for example **`.sedea/centers/research-and-development/`**). If init leaves an empty center tree and the primary clone has a populated checkout, the script **seeds** that path from **`HOSTING_ROOT`**. Pass **`--skip-submodules`** only when the parent documented a manual seed (see **`.cursor/rules/dot-sedea.mdc`** § *Push before worktrees*).
+**Script-bootstrap repos:** submodule init, operations seed, deps, configure, and docker (when applicable) are owned by that repo's script — see **`--help`**, not this skill.
 
 **Forbidden on this lane:** `git worktree add` / `remove` / `prune`, `sedea_add_worktree_folder` / `sedea_remove_worktree_folder`, hosting-repo product edits, `gh pr create`, spawning other plan-and-deliver skills. **Worktree removal ownership:** bootstrap never removes worktrees — see rule **20** § *Worktree removal ownership (binding)* and [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*.
 
@@ -99,9 +117,9 @@ Append each entry in `bootstrapSkipFlags` only when the parent documented develo
 
 | Outcome | `outputs.bootstrapStatus` | Terminal `status` |
 |---------|---------------------------|-------------------|
-| Script exit 0 | `success` | `success` |
-| Script exit non-zero | `failed` | `partial` |
-| Missing script | `failed` | `partial` |
+| Script or submodule-init exit 0 | `success` | `success` |
+| Script or submodule-init exit non-zero | `failed` | `partial` |
+| No applicable mode / missing script when required | `failed` | `partial` |
 
 Capture a short stderr/stdout tail in `outputs.bootstrapFailureReason` when `failed`.
 
@@ -116,6 +134,7 @@ When spawned by **`coding-session`**, populate at least:
 - `outputs.targetPlanPath`, `outputs.targetPlanSlug` (echo when supplied)
 - `outputs.worktreeName` (echo when supplied)
 - `outputs.bootstrapStatus` — `success` | `failed`
+- `outputs.bootstrapMode` — `script-bootstrap` | `full` | `extensions-only-link` | `submodule-init`
 - `outputs.bootstrapFailureReason` — when failed
 - `outputs.bootstrapSkipFlags` — array used, or `[]`
 - `outputs.ledgerParent`, `outputs.upstreamSkill`
@@ -145,4 +164,4 @@ Report the same `outputs` semantics in prose to the invoker on the **same lane**
 
 **Primary path:** **`coding-session`** invokes this skill inline after attach and blocks implementation until **`outputs.bootstrapStatus: success`**. See [`../coding-session/SKILL.md`](../coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*.
 
-Before **`coding-session`** continues past Generic flow step 4: one recap line with `bootstrapStatus`, script exit code, mode (full / extensions-only / extensions-only-link), and failure tail when failed.
+Before **`coding-session`** continues past Generic flow step 4: one recap line with `bootstrapStatus`, `bootstrapMode`, exit code, and failure tail when failed.

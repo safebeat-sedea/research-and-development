@@ -27,9 +27,9 @@ inputs:
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/debug-and-fix/plan.mdc"
   - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md"
   - ".cursor/rules/dot-sedea.mdc"
   - ".cursor/rules/sedea-debug-logging-settings.mdc"
-  - ".cursor/rules/fnm-node-management.mdc"
 ---
 
 # Debug and fix
@@ -80,18 +80,22 @@ Follow [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/ru
 |------|--------|
 | 1 | **`git worktree add <absolute-path> -b <worktree-name> origin/main`** from **`HOSTING_ROOT`** |
 | 2 | MCP **`sedea_add_worktree_folder`** with absolute **`WORKTREE_ROOT`** |
-| 3 | Run **`./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"`** from **`HOSTING_ROOT`** (inline — same as **`worktree-bootstrap`**) |
+| 3 | Bootstrap **inline** on this lane per [rule **20**](.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc) § *Bootstrap profiles* and [`worktree-bootstrap/SKILL.md`](../../../plan-and-deliver/skills/worktree-bootstrap/SKILL.md): read dot-sedea § *Worktree bootstrap mode*; resolve `bootstrapMode`; run from **primary** **`HOSTING_ROOT`** (script modes) or `submodule-init` under **`WORKTREE_ROOT`** |
 
-Do **not** edit product code before bootstrap succeeds.
+Do **not** edit product code before bootstrap succeeds (`outputs.bootstrapStatus: success`).
 
 ### 3 — Logs first (mandatory gate)
 
 **Do not start substantive root-cause analysis until log access is established.**
 
-1. Read [`.cursor/rules/sedea-debug-logging-settings.mdc`](.cursor/rules/sedea-debug-logging-settings.mdc) and hosting-repo rules for log channels (`sedeaHub.logLevel`, `missionControl.logLevel`, Output panel sinks).
-2. Collect existing logs relevant to `issueSummary` / `logHints`.
-3. Add **liberal debug logging** to code under **`WORKTREE_ROOT`** when existing logs are insufficient — verbose debug output is acceptable for this stage.
-4. Reproduce using `reproductionSteps` when provided; capture log evidence before proposing fixes.
+1. Read [`.cursor/rules/sedea-debug-logging-settings.mdc`](.cursor/rules/sedea-debug-logging-settings.mdc) when present on the hosting repo — follow its **cwd routing** table before tuning any channel.
+2. When the bug is under **`tapcart-push/`** or **`tapcart-merchant-dashboard/`**, read that submodule's logging rules first (for example [`tapcart-push/.cursor/rules/logging.mdc`](tapcart-push/.cursor/rules/logging.mdc) — `LOG_LEVEL`, pino).
+3. When the bug is **Mission Control**, **Sedea Hub**, or dispatch/agent lanes — tune `sedeaHub.logLevel`, `missionControl.logLevel`, and Output panel sinks per that router; inspect `.sedea/operations/<operationsUserId>/dispatch/` on the **primary** clone when lane evidence is needed.
+4. Collect existing logs relevant to `issueSummary` / `logHints`.
+5. Add **liberal debug logging** to code under **`WORKTREE_ROOT`** when existing logs are insufficient — verbose debug output is acceptable for this stage.
+6. Reproduce using `reproductionSteps` when provided; capture log evidence before proposing fixes.
+
+**Node toolchain:** when running `node` / `npm` / `yarn` in a submodule during diagnosis, use that repo's declared version (`fnm use` when `.node-version` or `.nvmrc` exists) per [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) — not a separate hosting-root warmUp rule.
 
 ### 4 — Analyze and propose fix
 

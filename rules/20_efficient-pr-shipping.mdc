@@ -220,40 +220,74 @@ git worktree add <absolute-path> -b <worktree-name> origin/main
 
 **Lane ownership:** On a spawned **`coding-session`** implementation lane, [Generic flow](../missions/plan-and-deliver/skills/coding-session/SKILL.md) steps 1–3 are normative even when this section describes Squad Leader handoff — see that skill § *Worktree create → attach → bootstrap (ownership)*. **`worktree-bootstrap`** never calls **`sedea_add_worktree_folder`**; it runs only after attach.
 
-**Bootstrap the worktree (mandatory for coding-session).** After attach, from **`HOSTING_ROOT`** run:
+**Bootstrap the worktree (mandatory for coding-session).** After attach, resolve the hosting-repo profile **before** running commands:
+
+1. Read [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Worktree bootstrap mode* and § *Fast bootstrap verification checklist* when that file exists on the active hosting repo.
+2. **`coding-session`** runs **`worktree-bootstrap`** **inline** on the same lane after attach (see [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)* and [`worktree-bootstrap/SKILL.md`](../missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md)) and **waits** for **`outputs.bootstrapStatus: success`** before implementation. On failure, ship phase stays at `worktree` and the lane reports `partial` until bootstrap succeeds. **`--skip-*`** behavior is **hosting-repo specific** — read [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Worktree bootstrap mode* and § *Script phases* when present, plus that repo's bootstrap script **`--help`** on **`HOSTING_ROOT`**.
+
+| Profile | When | Action (from **`HOSTING_ROOT`** unless cwd is **`WORKTREE_ROOT`**) |
+|---------|------|---------------------------------------------------------------------|
+| **Script bootstrap** | `./scripts/bootstrap-worktree-dev.sh` exists | Run via **`worktree-bootstrap`** — see § *Bootstrap script overlay* below |
+| **Overlay profile** | dot-sedea § *Worktree bootstrap mode* names a mode without that script (for example **`submodule-init`**) | Follow dot-sedea and **`worktree-bootstrap/SKILL.md`** — typically `git submodule update --init --recursive` for paths in `.gitmodules` |
+| **Fallback** | No dot-sedea overlay and no bootstrap script | **`worktree-bootstrap`** stops with `bootstrapStatus: failed` — do not invent commands |
+
+### Bootstrap profiles (hosting-repo overlay)
+
+**Read dot-sedea first.** [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Worktree bootstrap mode* on the **active hosting repo** selects the profile. When that section is absent and **`./scripts/bootstrap-worktree-dev.sh`** exists, default to **script bootstrap** § *Bootstrap script overlay* below.
+
+**Push order (all profiles):** [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Push before worktrees (mandatory)* and § *Submodule pins* when present; after center **`defaultBranch`** merges, § *Center submodule pin promotion (hosting repo)* below. Submodule init in a worktree uses the **committed** gitlink on that worktree's base ref — not an uncommitted pointer on the primary clone.
+
+#### Submodule-init profile (orchestrator repos without bootstrap script)
+
+When dot-sedea declares **`submodule-init`** (or equivalent) and **no** `./scripts/bootstrap-worktree-dev.sh` on **`HOSTING_ROOT`**:
 
 ```bash
-./scripts/bootstrap-worktree-dev.sh "<absolute-worktree-root>"
+cd "$WORKTREE_ROOT"
+git submodule update --init --recursive
 ```
 
-Submodules, native extensions, and vscode compile run per `scripts/bootstrap-worktree-dev.sh --help`. The script is idempotent. **`coding-session`** runs **`worktree-bootstrap`** **inline** on the same lane after attach (see [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)* and [`worktree-bootstrap/SKILL.md`](../missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md)) and **waits** for success before implementation. On failure, ship phase stays at `worktree` and the lane reports `partial` until bootstrap succeeds. Use **`--skip-*`** only when the developer attests partial setup.
+Seed empty `.sedea/centers/*` from **`HOSTING_ROOT`** when init leaves an empty tree and the primary clone is populated — see [`worktree-bootstrap/SKILL.md`](../missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md). **`--skip-submodules`** only with developer attestation on the parent lane.
 
-### Fast vs full worktree bootstrap (sedea-ai/app overlay)
+**Agent verification:** per dot-sedea § *Fast bootstrap verification checklist* — not vscode compile smoke unless that hosting repo documents it.
 
-On **`sedea-ai/app`**, **`coding-session`** / **`worktree-bootstrap`** choose **full** vs **`extensions-only-link`** per [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Worktree bootstrap mode* and § *Fast bootstrap verification checklist*. Generic hosting repos without that overlay always use **full** bootstrap.
+#### Bootstrap script overlay (when `bootstrap-worktree-dev.sh` exists)
+
+When **`./scripts/bootstrap-worktree-dev.sh`** exists on the **primary** **`HOSTING_ROOT`** clone, **`coding-session`** / **`worktree-bootstrap`** branch on dot-sedea § *Worktree bootstrap mode* and § *Fast bootstrap verification checklist*. The script implementation differs per hosting repo — read **`--help`** on that repo; dot-sedea names the mode and verification checklist.
+
+**HOSTING_ROOT for script bootstrap (binding):** Shell cwd is the **primary clone** that contains the script. **`WORKTREE_ROOT`** is the first argument. A linked worktree checkout may not contain the script file on disk — that is normal.
 
 ```mermaid
 flowchart TD
-  Start[Worktree attached] --> Read[Read dot-sedea worktreeBootstrap.mode]
-  Read --> Mode{mode?}
+  Start[Worktree attached] --> Read[Read dot-sedea bootstrap mode]
+  Read --> Script{bootstrap script on primary HOSTING_ROOT?}
+  Script -->|no| SubInit[Follow dot-sedea submodule-init or overlay]
+  Script -->|yes| Mode{dot-sedea mode?}
+  Mode -->|script-bootstrap| Linear[Linear script phases per dot-sedea]
   Mode -->|full or unset| Full[Full bootstrap script]
   Mode -->|extensions-only-link| Warm{Primary warm?}
   Warm -->|out + node_modules| Fast[extensions-only + link from HOSTING_ROOT]
   Warm -->|missing| Full
   Full --> Sub[Submodules + vscode ci + smoke]
   Fast --> Ext[Worktree extension sync + rebuild]
-  Sub --> Done[bootstrapStatus success]
+  Linear --> Done[bootstrapStatus success]
+  Sub --> Done
   Ext --> Done
+  SubInit --> Done
 ```
 
-| Path | Choose when | Invocation (from **`HOSTING_ROOT`**) |
-|------|-------------|--------------------------------------|
-| **`full`** | Default; cold primary; submodule/auth unknown; **`vscode/src`** edits | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"` |
-| **`extensions-only-link`** | Warm primary; overlay **`extensions-only-link`**; extension / rule / doc work only | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT" --extensions-only --link-vsc-build-artifacts-from "$HOSTING_ROOT"` |
+| Mode | Choose when | Invocation (from **primary** **`HOSTING_ROOT`**) |
+|------|-------------|-----------------------------------------------------|
+| **`script-bootstrap`** | dot-sedea declares **`script-bootstrap`** (linear phases; no vscode overlay — for example orchestrator repos that ship a repo-specific bootstrap script) | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"` — flags and phase list per that repo's **`--help`** and dot-sedea |
+| **`full`** | dot-sedea **`full`** or unset with vscode overlay; cold primary; **`vscode/src`** edits (typical **sedea-ai/app**) | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT"` |
+| **`extensions-only-link`** | dot-sedea **`extensions-only-link`**; warm primary; extension / rule / doc work only (**sedea-ai/app** overlay) | `./scripts/bootstrap-worktree-dev.sh "$WORKTREE_ROOT" --extensions-only --link-vsc-build-artifacts-from "$HOSTING_ROOT"` |
 
-**Submodule preconditions:** **`--extensions-only`** skips submodule init. Acceptable only when **`.sedea/`** is already populated in the worktree or you seed from primary and attest **`--skip-submodules`**. Full bootstrap fetches submodule SHAs from the **committed** gitlink on the worktree's base ref — not from the primary working tree. Push order: [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Push before worktrees (mandatory)* and § *Submodule pins*; after center **`defaultBranch`** merges, § *Center submodule pin promotion (hosting repo)* below.
+**`--skip-*` flags:** For **`script-bootstrap`** hosting repos, read [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc) § *Script phases* (when present) and `./scripts/bootstrap-worktree-dev.sh --help` on **`HOSTING_ROOT`**. Pass skip flags only with developer attestation on the parent **`coding-session`** lane via **`worktree-bootstrap`**. When dot-sedea or the script documents that skip flags are ignored, run all documented phases.
 
-**Worktree skew:** After **`git pull`** on the primary clone, linked **`vscode/out`** may advance while the worktree ref lags. Re-run **`rebuild-native-extensions.sh`** in the worktree when extension sources change; unfetchable submodule SHA → fix push order before retry.
+##### sedea-ai/app overlay only (`full` / `extensions-only-link`)
+
+**Submodule preconditions:** **`--extensions-only`** skips submodule init. Acceptable only when **`.sedea/`** is already populated in the worktree or you seed from primary and attest **`--skip-submodules`**.
+
+**Worktree skew:** After **`git pull`** on the primary clone, linked **`vscode/out`** may advance while the worktree ref lags. Re-run **`./scripts/rebuild-native-extensions.sh`** in the worktree when that script exists and extension sources change; unfetchable submodule SHA → fix push order before retry.
 
 ## Center submodule pin promotion (hosting repo)
 
@@ -261,7 +295,9 @@ When changes under a **non-built-in** center submodule (for example **`.sedea/ce
 
 Pin the center **`defaultBranch`** tip only. Git is **skill-owned** per [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc) § *Submodule pin promotion (skill-owned)*. Canonical semantics: [`.sedea/centers/sedea/rules/3_center.mdc`](.sedea/centers/sedea/rules/3_center.mdc) § *Git repo semantics*.
 
-**Launch from worktree (after bootstrap success):**
+**Launch from worktree (after bootstrap success — when hosting repo ships dev launcher):**
+
+When **`./scripts/run-dev-sedea.sh`** exists on the hosting repo (typical **sedea-ai/app**; see dot-sedea):
 
 ```bash
 cd "$WORKTREE_ROOT"
@@ -270,12 +306,18 @@ cd "$WORKTREE_ROOT"
 SKIP_BUILD=1 VSCODE_SKIP_PRELAUNCH=1 ./scripts/run-dev-sedea.sh
 ```
 
-Hub activation must reference **`$WORKTREE_ROOT/extensions/`**, not the primary clone path.
+Hub activation must reference **`$WORKTREE_ROOT/extensions/`**, not the primary clone path. **Omit this block** on orchestrator repos without that script (for example **sedea-push**).
 
-**Agent verification (minimum before ship chain):** **`bootstrapStatus: success`**; smoke shows **`vscode/out`** + extension **`node_modules`**; optional **`SKIP_BUILD=1 VSCODE_SKIP_PRELAUNCH=1`** launch confirms worktree extension paths. Full checklist: **dot-sedea** § *Fast bootstrap verification checklist*.
+**Agent verification (minimum before ship chain):** **`bootstrapStatus: success`**; then complete checks in dot-sedea § *Fast bootstrap verification checklist* when present. Verification is **hosting-repo specific** — do not assume one smoke model for every script repo:
+
+| dot-sedea mode | Typical verification (examples — dot-sedea wins when present) |
+|----------------|------------------------------------------------------------------|
+| **`script-bootstrap`** | Script exit **0**; phases in that repo's checklist (for example Docker, submodules, deps, local-docker on orchestrator repos) |
+| **`full`** / **`extensions-only-link`** | **`vscode/out`** + extension **`node_modules`**; optional **`SKIP_BUILD=1 VSCODE_SKIP_PRELAUNCH=1`** launch (**sedea-ai/app** overlay) |
+| **`submodule-init`** | Submodule checkout + attested skip flags — not vscode compile smoke |
 
 
-**Detach merged worktrees from the workbench.** After a PR merges, on the **`coding-session`** lane run [Post-merge workspace cleanup](../missions/plan-and-deliver/skills/coding-session/SKILL.md#post-merge-workspace-cleanup) **before** After deploy `deploy-walk` — **only** for **this pass’s** **`WORKTREE_ROOT`** when § *Worktree removal ownership (binding)* preconditions all pass. Invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree. Pull **`origin/main`** on **`HOSTING_ROOT`** in the same cleanup pass, then run **`./scripts/rebuild-native-extensions.sh`** when present so extension builds match **`main`** before **Developer: Reload Window**.
+**Detach merged worktrees from the workbench.** After a PR merges, on the **`coding-session`** lane run [Post-merge workspace cleanup](../missions/plan-and-deliver/skills/coding-session/SKILL.md#post-merge-workspace-cleanup) **before** After deploy `deploy-walk` — **only** for **this pass’s** **`WORKTREE_ROOT`** when § *Worktree removal ownership (binding)* preconditions all pass. Invoke **`sedea_remove_worktree_folder`** with JSON `{ "path": "<same-absolute-worktree-root>" }` so Sedea drops that workspace root (not the primary folder at index 0). Prefer calling this **before** `git worktree remove` so the explorer does not point at a deleted tree. Pull **`origin/main`** on **`HOSTING_ROOT`** in the same cleanup pass, then run **`./scripts/rebuild-native-extensions.sh`** when that script exists on **`HOSTING_ROOT`** so extension builds match **`main`** before **Developer: Reload Window**.
 
 Use `origin/main`, **not** `main` — `git worktree add … main` (and `git fetch origin main:main`) fails when `main` is already checked out in another worktree.
 

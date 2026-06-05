@@ -67,7 +67,7 @@ flowchart TD
 - `intent`: Run log-first diagnosis, fix loop, and exit recommendation on a child lane.
 - `target agent role`: Debug and Fix agent.
 - `assigned skill`: [`skills/debug-and-fix/SKILL.md`](skills/debug-and-fix/SKILL.md).
-- `required rule context`: Sedea center always-apply rules, [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../rules/20_efficient-pr-shipping.mdc), [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc), [`.cursor/rules/sedea-debug-logging-settings.mdc`](.cursor/rules/sedea-debug-logging-settings.mdc).
+- `required rule context`: Sedea center always-apply rules, [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../rules/20_efficient-pr-shipping.mdc), [`worktree-bootstrap/SKILL.md`](../plan-and-deliver/skills/worktree-bootstrap/SKILL.md), [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc), [`.cursor/rules/sedea-debug-logging-settings.mdc`](.cursor/rules/sedea-debug-logging-settings.mdc) — **hosting-repo authored** when present (like dot-sedea); create via cursor-center alignment when missing. Submodule Node toolchain (`fnm use`) is per dot-sedea appendix, not a separate hosting warmUp file.
 - `inputs`: `issueSummary`, `reproductionSteps`, `logHints`, `repoPath`, `operationsUserId` from step 2.
 - `spawn run-request fields`:
   - `inputs` — validated fields above.
