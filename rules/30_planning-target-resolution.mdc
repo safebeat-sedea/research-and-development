@@ -132,11 +132,13 @@ Markdown table for each in-flight plan (typically one Master Plan subtree):
 | Column | Content |
 | --- | --- |
 | **Plan** | Slug + display name. |
-| **Stage** | Mode #1 Master Plan, #2 Phase, #3 PR plan, roadmap topic. |
+| **Stage** | Mode #1 Master Plan, #2 Phase, #3 PR plan. |
 | **Status** | Drafted sections, `_TBD_`, PR linked, archived. |
 | **Next viable moves** | **Numbered** options naming **protocol branch + target** (e.g. *1. **new-plan** — expand list item **2** under `<parent-slug>`*; *2. **phase-planner** — populate child `<path>`*). Mark ineligible rows in the snapshot (e.g. *blocked — PR 1 ship incomplete*) but **do not** offer them as **`AskQuestion`** `options` — see § *Depth-first expansion eligibility*. |
 
 When a pick is required, offer the same moves as **`AskQuestion`** `options` (§ *Sedea input channel*). Session and plan-path contracts for planning live in this center rule, **`planning-target-resolution`**, center skills, and **`.sedea/centers/research-and-development/docs/development-process.md`** — hosting-repo **`.cursor/rules/`** cover codebase architecture and navigation only.
+
+**Root delivery plans only (binding).** New plans scaffold under the flat **`.sedea/operations/.../plans/`** union with sidecar **`parent: null`** unless the developer explicitly overrides **`Parent`** in the same message — see **development-process.md** § *Root delivery plans vs legacy Hub parent intake*. **Forbidden in snapshots and **`AskQuestion`** expand options:** paths under **`plans/roadmap-topics/`**, Hub **`top_level_topic`** intake, or “expand roadmap topic” moves. Legacy topic rows on disk may still appear in read-only snapshots until Hub UI removal (Master Plan phase 3); do **not** offer **`new-plan`** expand or parent-picker flows that recreate topic-parent intake.
 
 **Snapshot-scoped prompts** (e.g. *Option 2: **phase-planner** on `<path>`*) belong **only** inside that snapshot.
 

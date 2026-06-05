@@ -145,6 +145,22 @@ Sedea **`.plan.md`** files are **delivery anchors** for Mission Control ship (Ma
 
 **Implementation phases (Master Plan *Remove Sedea Hub plans box*):** This table is the **governance narrative** (phase 1). Host code and Hub UI follow in later phases — docs lead code; agents must not reintroduce topic-parent defaults while implementing those slices.
 
+### Plan Board writer notes
+
+Normative field semantics: [`.sedea/centers/sedea/rules/8_plan-board-contract.mdc`](.sedea/centers/sedea/rules/8_plan-board-contract.mdc). This subsection is the **R&D operator checklist** for agents and tools that create or update `.sedea/operations/**/plans/` pairs.
+
+| Write target | Rule |
+| --- | --- |
+| **Tree parent** | Sidecar **`parent`** only — **`null`** / omitted for root delivery plans; child plans set parent slug in **`.state.yaml`**, not frontmatter **`parent`** |
+| **Lifecycle dot** | Sidecar **`status`** — `not_started`, `started`, `completed`, `canceled` (American spelling) |
+| **Archive bucket** | Sidecar **`archived: true`** only — not frontmatter **`archived`** |
+| **`kind` frontmatter** | **`plan`** or omit for new delivery plans — **do not** create **`top_level_topic`** or files under **`plans/roadmap-topics/`** |
+| **Title / todos** | Frontmatter **`name`**, **`overview`**, **`todos[]`** — todo **`status`** uses British **`cancelled`**; plan lifecycle uses American **`canceled`** in sidecar |
+
+**Intake alignment:** [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](../rules/30_planning-target-resolution.mdc) § *Root delivery plans only* forbids roadmap-topic expand paths in planning snapshots. [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../rules/50_mission-control-display-metadata-discipline.mdc) § *Null-parent dispatch labels* forbids Hub-topic wording in dispatch chrome.
+
+**Operations write location:** Plan and sidecar edits target the **main hosting clone** only — see [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Operations persistence (main hosting root only)*.
+
 ### Agent UX pitfalls (easy mis-runs)
 
 | Pitfall | Correct surface |

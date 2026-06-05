@@ -32,7 +32,9 @@ When emitting **`AGENT_RUN_REQUEST_V1`** on **plan-and-deliver** or other R&D sp
 3. Follow **`missions/plan-and-deliver/skills/README.md`** § *Universal spawn preflight* — display metadata is part of spawn quality, not a post-hoc fix.
 4. **Squad Leader** lanes update **dispatch** chrome only via **`mission_control_update_dispatch_display`** — see rule **9**; do not relabel child slots from the leader lane.
 
-PR **3** mission spawn skill steps in **`plan.mdc`**, **`skills/README.md`**, and spawn-heavy **`SKILL.md`** files extend this baseline.
+Spawn-heavy **`SKILL.md`** files and **`plan.mdc`** § *Spawn run-request display metadata* extend this baseline.
+
+**Null-parent dispatch labels (cross-ref).** After PR 1–2 governance, **`plan and deliver`** defaults **`Parent: null`** — dispatch and lane titles must **not** imply a Hub roadmap topic or **`top_level_topic`** parent (for example “under topic X”). Use feature title, plan slug, or PR concern in **`name`** / **`dispatchTitle`**. Legacy Hub **`### Parent (Sedea Hub)`** openings may still appear until Mission Control host strip (Master Plan phase 2) — when present, echo the legacy parent in one acknowledgement line only; do **not** treat it as the long-term dispatch scope label. See **development-process.md** § *Root delivery plans vs legacy Hub parent intake* and rule **30** § *Root delivery plans only*.
 
 ---
 
