@@ -197,19 +197,19 @@ flowchart TB
 
 **Single-PR hoist:** after **`phase-planner`**, a **single-PR** assessment spawns **`pr-breakdown`** on the **ancestor** plan (not on the phase file) with `hoistFromPhasePath` — see `development-process.md` § *Single-PR hoist from a phase plan* and **`phase-planner`** § **5a-hoist**.
 
-## Hub missionInputs *(legacy — sunset)*
+## Hub missionInputs *(legacy — host-removed)*
 
 **Target contract:** Root delivery plans use **`Parent: null`** in §4; external PM scope via optional **`Related:`** only — see **`.sedea/centers/research-and-development/docs/development-process.md`** § *Root delivery plans vs legacy Hub parent intake*.
 
-This block remains **only** while legacy Hub **Start New Plan** and Mission Control host validation still read it (Master Plan phase 2 strips host paths; phase 3 removes Hub UI). **Do not** extend or document new Hub parent intake here.
+Mission Control **host strip (phase 2 — merged app#282 / app#288)** removed Hub parent intake for **`plan-and-deliver`**. The host no longer injects **`missionInputs`**, does not render **`### Parent (Sedea Hub)`** on dispatch openings, and strips legacy keys if Hub **Start New Plan** still passes them until Hub UI removal (Master Plan phase 3).
 
-| key | required | Sunset |
-| --- | --- | --- |
-| `parentSlug` | yes *(legacy Hub only)* | Removed with MC host strip (phase 2) |
-| `parentPlanPath` | yes *(host-resolved)* | Removed with MC host strip (phase 2) |
+| key | Host status |
+| --- | --- |
+| `parentSlug` | **Removed** — historical only; Hub strips on dispatch |
+| `parentPlanPath` | **Removed** — historical only; Hub strips on dispatch |
 
-- **`parentSlug`** / **`parentPlanPath`** — legacy Hub topic parent injected into `dispatch.yaml`; Mission Control may still render **`### Parent (Sedea Hub)`** until host strip (§4 *Legacy Hub parent*).
 - **Manual `plan and deliver`** and Centers dispatch **omit** **`missionInputs`** — §4 defaults **`Parent: null`** with **no** parent **AskQuestion**.
+- **Forbidden:** reintroducing Hub parent detection, **`### Parent (Sedea Hub)`** parsing, or parent **AskQuestion** gates in §4.
 
 ## Protocol
 
@@ -304,7 +304,7 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 **Procedure**
 
 1. Match `plan and deliver` on the opening message (case-insensitive).
-2. When scope is readable from the opening message (feature title or command remainder), run **Dispatch display refresh** (above) — **skip** when chrome already matches. Do **not** treat legacy Hub **`missionInputs`** as the default planning model (see §4 *External PM scope*).
+2. When scope is readable from the opening message (feature title or command remainder), run **Dispatch display refresh** (above) — **skip** when chrome already matches. Default **`Parent: null`** intake — see §4 *External PM scope*; do not prompt for Hub topic parents.
 3. Use **AskQuestion** (per Sedea conduct — includes the standard *More details for option _* escape hatch) to ask where the PRD will come from:
    1. **PRD link or file** — Confluence, Google Docs, or `@path` in the workspace.
    2. **Ad-hoc task description** — Short blurb the agent uses to draft an ad-hoc PRD via **`ad-hoc-prd`** (see development-process § *PRD routing (canonical)* and protocol branches table — not **`create prd`** on the **`prd`** mission).
@@ -379,14 +379,13 @@ Do **not** invent PRD content from the URL alone. Do **not** call **`author-prd`
 
 - **Type:** Simple skill execution
 - **Intent:** Compile the required seed block for **`planner`** after a readable PRD artifact exists.
-- **Inputs:** PRD reference and loaded/created PRD body from §2 or §3; optional title and **`Related`** hints from the opening message or prior developer answers; legacy Hub parent only when § *Legacy Hub parent* applies.
+- **Inputs:** PRD reference and loaded/created PRD body from §2 or §3; optional title and **`Related`** hints from the opening message or prior developer answers.
 - **Expected output:** A complete **`planner`** seed containing `Feature planning`, `PRD`, **`Parent: null`** (default), and optional **`Related`** entries for external PM / doc traceability.
 - **Next-step resolution:**
   - Required seed fields complete → continue to §5 to engage **`planner`**.
   - Title missing → ask the developer for the feature title, then resume this step.
   - **Default:** set **`Parent: null`** — **do not** run a parent **AskQuestion** for net-new delivery plans.
   - Developer explicitly names a non-null **`Parent`** slug or `@path` in the same message → use that value (exception only).
-  - Legacy Hub parent present (§ *Legacy Hub parent*) → parse Hub **`Parent`**; **skip** parent **AskQuestion** for that value.
   - **`Related`** absent → record none and continue; optional external PM / doc links only when the developer supplies them.
   - **Ad-Hoc PRD branch (§3 terminal approve):** when title and default **`Parent`** are set, **continue immediately to §5** on the same turn — **no** leader approval between child PRD approve and **`planner`** spawn.
 
@@ -398,32 +397,11 @@ Product and feature **scope** lives in external PM tools (JIRA, Trello, ClickUp,
 - Put external traceability in optional **`Related:`** seed lines (role + link or `@path`) when the developer provides them — for example `PM: https://…/PROJ-123` or `PRD: @path/to/doc`.
 - **Forbidden:** treating Hub roadmap topics, **`top_level_topic`**, or plan-tree parents as the default intake model for new work (see **development-process.md** § *Root delivery plans vs legacy Hub parent intake*).
 
-#### Legacy Hub parent *(sunset)*
-
-When Mission Control still queued this dispatch from legacy Sedea Hub **Start New Plan**, the opening message may include **`### Parent (Sedea Hub)`** from `dispatch.yaml` **`missionInputs`**. Honor until host strip (Master Plan phase 2); do **not** document this as the target contract.
-
-**Detection (opening message or first user turn on this dispatch):**
-
-1. Section marker: line `### Parent (Sedea Hub)` (exact heading).
-2. Parent line: `**Parent:** \`<slug>\`` with optional trailing ` (@\`<workspace-relative-plan-path>\`)` on the same line.
-
-**Parse rules:**
-
-| Capture | Use as seed **`Parent`** |
-| --- | --- |
-| `@path` in parentheses | That workspace-relative path (preferred when present) |
-| `` `slug` `` only | The slug (or resolve to `@.sedea/operations/.../plans/<slug>.plan.md` when path is needed for **`planner`**) |
-
-If both slug and path appear, prefer the **`@path`** for **`Parent`** in the seed block; echo both in the Hub acknowledgement line.
-
-**Squad Leader echo (required when legacy Hub parent detected):** Before compiling the seed block, state one line: *Legacy Hub supplied parent: `<slug>`* (include `@path` when parsed). Do not imply the developer must confirm parent again unless they choose to revise it.
-
 **Procedure**
 
 1. Derive `Feature planning` title from the PRD heading or provided title.
 2. Set `PRD` to the original readable link/path, or the Ad-Hoc PRD document returned by the child agent.
 3. Resolve **`Parent`**:
-   - **Legacy Hub first:** If § *Legacy Hub parent* applies, parse **`Parent`** from the opening message and apply the echo line above; **skip** parent **AskQuestion**.
    - **Explicit developer override:** When the same message names a slug, `@path`, or absolute plan path for **`Parent`**, use that value.
    - **Default:** **`Parent: null`** — **no** parent **AskQuestion**.
 4. Collect optional **`Related`** entries when the developer provides external PM or document links (see § *External PM scope*).
@@ -442,7 +420,7 @@ Related (optional):
 - <role>: <link or @path>   # e.g. PM: JIRA/PROJ-123, PRD: @path
 ```
 
-When legacy Hub parent or an explicit developer override applies, replace the **`Parent:`** line with the resolved slug or `@path` instead of **`null`**.
+When an explicit developer override applies, replace the **`Parent:`** line with the resolved slug or `@path` instead of **`null`**.
 
 ### 5. Create Master Plan via agent
 
