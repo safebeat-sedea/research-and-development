@@ -84,50 +84,46 @@ Exit **0** when manifest and disk match; **1** prints paths only on disk or only
 
 ### PRD routing (canonical)
 
-One decision before **`planner`**. Squad Leader procedure: **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §§1–2. PRD mission procedure: **`.sedea/centers/research-and-development/missions/prd/plan.mdc`**.
+Every **`plan and deliver`** dispatch runs **`author-prd`** before **`planner`**. Squad Leader procedure: **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`** §§1–3.
 
 ```mermaid
 flowchart TD
- START[Requirements before planner] --> HAS{Readable PRD exists?}
- HAS -->|yes file URL path| PAD[plan and deliver §1 opt 1 → §2]
- HAS -->|no short blurb on plan and deliver| ADHOC[§1 opt 2 → spawn ad-hoc-prd]
- HAS -->|no full structured doc| PRD[prd create prd / manage prd]
- HAS -->|URL blocked in §2| AQ[plan and deliver §2 AskQuestion]
- PRD --> LATER[New plan and deliver + @path]
- ADHOC --> SEED[§4 seed → §5 spawn planner]
- PAD --> SEED
- LATER --> PAD
+ START[plan and deliver dispatch] --> S1[§1 Open dispatch]
+ S1 --> S2[§2 PRD intake on leader lane]
+ S2 --> S3[§3 spawn author-prd]
+ S3 --> APR[Author PRD lane: evidence draft approve]
+ APR --> SEED[§4 seed → §5 spawn planner]
+ S2 -->|unreadable existing PRD| AQ[§2 AskQuestion paste path or switch create]
+ AQ --> S2
 ```
 
-| Route | When | Mission / phrase | Artifact | Next |
-| --- | --- | --- | --- | --- |
-| **A — Full PRD** | Structured doc **outside** active **`plan and deliver`** planning | **`prd`** — **`create prd`** / **`manage prd`** | **`.sedea/operations/<operationsUserId>/docs/`** via **`author-prd`** | New **`plan and deliver`** + `@path` → §2 |
-| **B — Ad-hoc PRD** | Short blurb; **already on** **`plan and deliver`** | **`plan and deliver`** §1 opt **2** → spawn **`ad-hoc-prd`** | **`ad_hoc_<slug>_<hex>.ad-hoc-prd.md`** under **`<operationsUserId>/docs/`** only | Child approves on Ad-Hoc PRD lane → Squad Leader **auto-chains** §4 seed + §5 **`planner`** spawn same turn (no leader re-approval) |
-| **C — Existing PRD** | File, `@path`, or fetchable URL | **`plan and deliver`** §1 opt **1** → §2 | Link or path (may be outside **`operations/`**) | §4 seed → §5 spawn **`planner`** |
-| **D — Blocked URL** | §2 cannot fetch external PRD | **`plan and deliver`** (or **`prd`** per modal) | Readable body required | **`plan.mdc`** §2 *Auth-blocked or unreadable PRD* |
+| Step | When | Artifact | Next |
+| --- | --- | --- | --- |
+| **§1 Open** | Every **`plan and deliver`** dispatch | Optional opening seeds (title, `@path`, URL) | §2 intake |
+| **§2 Intake** | Leader lane before spawn | `prdTitle`, `prdDescription`, `operation` (`create` \| `manage`), `sourceMaterials` | §3 spawn **`author-prd`** |
+| **§3 Author PRD** | Child lane | Full or updated PRD under **`.sedea/operations/<operationsUserId>/docs/`** (or managed existing path) via **`author-prd`** | Developer approves on **Author PRD** lane → Squad Leader **auto-chains** §4 seed + §5 **`planner`** same turn |
+| **§4–§5 Planning** | After terminal approved PRD | Master Plan via **`planner`** | Decomposition / ship per mission protocol |
 
-**Intake boundaries (do not conflate missions)**
+**Intake boundaries**
 
-- **`plan and deliver` §2** validates or loads an **existing** readable PRD for the **`planner`** seed — it does **not** spawn **`author-prd`** or run **`create prd`** / **`manage prd`** inline.
-- **`prd`** mission owns **`author-prd`** drafting and **`manage prd`** revision — it does **not** perform Squad Leader §2 fetch for **`planner`**; return with **`@path`** after the PRD dispatch.
-- **No PRD yet on `plan and deliver`:** §1 opt **2** → **`ad-hoc-prd`**, not **`create prd`** on the same dispatch.
+- **`plan and deliver` §2** collects product context on the **Squad Leader** lane — it does **not** draft the PRD or skip **`author-prd`**.
+- **`author-prd`** owns evidence gathering, drafting, and developer approval on its **child** lane (steps 10–11).
+- **`ad-hoc-prd`** is **not** used on **`plan and deliver`** — it remains for **`debug-and-fix`** only (minimal fix-scope PRD).
 
 **Do not use**
 
-- **`create prd`** / **`manage prd`** when already on **`plan and deliver`** §1 option 2 — use **`ad-hoc-prd`** spawn.
-- **`ad-hoc-prd`** for a full multi-section PRD — use **`prd`** mission first.
-- **`joint/docs/`** for new Ad-Hoc PRD writes — **`ad-hoc-prd`** is **`operationsUserId`**-scoped only.
+- Skipping **`author-prd`** because a PRD `@path` was pasted in the opening message — §2 may set **`operation: manage`**, but §3 still runs for approval and gap closure.
+- **`joint/docs/`** for new PRD writes — **`author-prd`** **`create`** mode is **`operationsUserId`**-scoped only.
 
 **Handoff phrase examples**
 
 | Developer says (paraphrase) | Route |
 | --- | --- |
-| “Here’s the PRD `@path` — start planning” | **`plan and deliver`** → §2 |
-| “Write a PRD from these notes, then we’ll plan” | **`create prd`** → later **`plan and deliver`** + `@path` |
-| “Small fix, plan and deliver” (no file) | **`plan and deliver`** §1 option **2** → **`ad-hoc-prd`** |
-| “This Confluence link won’t load” | **`plan and deliver`** §2 **AskQuestion** (not invented body text) |
+| “Plan and deliver — here’s `@path` to our PRD” | **`plan and deliver`** → §2 (`manage`) → §3 **`author-prd`** |
+| “Plan and deliver — small auth tweak for SSO” | **`plan and deliver`** → §2 intake (description + sources) → §3 **`author-prd`** |
+| “This Confluence link won’t load” | **`plan and deliver`** §2 **AskQuestion** (paste, different path, or switch **`create`**) |
 
-**Referenced skills:** **`ad-hoc-prd`**, **`author-prd`**.
+**Referenced skills:** **`author-prd`** (plan-and-deliver §3); **`ad-hoc-prd`** (debug-and-fix only).
 
 ### Root delivery plans vs legacy Hub parent intake
 
@@ -170,10 +166,9 @@ Normative field semantics: [`.sedea/centers/sedea/rules/8_plan-board-contract.md
 | **Commit and push cadence** step 3 | Rule **20** step 3 = **`pr-review` Step 5 — GitHub only** after push when Steps 1–4 already ran — not a second full triage |
 | **High complexity** Master Plan (score **> 20**) | Recommend **Route §6 → Delivery phases** on the **planner** lane (do not withhold §6); each phase plan gets **`phase-planner`** without numeric gate; Squad Leader never runs **`delivery-phases`** / **`pr-breakdown`** |
 | Worktree name / PR / chat titles | **`.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`** — benefit verbs only; never the forbidden busy-work prefix |
-| **`create prd`** while already on **`plan and deliver`** §1–2 | §1 option **2** → **`ad-hoc-prd`**, or finish **`prd`** first then new **`plan and deliver`** + `@path` — § *PRD routing (canonical)* |
-| Squad Leader collects **title only**, spawns **`author-prd`**, child invents scope | **`prd/plan.mdc`** §**2.5** intake on Squad Leader; §3 handoff includes **`prdDescription`** + **`sourceMaterials`** |
+| Squad Leader collects **title only**, spawns **`author-prd`**, child invents scope | Complete **`plan.mdc`** §2 intake on Squad Leader; §3 handoff includes **`prdDescription`** + **`sourceMaterials`** |
 | Spawn **`planner`** from **`new-plan`** or run **`pr-plan`** on a standalone child without **`new-plan-agent`** | **`planner`** = Squad Leader §5 **spawn only**; **`pr-plan`** = **inline** under **`new-plan`** — **`skills/README.md`** § *Normative execution mode* |
-| Leader **AskQuestion** after Ad-Hoc PRD child approve (seed review / confirm spawn) | **Forbidden** — auto-chain §4→§5 on same leader turn; PRD approval stays on **Ad-Hoc PRD** child lane (**`plan.mdc`** §3 resume) |
+| Leader **AskQuestion** after Author PRD child approve (seed review / confirm spawn) | **Forbidden** — auto-chain §4→§5 on same leader turn; PRD approval stays on **Author PRD** child lane (**`plan.mdc`** §3 resume) |
 | **Child lane** calls **`mission_control_update_dispatch_display`** | **Forbidden** — dispatch chrome is Squad Leader scope only; child refreshes **own** slot via **`mission_control_update_lane_display`** — [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc); [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../rules/50_mission-control-display-metadata-discipline.mdc) |
 | **Squad Leader** renames a **child** agent tab via dispatch MCP or prose | **Forbidden** — leader uses **`mission_control_update_dispatch_display`** for dispatch title/hover; child lane self-service via lane MCP — rule **9** § *Forbidden* |
 | **Chat-only** tab rename ("call it X in the UI") with no MCP on owning lane | **Stop** — durable labels persist through governed MCP; see [`.sedea/centers/research-and-development/docs/mission-control-display-metadata-host-spec.md`](mission-control-display-metadata-host-spec.md) § *Stale tab title recovery* |
@@ -213,7 +208,7 @@ Labels reuse numbers and § symbols across documents. **Read the owning doc** be
 - **Plan board** — Where **developers** open and review planning-mode `.plan.md` files in the plans folder `.sedea/operations/**/plans/**`).
 - **Path placeholders (`...`)** — In this document and R&D governance, `` `...` `` inside path examples (e.g. `.sedea/operations/.../plans/`) denotes **omitted segments**, not a folder named `...`. Substitute **`joint`**, **`operationsUserId`**, or a real **`slug`**. See **`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`** § *Path placeholders in documentation*.
 - **`.plan.md` files** — Standalone plan files at each hierarchy level (Master Plan, phase plans, PR plans); canonical location is under `.sedea/operations/**/plans/**`.
-- **PRD** — Product (or feature) Requirements Document — the prime input for the one-shot **Master Plan** (mode #1). **Which authoring flow** (`prd` mission vs **`plan and deliver`** + **`ad-hoc-prd`**) is decided in § *PRD routing (canonical)* above — not by filename alone.
+- **PRD** — Product (or feature) Requirements Document — the prime input for the one-shot **Master Plan** (mode #1). Every **`plan and deliver`** dispatch authors or validates PRD via **`author-prd`** (§§1–3) before **`planner`** — see § *PRD routing (canonical)*.
 - **Git worktree** — Isolated worktree used by the **`coding-session`** protocol branch when spinning up a coding agent.
 - **Protocol** — The **plan and deliver** mission (`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`, command phrase *plan and deliver*) — protocol branches and skills under `missions/plan-and-deliver/skills/` implement this document's cadence.
 
@@ -221,7 +216,8 @@ Labels reuse numbers and § symbols across documents. **Read the owning doc** be
 
 | Branch | Path | Role in this process |
 | --- | --- | --- |
-| `ad-hoc-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md` | Scaffold a minimal **Ad-Hoc PRD** (`ad_hoc_<slug>_<hex>.ad-hoc-prd.md`) under **`.sedea/operations/<operationsUserId>/docs/`** only — standalone upstream input for **`planner`**; Master Plan `.plan.md` is created afterward. Moving an Ad-Hoc PRD into **`joint/docs/`** for sharing is manual. |
+| `author-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md` | Squad Leader §3 child lane: gather evidence, draft or update a flexible PRD, developer approval — mandatory before **`planner`** on every **`plan and deliver`** dispatch. **`create`** writes under **`.sedea/operations/<operationsUserId>/docs/`** only. |
+| `ad-hoc-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md` | Minimal fix-scope PRD for **`debug-and-fix`** only — **not** **`plan and deliver`**. |
 | `planner` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/planner/SKILL.md` | PRD → **Master Plan** (mode #1). Drafts §§ 1–5 in the initial turn, including **`### Decomposition assessment`** and **`### Complexity score (plan-scope signal)`** under § 5. **High** complexity (overall score > 20) recommends **Route §6 → Delivery phases** — not withholding §6 — to split into lower-complexity phase plans via **`phase-planner`**. Follow-up moves use **AskQuestion** per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Sedea input channel* — run **`delivery-phases`** or **`pr-breakdown`** **inline** on the planner lane, draft §7 Caveats inline, revise sections, or commit plans when the user asks in the same message. |
 | `delivery-phases` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/delivery-phases/SKILL.md` | Decompose a focused **Master Plan** or **Phase plan** into delivery phases (mode #2). **`planner`** or **`phase-planner`** runs this skill **inline**; standalone dispatch may spawn a child lane. Runs **`new-plan`** **inline** per approved row. |
 | `pr-breakdown` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-breakdown/SKILL.md` | Decompose a focused **Master Plan** or **Phase plan** into PRs (mode #3 set-level). **`planner`** or **`phase-planner`** runs this skill **inline**; standalone dispatch may spawn a child lane. Runs **`new-plan`** **inline** (then inline **`pr-plan`**) per approved row. |

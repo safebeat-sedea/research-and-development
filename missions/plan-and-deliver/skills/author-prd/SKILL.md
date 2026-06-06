@@ -20,7 +20,7 @@ inputs:
     required: false
   sourceMaterials:
     type: array
-    description: Seed materials from Squad Leader intake (step 2.5); author-prd extends the ledger for remaining gaps.
+    description: Seed materials from Squad Leader intake (plan.mdc §2); author-prd extends the ledger for remaining gaps.
     required: false
     default: []
   sectionPolicy:
@@ -36,7 +36,8 @@ inputs:
     description: Current Mission Control operations user id for user-private operations paths.
     required: true
 warmUpRules:
-  - ".sedea/centers/research-and-development/missions/prd/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
   - ".sedea/centers/research-and-development/docs/development-process.md"
   - ".sedea/centers/research-and-development/rules/31_operations-user-id.mdc"
 ---
@@ -50,7 +51,7 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
 ## Inputs
 
 - `prdTitle`
-- `prdDescription` — required when spawned from the **prd** mission Squad Leader
+- `prdDescription` — required; collected on the Squad Leader lane in **plan.mdc** §2 before spawn
 - `operation`: `create` or `manage`
 - `targetPath` when supplied
 - `sourceMaterials` (optional seed materials)
@@ -64,8 +65,8 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
  - `create` drafts a new PRD.
  - `manage` updates or reviews an existing PRD.
  - `create` always resolves output under `.sedea/operations/<operationsUserId>/docs/`; do not create PRDs under `.sedea/operations/joint/docs/`.
-1b. **Leader intake guard** (spawned from **prd** mission only):
- - If `prdDescription` is missing or empty → end with `failure` and ask the Squad Leader to complete **plan.mdc** step **2.5** (do not draft).
+1b. **Leader intake guard** (spawned from **`plan and deliver`**):
+ - If `prdDescription` is missing or empty → end with `failure` and ask the Squad Leader to complete **plan.mdc** §2 intake (do not draft).
  - When `sourceMaterials` is empty and the user did not explicitly choose **no sources yet** on the leader lane → run step 3 (evidence loop) before drafting; **do not** infer goals, requirements, or acceptance criteria from `prdTitle` alone.
  - Treat `prdDescription` and leader `sourceMaterials` as authoritative seeds; ask only for gaps mandatory sections still lack.
 2. Initialize a source ledger:
@@ -99,7 +100,13 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
  - important gaps are reported but do not always block planning.
  - optional gaps do not block planning.
 8. Write the document when an output path is resolved, then re-read it and verify the required sections.
-9. End the skill run per **`## Completion (spawned)`** (spawned lane) or **`## Completion (inline)`** (same-lane run). Do not emit **`MC_DISPATCH_RESOLVED_V1`** — dispatch closure is the PRD Squad Leader only.
+9. **Refresh lane display** when spawn labels are generic — MCP **`mission_control_update_lane_display`** on this lane only (rule **50**).
+10. **Present for approval** — Recap path, `planningReadiness`, and gap summary. Use **`MC_PHASED_RESPONSE_V1`** with minimum options:
+    - **Approve PRD** — accept for **`planner`** on this dispatch
+    - **Revise PRD** — edit on this lane, return to step 10
+    - **More details for option _**
+    Do **not** treat the write alone as developer approval.
+11. **On approve** — Set `outputs.developerApprovedPrd: true`, emit terminal **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: terminal` and `continuationOwner: squad-leader`.
 
 ## Default section policy
 
@@ -228,7 +235,7 @@ Use this template as a starting point. Remove optional sections that do not appl
 
 ## Completion (spawned)
 
-The **prd** mission Squad Leader spawns this skill on a child lane (**`.sedea/centers/research-and-development/missions/prd/plan.mdc`** §3). A successful child result is **not** developer approval to continue the PRD mission — the Squad Leader still runs review (step 4).
+The **`plan and deliver`** Squad Leader spawns this skill on a child lane (**`plan.mdc`** §3). The **Author PRD agent** owns recap, approval, and revision (steps 10–11) — the Squad Leader does **not** duplicate approval on the leader lane.
 
 ### Host protocol line (required)
 
@@ -241,7 +248,9 @@ Top-level `status`: `success`, `partial`, `failure`, `aborted`, or `abandoned`.
 Required `outputs` fields:
 
 - `outputs.prdPath` — workspace-relative or absolute path to the written or updated PRD (omit or empty when no usable file)
+- `outputs.prdRef` — same as `prdPath` or `@path` form for **`planner`** seed
 - `outputs.prdTitle`
+- `outputs.developerApprovedPrd` — `true` only after **Approve PRD** on this lane
 - `outputs.sectionPolicy` — map of section → `mandatory` | `important` | `optional` | `not applicable`
 - `outputs.completedSections` — list of section ids or headings populated
 - `outputs.missingMandatorySections` — list blocking `planningReadiness: ready`
@@ -249,7 +258,11 @@ Required `outputs` fields:
 - `outputs.openQuestions` — unresolved decisions or contradictions
 - `outputs.sourceLedger` — attributed sources used in the draft
 - `outputs.planningReadiness` — `ready`, `partial`, or `blocked`
-- `outputs.recommendedNextAction` — when `planningReadiness` is `ready` or user-accepted `partial`, tell the developer to start a **new** Mission Control dispatch: center **research-and-development**, mission **`plan and deliver`**, command phrase **`plan and deliver`** (supply PRD `@path` or link in the opening message)
+- `outputs.continuationOwner` — `author-prd-agent` while approval pending; `squad-leader` when terminal approved
+- `outputs.continuationStatus` — `active` until approval; `terminal` when approved or abandoned
+- `outputs.recommendedNextAction` — when approved, Squad Leader auto-chains **`plan.mdc`** §4 seed + §5 **`planner`** on **this dispatch**
+
+After initial write (step 8), before approval: emit **`AGENT_RESULT_RESPONSE_V1`** with `developerApprovedPrd: false`, `continuationOwner: author-prd-agent`, `continuationStatus: active` so the Squad Leader **acknowledges only**.
 
 Status guidance:
 
@@ -262,9 +275,7 @@ On spawned lanes, put **`MC_PHASED_RESPONSE_V1`** on **line 1** and **`AGENT_RES
 
 ## Completion (inline)
 
-Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
-
-The **prd** mission normally spawns this skill (Squad Leader §3). If another invoker runs inline, use the same field semantics as **`## Completion (spawned)`** `outputs` in prose only.
+Report **`## Completion (spawned)`** `outputs` in prose. Do **not** emit host protocol lines. **`plan and deliver`** runs this skill **spawned only**.
 
 ## Safety constraints
 
