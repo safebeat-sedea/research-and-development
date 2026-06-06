@@ -50,7 +50,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 
 - When a step says the developer will review work **outside** chat (GitHub PR, diff, staging), end the turn with **parked** structured choice — not “wait for the user” / “come back when done” prose alone.
 - Gate **`options`** must match the skill’s next branches (approve, revise, defer, commit when applicable, **More details for option _**).
-- Reference **`coding-session/SKILL.md`** § *Post-create-pr handoff gate* and **`pr-review/SKILL.md`** Step **4** for ship-path examples.
+- Reference **`coding-session/SKILL.md`** § *Post-create-pr handoff gate* and **`pr-review/SKILL.md`** Step **4** § *Build disposition options* for ship-path examples (contextual options from triage counts — omit inert Must/Should rows).
 
 **Reference implementations (planning):**
 
@@ -62,7 +62,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 | **`phase-planner`** | §4f echo / §5c route modal; Step **5f** after **`prPlanHandoffSkipped`** | §5b inline decompose / Step **5f** **`coding-session`** spawn |
 | **`new-plan`** | stub + parent link + populator gate | populator spawn |
 
-**Ship and ops skills:** **`coding-session`** (worktree-open, inline bootstrap wait, implementation continuation gate, **pre-PR ship gate** — no push/create-PR modals until **`pre-pr-review`** **`go`** except executive override, **auto** pre-PR spawn after cut-point + Before deploy, **auto** inline **create-pr** on clean **go**, **auto** post-merge cleanup when merged, inline **deploy-walk**, inline **plan-reconcile**), **`worktree-bootstrap`**, **`pre-pr-review`** — structured choice for gates that still require a developer pick (cut-point, review feedback, post-create-PR, remainder); recap for status, diff, or dry-run report only. Prefer **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** when recap and modal belong in one message. Gate detail: **`coding-session/SKILL.md`** § *Pre-PR ship gate (push/PR)* and § *Implementation continuation gate*.
+**Ship and ops skills:** **`coding-session`** (worktree-open, inline bootstrap wait, implementation continuation gate, **pre-PR ship gate** — no push/create-PR modals until **`pre-pr-review`** **`go`** except executive override, **auto** pre-PR spawn after cut-point + Before deploy, **auto** inline **create-pr** on clean **go**, **auto** post-merge cleanup when merged, inline **deploy-walk**, inline **plan-reconcile**), **`worktree-bootstrap`**, **`pre-pr-review`** — structured choice for gates that still require a developer pick (cut-point, review feedback, post-create-PR, remainder); recap for status, diff, or dry-run report only. **`pr-review`** Step **4** — disposition gate uses **contextual** `options` from triage counts (see § *Build disposition options*). Prefer **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** when recap and modal belong in one message. Gate detail: **`coding-session/SKILL.md`** § *Pre-PR ship gate (push/PR)* and § *Implementation continuation gate*.
 
 **Lane pick (no resolved target):** emit *Where we are now in the plan tree* snapshot, then structured choice per **30_planning-target-resolution** § *Sedea input channel* (phased or split — not prose menus).
 
