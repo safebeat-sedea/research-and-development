@@ -170,17 +170,11 @@ Do **not** apply fixes yet. First report the classification; then open the Step 
 
 Run this gate only after Step 3a has prepared proposed follow-ups and Step **4** has printed the classification report.
 
-Before applying any code, plan, or GitHub changes, open the **parked disposition gate** in Step **4** (`MC_PHASED_RESPONSE_V1` or **AskQuestion** with the option set below). **Do not** duplicate the gate in prose.
+Before applying any code, plan, or GitHub changes, open the **parked disposition gate** in Step **4** (`MC_PHASED_RESPONSE_V1` or **AskQuestion** with the **contextual** option set in Step **4** § *Build disposition options*). **Do not** duplicate the gate in prose.
 
-Required options:
+**Contextual options (binding):** List **only** disposition actions valid for this PR's Step 3 classification counts — see Step **4** § *Build disposition options*. **Forbidden:** showing **`apply-must`** or **`apply-must-should`** when **`mustCount`** and **`shouldCount`** are both **0**; showing **`follow-ups-only`** when **`followUpCount`** is **0**. **`more-details`** is always included.
 
-1. **Apply Must fixes** — edit only PR-blocking comments.
-2. **Apply Must + Should fixes** — edit blockers and approved non-blocking fixes.
-3. **Follow-ups only** — append out-of-scope follow-ups, no source edits.
-4. **Skip / reject selected comments** — developer provides rationale before GitHub replies.
-5. **More details for option _**
-
-No source edits, plan edits, commits, pushes, GitHub replies, resolves, minimizes, or review re-requests may happen until the developer chooses an approval option.
+No source edits, plan edits, commits, pushes, GitHub replies, resolves, minimizes, or review re-requests may happen until the developer chooses an approval option shown in the modal.
 
 When the approved scope includes **Follow-ups only** or includes any **Skipped → follow-up** comments, append only those approved bullets to the linked PR plan's `## Follow-ups` section before Step 5. If the developer rejects a proposed follow-up, do not mutate the plan or mention it as captured in GitHub reconciliation.
 
@@ -215,17 +209,45 @@ Print **every** comment in its original form (quote the body). For each one, sta
 
 Do **not** reply to, resolve, or minimize any threads yet.
 
-**Parked continuation (binding):** After the report, emit **`MC_PHASED_RESPONSE_V1`** (preferred on **`coding-session`** spawned lanes — sentinel line **1**, report recap in **`display.markdown`**) or the **AskQuestion** tool with the Step **3b** option set. The developer may review on GitHub or inspect local diffs **while the modal stays open**; they resume by **selecting an option**, not free-form chat.
+**Parked continuation (binding):** After the report, emit **`MC_PHASED_RESPONSE_V1`** (preferred on **`coding-session`** spawned lanes — sentinel line **1**, report recap in **`display.markdown`**) or the **AskQuestion** tool with the **contextual** Step **3b** option set from § *Build disposition options* below. The developer may review on GitHub or inspect local diffs **while the modal stays open**; they resume by **selecting an option**, not free-form chat.
 
-| Option id (illustrative) | Label (brief) |
-|--------------------------|---------------|
-| `apply-must` | Apply Must fixes only |
-| `apply-must-should` | Apply Must + Should fixes |
-| `follow-ups-only` | Follow-ups only — no source edits |
-| `skip-reject` | Skip / reject selected comments |
-| `more-details` | More details for option _ |
+#### Build disposition options (contextual — binding)
 
-**Forbidden:** “Review the PR and tell me when to continue”, “wait for the user to review”, or ending the turn without structured choice when dispositions need approval.
+After Step 3 classification, compute:
+
+| Variable | Rule |
+|----------|------|
+| **`mustCount`** | Comments classified **Must fix** |
+| **`shouldCount`** | Comments classified **Should fix** |
+| **`followUpCount`** | Comments classified **Skipped → follow-up** |
+| **`skippedOnly`** | **`mustCount === 0`** and **`shouldCount === 0`** and **`followUpCount === 0`** and at least one **Skipped (no follow-up)** |
+
+**`display.markdown`** (required before modal):
+
+1. Triage counts — one line or table: Must / Should / Skipped (no follow-up) / Skipped → follow-up.
+2. **Omitted-options explainer** when any standard option is hidden — e.g. *"Apply Must / Apply Must + Should are not shown — 0 Must and 0 Should items on this PR."*
+
+**`askQuestion.options`** — include **only** applicable rows (always end with **`more-details`**):
+
+| Option id | Include when | Label (brief) |
+|-----------|--------------|---------------|
+| `apply-must` | **`mustCount > 0`** | Apply Must fixes only |
+| `apply-must-should` | **`mustCount > 0` or `shouldCount > 0`** | Apply Must + Should fixes |
+| `follow-ups-only` | **`followUpCount > 0`** | Follow-ups only — no source edits |
+| `skip-reject` | Triage non-empty | When **`skippedOnly`**: *Skip / reject — reconcile on GitHub (recommended)*; else *Skip / reject selected comments* |
+| `more-details` | Always | More details for option _ |
+
+**Act mapping unchanged:** selecting an option not shown in the modal is impossible; do not treat hidden options as implicit consent.
+
+**Example fixtures** (illustrative `askQuestion.options` after counts):
+
+| Scenario | Typical options |
+|----------|-----------------|
+| Must present | `apply-must`, `apply-must-should`, `skip-reject`, `more-details` |
+| Skip-only (0 Must / 0 Should / 0 follow-up) | `skip-reject` (recommended), `more-details` |
+| Mixed (Must + follow-up) | `apply-must`, `apply-must-should`, `follow-ups-only`, `skip-reject`, `more-details` |
+
+**Forbidden:** “Review the PR and tell me when to continue”, “wait for the user to review”, fixed five-option menus when counts make options inert, or ending the turn without structured choice when dispositions need approval.
 
 **Act** (edits, plan append, GitHub reconciliation) runs on the **developer's response turn** after modal selection — not in the same turn as the parked gate.
 
