@@ -11,7 +11,8 @@ This mission uses **three execution shapes** (see **`.sedea/centers/sedea/skills
 | **`planner`** | **Spawned only** — new child lane | Squad Leader §5 (`AGENT_RUN_REQUEST_V1`) | **`AGENT_RESULT_RESPONSE_V1`** on child lane |
 | **`pr-plan`** | **Inline only** — same lane as invoker | **`new-plan`** step 4 (`parentAgentRole: new-plan-agent`) | **`## Completion (inline)`** — no `AGENT_RESULT_RESPONSE_V1` for **`pr-plan`** |
 | **`pr-plan`** → **`coding-session`** | Spawn after §5c **Start coding session** (or **`phase-planner`** Step **5f** when inline **`pr-plan`** skipped §5c) | **`pr-plan`** lane, or **`phase-planner`** after **`prPlanHandoffSkipped`** | Child **`coding-session`** uses **`AGENT_RESULT_RESPONSE_V1`** |
-| **`ad-hoc-prd`** | Spawned | Squad Leader §3 | Child terminal |
+| **`author-prd`** | **Spawned only** | Squad Leader §3 | Child terminal |
+| **`ad-hoc-prd`** | Spawned (**`debug-and-fix`** only — not plan-and-deliver §3) | debug-and-fix Squad Leader | Child terminal |
 | **`delivery-phases`**, **`pr-breakdown`**, **`new-plan`** | Inline on **`planner`** / **`phase-planner`** lane | Parent planning skill | Inline completion merged into parent |
 | **`phase-planner`** | Spawned from inline **`new-plan`** (optional) | **`new-plan`** | Child terminal; **owns phase delivery** on its lane until **`phaseShipComplete`** or explicit defer/abandon — Master Plan lane ack-only meanwhile |
 | **`phase-planner` + `autoContinue: true`** → inline **`pr-breakdown`** (hoist K=1) | Inline on **`phase-planner`** lane after Step **5b** route approval | **`phase-planner`** | May **skip **`pr-breakdown`** Step **6** modal** when **`skipPrBreakdownApprovalModal: true`** — same-turn **`approve-list`** act-after-select matches **`planner`** **`approve-list`** auto-expand semantics |
@@ -69,11 +70,11 @@ Mission Control delivery for skills that mix long plan output with structured us
 
 ## Planning spawn (Squad Leader §3, §5, decomposition tree)
 
-Squad Leader steps **§3** and **§5** spawn child lanes for **`ad-hoc-prd`** and **`planner`**. **`planner`** runs **`delivery-phases`**, **`pr-breakdown`**, and **`new-plan`** **inline**. **`phase-planner`** runs **`delivery-phases`** and **`pr-breakdown`** **inline** on its child lane. Inline **`new-plan`** runs **`pr-plan`** inline and may still spawn **`phase-planner`**. **Depth-first expansion:** parent lists show all rows; **`new-plan`** runs only for ship-eligible indices (phases sequential; PRs per **`### Sequencing`** stages) — see **development-process.md** § *Depth-first plan-tree traversal* and rule **30** § *Depth-first expansion eligibility*. Skills that support both modes still document **`## Completion (spawned)`** and **`## Completion (inline)`** — use **§ Normative execution mode** above for which mode applies on this mission.
+Squad Leader steps **§3** and **§5** spawn child lanes for **`author-prd`** and **`planner`**. **`planner`** runs **`delivery-phases`**, **`pr-breakdown`**, and **`new-plan`** **inline**. **`phase-planner`** runs **`delivery-phases`** and **`pr-breakdown`** **inline** on its child lane. Inline **`new-plan`** runs **`pr-plan`** inline and may still spawn **`phase-planner`**. **Depth-first expansion:** parent lists show all rows; **`new-plan`** runs only for ship-eligible indices (phases sequential; PRs per **`### Sequencing`** stages) — see **development-process.md** § *Depth-first plan-tree traversal* and rule **30** § *Depth-first expansion eligibility*. Skills that support both modes still document **`## Completion (spawned)`** and **`## Completion (inline)`** — use **§ Normative execution mode** above for which mode applies on this mission.
 
 | Skill | Typical invoker | Squad Leader ledger |
 |-------|-----------------|---------------------|
-| `ad-hoc-prd` | Squad Leader §3 | Child lane owns PRD recap + approval (steps 5–7); leader §4 only after `terminal` + `developerApprovedPrd: true`; no nested child lanes |
+| `author-prd` | Squad Leader §3 | Child lane owns PRD recap + approval (steps 10–11); leader §4 only after `terminal` + `developerApprovedPrd: true`; no nested child lanes |
 | `planner` | Squad Leader §5 | Seed ledger; §6 ack when `continuationOwner: master-plan-agent` |
 | `phase-planner` | inline **`new-plan`** spawn | Runs **`delivery-phases`** / **`pr-breakdown`** inline on **its child lane**; owns phase subtree through ship-complete; **`planner`** ack-only while **`continuationOwner: phase-planner-agent`** is active |
 | `delivery-phases` | **`planner`** or **`phase-planner` inline** | Runs **`new-plan`** inline on invoker lane |
@@ -214,10 +215,10 @@ After emitting **`AGENT_RESULT_RESPONSE_V1`**, **stop on that lane** for the cur
 
 | Skill | Explicit “Stop after the terminal line” in `## Completion (spawned)`? | Notes |
 |-------|------------------------------------------------------------------------|--------|
-| `author-prd` (prd mission) | Yes | Also forbids downstream planning spawns |
+| `author-prd` | Yes | Also forbids downstream planning spawns |
 | `pr-plan` | Yes | May spawn **`coding-session`** in §5d before terminal (standalone) or inline under **`new-plan`**; one spawn per turn |
 | `planner` | Yes | Procedure stop before terminal when `continuationStatus: active`; Step 7 runs **`delivery-phases`** / **`pr-breakdown`** inline on **later** user messages only; **`continuationStatus: terminal`** blocked while **`caveatsApprovalStatus: pending`** (§7 approve gate — see **`planner/SKILL.md`** *Draft §7 Caveats*) |
-| `delivery-phases`, `pr-breakdown`, `new-plan`, `ad-hoc-prd` | Yes | `delivery-phases` / `pr-breakdown`: inline **`new-plan`** under planner; `new-plan`: inline under decomposition; `ad-hoc-prd`: active result after write, terminal only after developer approval; see each skill § *Completion (spawned)* |
+| `delivery-phases`, `pr-breakdown`, `new-plan` | Yes | `delivery-phases` / `pr-breakdown`: inline **`new-plan`** under planner; `new-plan`: inline under decomposition; see each skill § *Completion (spawned)* |
 | Ship chain (`coding-session`, `pre-pr-review`) | Yes | Inline ship skills (`create-pr`, `deploy-walk`, `plan-reconcile`, `pr-review`) — see **`## Completion (inline)`** |
 | `phase-planner` | Yes | Runs **`delivery-phases`** / **`pr-breakdown`** inline; may spawn nested **`phase-planner`** or **`coding-session`** |
 
@@ -257,7 +258,7 @@ Do **not** re-add omitted paths to **`pre-pr-review`** frontmatter without re-ch
 
 Mission Control **`skillResolver`** parses YAML frontmatter with strict unique keys. **`inputs`** must use **2-space** nesting (input name → field keys), not single-space flat keys — flat `inputs` breaks spawn with `skill-not-found` / duplicate key errors.
 
-**Canonical shape** — copy from **`missions/prd/skills/author-prd/SKILL.md`**:
+**Canonical shape** — copy from **`missions/plan-and-deliver/skills/author-prd/SKILL.md`**:
 
 ```yaml
 inputs:

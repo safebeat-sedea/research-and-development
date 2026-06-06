@@ -366,7 +366,7 @@ When inline under **`phase-planner`**, include **`invokerRole: phase-planner-age
 
 - Report **`## Completion (inline)`** to the invoker while **`implementationHandoffStatus`** is still **`not-offered`** (§5c not yet shown) **unless** **`skipPrPlanHandoffModal: true`**.
 - Bubble **`readyForImplementation: true`** upstream and return to **`planner`** Step **7b** master-plan menus without offering §5c on **this** lane first **unless** **`skipPrPlanHandoffModal: true`** (then include **`prPlanHandoffSkipped: true`** in inline completion).
-- Treat Squad Leader §2 **existing PRD** intake (no session **`ad-hoc-prd`**) as permission to skip §5c — PRD source does **not** change the **`pr-plan`** → **`coding-session`** handoff chain.
+- Skip §5c based on PRD **`operation: manage`** or a linked `@path` alone — PRD source does **not** change the **`pr-plan`** → **`coding-session`** handoff chain.
 
 Set **`implementationHandoffStatus: "offered"`** when §5c modal is emitted; **`deferred`** when the developer picks **`defer`**; **`spawned-coding-session`** after §5d.
 
