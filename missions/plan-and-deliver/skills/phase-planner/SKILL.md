@@ -362,6 +362,8 @@ Path: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/
 | `routeLock` | `"pr-breakdown"` |
 | `parentAgentRole` | `"phase-planner-agent"` |
 | `ledgerParent`, `decompositionAssessment` | When known |
+| `upstreamRouteApproved` | `true` after Step **5b** **Approve phase plan and route** (or **Hoist single-PR to ancestor**) when `autoContinue` is not `false` |
+| `skipPrBreakdownApprovalModal` | `true` when `autoContinue` is not `false`, hoist path is clear (parent hint + **`### Decomposition assessment`** agree, **K = 1**) |
 
 ## Step 5 — Resolve next decomposition route
 
@@ -422,6 +424,16 @@ When **`hoistRequired`**, add:
 - **PR breakdown on this phase plan** — sets `decomposeOnPhasePlan: true` on the inline **`pr-breakdown`** handoff (override; not recommended after **`delivery-phases`** → **`phase-planner`**)
 
 Only **Approve phase plan and route** (with hoist when single-PR) authorizes inline decomposition handoff. Do not treat agreement between parent hint and assessment as developer approval.
+
+### Cascade approval when `autoContinue: true` (binding)
+
+When **`autoContinue`** is not `false` and the developer selects **Approve phase plan and route** or **Hoist single-PR to ancestor** (Step **5b**), that approval **propagates** as upstream consent for inline decomposition on **this same turn** — do **not** stop after entering inline **`pr-breakdown`** when the hoist path is clear (**K = 1**, depth-first eligible for PR index **1**).
+
+Pass **`upstreamRouteApproved: true`** and **`skipPrBreakdownApprovalModal: true`** on the inline **`pr-breakdown`** handoff per [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b--5a-hoist) when route signals agree on single-PR hoist.
+
+**Forbidden:** Opening **`pr-breakdown`** Step **6** structured choice when **`skipPrBreakdownApprovalModal: true`** and PR index **1** is depth-first eligible per **30_planning-target-resolution**.
+
+**Required:** Same-turn **`approve-list`** act-after-select per **`pr-breakdown`** Step **6** (inline **`new-plan`** index **1** with `autoChainFirstPr: true`, then inline **`pr-plan`**) — merge completion per Step **5e**. Treat **`planner`** Step **7** route approval and **`phase-planner`** Step **5b** route approval as **equivalent upstream consent** for first PR expand on the decomposition lane.
 
 After inline handoff begins, merge **`## Completion (inline)`** from the decomposition skill. If inline **`new-plan`** / **`pr-plan`** opened **`phase-planner`** or **`coding-session`** child lanes, keep `continuationStatus: "active"` and aggregate per step **5e**. Do not return terminal success upstream while those child lanes are active.
 
