@@ -41,6 +41,8 @@ R&D delivery agents are governed by:
 - **Mission plans** — `missions/<missionSlug>/plan.mdc`
 - **Skills** — `missions/<missionSlug>/skills/` and the **Protocol branches** table below
 
+**Lane warm-up manifest contract.** Per-lane warm-up semantics (`bootstrapRules`, `laneRules`, `skillWarmUp`, `effectiveWarmUp`, reload obligations) are normative in **`.sedea/centers/sedea/docs/lane-manifest-contract.md`**, with spawn/reload bindings in **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Lane warm-up manifest (spawn and reload)*. R&D plans and skills should reference that contract when declaring role-specific **`laneRules`** — do not flip Sedea center **`alwaysApply`** frontmatter until the host resolver and parity gate ship (reduce-alwaysapply-governance-load PRD §5.0).
+
 **Audits and gap reports** must **not** flag missing mission-level rule files under this center. To change **this center's** process or rules, use **`improve center rules`** on **`research-and-development`** (`center-maintenance` on the **sedea** center). For **Sedea platform** governance (hosting layout, git gate, Safeguard), use **`improve center rules`** on **`sedea`**. To change **repo** agent guidance in a hosting repo, use **`.cursor/rules/*.mdc`** per **`.sedea/centers/research-and-development/rules/40_maintain-rules.mdc`** and per-PR plan **§ 5. Repo rules impact**.
 
 ### Center submodule git (two repositories)
