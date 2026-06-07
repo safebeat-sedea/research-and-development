@@ -413,6 +413,8 @@ When route is **`pr-breakdown`** (multi on **this** phase plan **or** single-PR 
 
 **Required:** Step **5b** structured choice and **`autoContinue`** cascade approval still run **on this lane** before inline **`pr-breakdown`**; merge completion per Step **5e**. After inline **`pr-plan`** with **`prPlanHandoffSkipped`**, Step **5f** owns implementation handoff on the **same** lane.
 
+**Scope (does not apply):** When **no** active **`phase-planner`** child owns the phase row, **`planner`** Step **7** **`route-6`** → inline **`pr-breakdown`** on the Master Plan (**`parentAgentRole: master-plan-agent`**) remains normative — including direct Master Plan **PR breakdown** with no phase layer.
+
 ### 5b — Hand off next branch inline when clear
 
 When this skill is running as a spawned child and `autoContinue` is not `false`, run the next decomposition branch **inline on this lane** **only** when route signal is clear:
