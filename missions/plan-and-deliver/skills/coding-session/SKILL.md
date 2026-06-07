@@ -77,6 +77,11 @@ inputs:
       handoff). Default false for Mission Control spawn from pr-plan — same lane implements.
     required: false
     default: false
+laneRules:
+  - ".sedea/centers/sedea/rules/2_ask-question-instructions.mdc"
+  - ".sedea/centers/sedea/rules/6_git-commit-push-gate.mdc"
+  - ".sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md"
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"

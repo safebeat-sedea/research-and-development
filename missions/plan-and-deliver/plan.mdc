@@ -290,6 +290,17 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 
 **Dispatch display refresh (Squad Leader).** When dispatch scope is readable (opening command or confirmed feature title from §4), call MCP **`mission_control_update_dispatch_display`** with non-empty **`dispatchTitle`** (≤64 chars) and optional **`dispatchDescription`** / **`dispatchHoverDescription`** (≤512 chars). **Skip** when current dispatch chrome already matches. **Forbidden:** **`mission_control_update_lane_display`** to relabel **child** slots from the leader lane; hand-editing **`dispatch-tab.v1.json`**. See [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc).
 
+**Squad Leader `laneRules` (binding).** Mission protocol or host config supplies minimum governance for the **leader lane** beyond bootstrap — see **`missions/plan-and-deliver/skills/README.md`** § *Definitive `laneRules`*. Definitive paths for **`plan and deliver`** Squad Leader:
+
+| Path | Role |
+|------|------|
+| `.sedea/centers/sedea/rules/2_ask-question-instructions.mdc` | Structured choice on every turn |
+| `.sedea/centers/sedea/rules/4_mission.mdc` | Mission protocol, spawn/reload manifest |
+| `.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc` | This mission plan (§§1–8) |
+| `.sedea/centers/research-and-development/docs/development-process.md` | Cadence and protocol branches |
+
+Child spawns must satisfy the same README table for the target skill role (skill frontmatter **`laneRules`** or run-request **`laneRules`**).
+
 ### 1. Open dispatch
 
 - **Type:** Simple skill execution

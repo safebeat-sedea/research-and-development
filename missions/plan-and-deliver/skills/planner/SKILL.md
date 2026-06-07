@@ -32,6 +32,11 @@ inputs:
     description: Optional related document entries with role and link/path.
     required: false
     default: []
+laneRules:
+  - ".sedea/centers/sedea/rules/2_ask-question-instructions.mdc"
+  - ".sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/planner/SKILL.md"
+  - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc"
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
