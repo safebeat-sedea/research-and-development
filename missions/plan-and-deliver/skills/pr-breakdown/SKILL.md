@@ -88,6 +88,17 @@ The procedure below is a hard contract — do **not** skip steps, re-order them,
 
 The **developer** picks the next move per **30_planning-target-resolution** § *Sedea input channel*.
 
+### Inline invoker lane (binding)
+
+When **`parentAgentRole`** is **`phase-planner-agent`**, this skill runs **inline on the active phase-planner child lane** — even when **`targetPlanPath`** is the decomposition **ancestor** (Master Plan) after single-PR hoist (`hoistFromPhasePath` set). The **write target** (which `.plan.md` file is edited) is **not** the **execution lane**.
+
+**Forbidden:**
+
+- Prose redirect to the **`planner`** lane, **`planner`** Step **7**, or *"open the Master Plan agent"* because **`targetPlanPath`** names the ancestor Master Plan.
+- Treating ancestor file paths as permission to hand decomposition back to **`master-plan-agent`** while **`phase-planner-agent`** invoked this skill inline.
+
+**Required:** Report **`## Completion (inline)`** to the **phase-planner** invoker on the **same** child lane; merge fields per **`phase-planner/SKILL.md`** Step **5e**.
+
 ### Inline handoff — **pr-breakdown** → **`new-plan`** (step 6 act-after-select)
 
 When **`parentAgentRole`** is **`master-plan-agent`** or **`phase-planner-agent`** (this skill inline under **`planner`** or **`phase-planner`**), run **`new-plan`** **inline on this lane** for **eligible** row index(es) only — **do not** emit **`AGENT_RUN_REQUEST_V1`** for **`new-plan`**. **Depth-first gate:** parse **`### Sequencing`** per **development-process.md** § *Depth-first plan-tree traversal* — expand only PR indices that are **ship-eligible** (sequential: lowest pending **N** whose prior PR in the chain is ship-complete; parallel stage: all pending indices in the current stage once the prior stage is fully ship-complete). Load `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`, construct inline context per eligible row from the table below, follow that skill’s steps (including inline **`pr-plan`**), and merge each **`## Completion (inline)`** into this skill’s ledger (`childRows`, `spawnedPlans`, `activeLanes`, `openLedgerEntries`, `remainingTasks`). Inline **`new-plan`** may still spawn **`coding-session`** via inline **`pr-plan`** §5d.
@@ -141,9 +152,9 @@ Run **after** stage verification when **all** of the following hold:
 
 **Stop** (do not draft § 5 PR breakdown on this phase plan):
 
-> *"Single-PR **`PR breakdown`** after **`phase-planner`** should **hoist** to the decomposition **ancestor** (the plan that owns this phase's **`Delivery phases`** row), not run set-level **`pr-breakdown`** on this phase file. Re-run **`pr-breakdown`** on the ancestor with `hoistFromPhasePath` / `hoistFromPhaseSlug`, `scopeParentIndex`, and `prBreakdownShape: \"single\"` — or set `decomposeOnPhasePlan: true` only when the developer explicitly wants a one-PR § 5 on this phase plan."*
+> *"Single-PR **`PR breakdown`** after **`phase-planner`** should **hoist** to the decomposition **ancestor** (the plan that owns this phase's **`Delivery phases`** row), not run set-level **`pr-breakdown`** on this phase file. Re-run **`pr-breakdown` inline on this phase-planner lane** with `targetPlanPath` = ancestor, plus `hoistFromPhasePath` / `hoistFromPhaseSlug`, `scopeParentIndex`, and `prBreakdownShape: \"single\"` — **do not** switch to the **`planner`** lane. Or set `decomposeOnPhasePlan: true` only when the developer explicitly wants a one-PR § 5 on this phase plan."*
 
-Return `partial` with `remainingTasks` naming the hoist when spawned from **`phase-planner`** without ancestor retargeting.
+Return `partial` with `remainingTasks` naming the hoist when **`phase-planner`** inline handoff omitted ancestor retargeting — **not** as permission to redirect to **`planner`**.
 
 When **`hoistFromPhasePath`** **is** set, the **target** must be the **ancestor** (Master or Phase plan whose **`Delivery phases`** list contains item **`scopeParentIndex`** for the hoisted phase). The phase file at **`hoistFromPhasePath`** is **scope-only** — do not use it as `targetPlanPath`. Acknowledge: *"Hoist mode: ancestor `<target-slug>`, phase scope `<hoistFromPhaseSlug>`, row N=<index>."* Then continue; **step 3.6** runs after step 3.
 
@@ -177,7 +188,7 @@ Acknowledge the state in one line.
 Run when **`hoistFromPhasePath`** and **`scopeParentIndex`** are set and **`prBreakdownShape`** is `"single"` (or step 4 would route to **step 5s**).
 
 1. Read the phase plan at **`hoistFromPhasePath`** in full. Use §§ 2–4 and **`### Decomposition assessment`** as the **only** scope for the single PR (not the ancestor's full feature scope).
-2. Read the **target** (ancestor) plan. Locate **`## 6. Delivery phases`** (Master) or **`## 5. Delivery phases`** (Phase parent). If the ancestor dual-title is still `Delivery phases | PR breakdown` with `_TBD_` list, **stop** — run **`delivery-phases`** on the ancestor first, then re-enter hoist.
+2. Read the **target** (ancestor) plan. Locate **`## 6. Delivery phases`** (Master) or **`## 5. Delivery phases`** (Phase parent). If the ancestor dual-title is still `Delivery phases | PR breakdown` with `_TBD_` list: when **`parentAgentRole`** is **`phase-planner-agent`**, run **`delivery-phases`** **inline on this same phase-planner lane** on the ancestor (or close with structured choice to defer) — **forbidden** to redirect to the **`planner`** lane. When **`master-plan-agent`**, run **`delivery-phases`** inline on the **`planner`** lane or stop with structured choice. Then re-enter hoist.
 3. Match **`scopeParentIndex`** to the numbered row whose **`Plan:`** links the hoisted phase plan (or whose title matches **`hoistFromPhaseSlug`** / phase `name:`). If no row matches, return `partial` and report the index mismatch.
 4. **`StrReplace`** on the ancestor — update **only** that row:
  - Set the **Decomposition decision** sub-bullet to **`PR breakdown`**.

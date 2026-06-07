@@ -402,6 +402,19 @@ When **`hoistRequired`** is true (route `pr-breakdown-single`):
 
 When route is `pr-breakdown-multi`, **`hoistRequired`** is false — run **`pr-breakdown`** **inline** on **this** phase plan with `prBreakdownShape: "multi"` per [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b--5a-hoist).
 
+### 5b-decompose — lane ownership (binding)
+
+When route is **`pr-breakdown`** (multi on **this** phase plan **or** single-PR **hoist** on the **decomposition ancestor**), run **`pr-breakdown`** **inline on this phase-planner lane** with **`parentAgentRole: "phase-planner-agent"`** — even when **`targetPlanPath`** / write targets point at the ancestor Master Plan file.
+
+**Forbidden:**
+
+- Telling the developer to run **`pr-breakdown`** on the **`planner`** lane, open the Master Plan agent, or return to **`planner`** Step **7** / **`route-6`** because the hoist or PR list writes target the ancestor plan file.
+- Prose redirect such as *"switch to the planner lane for **`pr-breakdown`"* — the **invoker lane** stays **phase-planner**; only the **file path** may be the ancestor.
+
+**Required:** Step **5b** structured choice and **`autoContinue`** cascade approval still run **on this lane** before inline **`pr-breakdown`**; merge completion per Step **5e**. After inline **`pr-plan`** with **`prPlanHandoffSkipped`**, Step **5f** owns implementation handoff on the **same** lane.
+
+**Scope (does not apply):** When **no** active **`phase-planner`** child owns the phase row, **`planner`** Step **7** **`route-6`** → inline **`pr-breakdown`** on the Master Plan (**`parentAgentRole: master-plan-agent`**) remains normative — including direct Master Plan **PR breakdown** with no phase layer.
+
 ### 5b — Hand off next branch inline when clear
 
 When this skill is running as a spawned child and `autoContinue` is not `false`, run the next decomposition branch **inline on this lane** **only** when route signal is clear:
@@ -527,7 +540,7 @@ After §§ 1–4 are drafted on this lane, **this phase-planner child lane owns 
 **Owns on this lane (through ship-complete or explicit defer/abandon):**
 
 - Route approval after §§ 1–4 (**Step 5b** / **5c** structured choice)
-- Inline **`delivery-phases`** / **`pr-breakdown`** on this phase plan (including **§ 5a-hoist**)
+- Inline **`delivery-phases`** / **`pr-breakdown`** on this phase plan **or** on the decomposition **ancestor** when **§ 5a-hoist** applies (**§ 5b-decompose** — invoker lane stays **phase-planner**)
 - Inline **`new-plan`** / **`pr-plan`** and nested **`phase-planner`** / **`coding-session`** spawns from that subtree
 - Per-PR and phase ship aggregation (**Step 5e**)
 
@@ -541,7 +554,7 @@ After §§ 1–4 are drafted on this lane, **this phase-planner child lane owns 
 
 - Returning **`continuationStatus: terminal`** immediately after §§ 1–4 draft or route approval when inline decomposition or child lanes remain — use **`active`** and keep **`continuationOwner: "phase-planner-agent"`**
 - Emitting a terminal line that causes **`planner`** Step **7b** to offer **`route-6`**, **`pr-breakdown`**, or phase-scoped **`expand-eligible`** / **`expand-next-eligible`** for work this lane still owns
-- Telling the developer to continue phase decomposition on the **Master Plan** lane when this **phase-planner** child lane is open
+- Telling the developer to continue phase decomposition on the **Master Plan** lane when this **phase-planner** child lane is open — including *"run **`pr-breakdown`** on the **`planner`** lane"* or *"return to Master Plan agent / Step 7"* when **§ 5b-decompose** applies (ancestor **`targetPlanPath`** does **not** transfer ownership to **`planner`**)
 
 When **`AGENT_RESULT_RESPONSE_V1`** bubbles to inline **`new-plan`** / **`delivery-phases`** / **`planner`**, parents **acknowledge only** until **`phaseShipComplete`** or explicit defer/abandon — see **`new-plan`** step **5**, **`delivery-phases`** step **6b**, and **`planner`** Step **7b** *Phase-planner child active*.
 
