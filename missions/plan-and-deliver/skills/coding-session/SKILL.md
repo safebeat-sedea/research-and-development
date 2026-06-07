@@ -1,12 +1,11 @@
 ---
 name: coding-session
 description: >-
- **Coding session** protocol branch: **create** the worktree with shell **`git worktree add`**
- only (never **`sedea_add_worktree_folder`** for creation), record worktrees and session focus
- in the plan sidecar via plan-state.mjs, **attach** the worktree with MCP
- **`sedea_add_worktree_folder` only** (never editor Add Folder to Workspace), then run
- **`worktree-bootstrap`** **inline** on this lane
- (mandatory wait before any implementation) via [`worktree-bootstrap/SKILL.md`](../worktree-bootstrap/SKILL.md).
+ **Coding session** protocol branch: run center **`worktree-setup.sh`** from **`HOSTING_ROOT`**
+ (never **`sedea_add_worktree_folder`** for creation), parse setup JSON hints, record worktrees
+ and session focus in the plan sidecar via plan-state.mjs, **attach** the worktree with MCP
+ **`sedea_add_worktree_folder` only** (never editor Add Folder to Workspace), then implement.
+ Post-merge cleanup uses center **`worktree-cleanup.sh`** after MCP **`sedea_remove_worktree_folder`**.
  On a **spawned child lane** with layer-2 approval (or **pr-plan** spawn auto-authorize),
  **implement the anchored PR plan on this lane** in that worktree; on **prompt-only**
  entry, emit a copy/paste-safe two-phase session prompt for a separate coding chat.
@@ -86,24 +85,25 @@ warmUpRules:
 
 # Coding session
 
-Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. Worktree **creation** is **`git worktree add` only**; workbench **attach** is **`sedea_add_worktree_folder` only** — see [Hard rules — git worktree vs workbench attach (binding)](#hard-rules--git-worktree-vs-workbench-attach-binding). **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
+Hand off a unit of work into a **dedicated git worktree**, with the worktree visible in the **same Sedea workbench** (multi-root workspace), not a second editor process. Worktree **setup** is **center `worktree-setup.sh` only** (from **`HOSTING_ROOT`**); workbench **attach** is **`sedea_add_worktree_folder` only** — see [Hard rules — git worktree vs workbench attach (binding)](#hard-rules--git-worktree-vs-workbench-attach-binding) and [Center worktree scripts (binding)](#center-worktree-scripts-binding). **Execution mode** after setup depends on entry path — see [Execution mode after worktree attach](#execution-mode-after-worktree-attach).
 
-**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); `git worktree add`, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, **mandatory inline worktree bootstrap** on this lane ([Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) — wait for `outputs.bootstrapStatus: success` before implementation), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** inline → **auto-spawn **`pre-pr-review`** → **auto inline **`create-pr`** on clean **go** → **auto** [Post-merge workspace cleanup](#post-merge-workspace-cleanup) when merged → After deploy **`deploy-walk`** inline).
+**Owns:** per-PR plan §§ **5–8** during implementation (repo rules impact, tests, deploy plan, caveats); center **`worktree-setup.sh`**, JSON hint parsing, `plan-state.mjs set-worktrees` / `set-session`, Mission Control worktree attach, bootstrap status from setup hints (`outputs.bootstrapStatus: success` before implementation — no default-path inline **`worktree-bootstrap`**), pre-worktree validation + worktree-open gate; **spawned-lane implementation** or curated **prompt-only** session prompt emission; post-merge **center `worktree-cleanup.sh`** after MCP detach; [Ship chain after implementation](#ship-chain-after-implementation-coding-session-lane) ([Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — one modal approve + commit + Before deploy **`deploy-walk`** inline → **auto-spawn **`pre-pr-review`** → **auto inline **`create-pr`** on clean **go** → **auto** [Post-merge workspace cleanup](#post-merge-workspace-cleanup) when merged → After deploy **`deploy-walk`** inline).
 
 **Out of scope:** drafting per-PR §§ **1–4** ( **`pr-plan`** ); implementing hosting repo code when this run is **prompt-only** (see [Prompt-only handoff](#prompt-only-handoff)); opening PRs from the planning lane; **`plan-reconcile`** archive cadence except where this skill references it for cleanup narrative.
 
 ## Worktree create → attach → bootstrap (ownership)
 
-Four **sequential** steps on the **`coding-session`** lane after the [Worktree-open gate](#worktree-open-gate). **`worktree-bootstrap`** runs **only** step 4 — it does **not** replace steps 1–3.
+Three **sequential** agent steps on the **`coding-session`** lane after the [Worktree-open gate](#worktree-open-gate), plus **center setup** (step **1** — includes fast bootstrap inside the shell).
 
 | Step | Owner lane | Action | Tool / skill |
 |------|------------|--------|--------------|
-| 1 | **`coding-session`** | Create filesystem worktree | `git worktree add` ([Generic flow](#generic-flow-single-repo) step 1) |
+| 1 | **`coding-session`** | Setup worktree + fast bootstrap | **`.sedea/centers/sedea/scripts/worktree-setup.sh`** ([Generic flow](#generic-flow-single-repo) step 1) |
 | 2 | **`coding-session`** | Record sidecar `worktrees` / `session` | `plan-state.mjs` (step 2) |
-| 3 | **`coding-session`** | Mount worktree in Sedea workbench | MCP **`sedea_add_worktree_folder`** (step 3) |
-| 4 | **`coding-session`** (inline **`worktree-bootstrap`**) | Dev bootstrap script | `./scripts/bootstrap-worktree-dev.sh` — see [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) |
+| 3 | **`coding-session`** | Mount worktree in Sedea workbench | MCP **`sedea_add_worktree_folder`** when setup hint **`nextAction: attach-required`** (step 3) |
 
-**Not a conflict:** `git worktree add` creates the directory; **`sedea_add_worktree_folder`** adds that path to the Mission Control / editor workspace. **`worktree-bootstrap`** assumes both are done and **forbids** repeating steps 1 or 3 on its lane.
+**Bootstrap:** Default path — map **`bootstrapStatus`** / **`bootstrapMode`** from setup stdout JSON to **`outputs`**; **do not** run inline **`worktree-bootstrap`** when setup succeeded. Retry / exception only — [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory).
+
+**Not a conflict:** center setup creates the directory and runs overlay bootstrap; **`sedea_add_worktree_folder`** adds that path to the Mission Control / editor workspace.
 
 **Removal is the mirror:** post-merge detach/remove applies **only** to the **`WORKTREE_ROOT`** from steps 1–3 on **this pass** — see § *Post-merge workspace cleanup* and rule **20** § *Worktree removal ownership (binding)*. **Do not remove worktrees you do not own.**
 
@@ -113,12 +113,37 @@ Agents repeatedly call **`sedea_add_worktree_folder`** instead of **`git worktre
 
 | Step | Required | Forbidden |
 |------|----------|-----------|
-| **1 — Create worktree** | Shell **`git worktree add <path> -b <worktree-name> <base-ref>`** | **`sedea_add_worktree_folder`** (MCP does **not** run git — it only mounts an **existing** folder), `git clone`, manual checkout/mkdir, opening a folder without `git worktree add` |
-| **3 — Mount in Sedea workbench** | MCP **`sedea_add_worktree_folder`** with **absolute** `path` (optional `name`) | VS Code / Cursor **Add Folder to Workspace**, hand-edited **`.code-workspace`** as the attach mechanism on Mission Control lanes, assuming step 1 made the worktree appear in the explorer |
+| **1 — Center setup** | **`.sedea/centers/sedea/scripts/worktree-setup.sh`** from **`HOSTING_ROOT`** with **`--hosting-root`**, **`--worktree-path`**, **`--worktree-name`**, optional **`--base-ref`** | **`sedea_add_worktree_folder`** (MCP does **not** run git — it only mounts an **existing** folder), inline **`git worktree add`** on the default path, `git clone`, manual checkout/mkdir |
+| **3 — Mount in Sedea workbench** | MCP **`sedea_add_worktree_folder`** with **absolute** `path` (optional `name`) when setup hint **`nextAction: attach-required`** | VS Code / Cursor **Add Folder to Workspace**, hand-edited **`.code-workspace`** as the attach mechanism on Mission Control lanes, assuming step 1 made the worktree appear in the explorer |
 
-**Fixed order:** step **1** → **2** → **3** → **4**. Never call **`sedea_add_worktree_folder`** before **`git worktree add`** succeeds. Never skip step **3** because the directory exists on disk.
+**Fixed order:** center setup (step **1**) → sidecar (step **2**) → MCP attach (step **3**). Never call **`sedea_add_worktree_folder`** before **`worktree-setup.sh`** exits **0**. Never skip step **3** because the directory exists on disk.
 
-**Squad Leader vs this lane:** **20_efficient-pr-shipping.mdc** § *Squad Leader on HOSTING_ROOT* may create the worktree and call **`sedea_add_worktree_folder`** before spawning **`coding-session`**. When this skill runs [Generic flow](#generic-flow-single-repo) on a **spawned implementation lane**, **this lane** owns steps 1–4 end-to-end unless the leader already completed attach and passed absolute **`WORKTREE_ROOT`** in spawn `inputs` — then skip duplicate `git worktree add` / MCP only when the worktree path already exists **and** is already mounted in the workbench.
+**Squad Leader vs this lane:** **20_efficient-pr-shipping.mdc** § *Squad Leader on HOSTING_ROOT* may run center setup and call **`sedea_add_worktree_folder`** before spawning **`coding-session`**. When this skill runs [Generic flow](#generic-flow-single-repo) on a **spawned implementation lane**, **this lane** owns setup → sidecar → attach end-to-end unless the leader already completed attach and passed absolute **`WORKTREE_ROOT`** in spawn `inputs` — then skip duplicate setup / MCP only when the worktree path already exists **and** is already mounted in the workbench.
+
+## Center worktree scripts (binding)
+
+**Setup and cleanup git orchestration** run through built-in **sedea** center shells from **`HOSTING_ROOT`**. **MCP attach/detach remain explicit agent steps** — shells emit JSON hints; they do **not** invoke **`sedea_add_worktree_folder`** or **`sedea_remove_worktree_folder`**.
+
+| Script | Path | Replaces on this skill |
+|--------|------|------------------------|
+| **Setup** | `.sedea/centers/sedea/scripts/worktree-setup.sh` | Inline dirty-primary gate, **`git fetch`**, **`git worktree add`**, and default-path inline **`worktree-bootstrap`** |
+| **Cleanup** | `.sedea/centers/sedea/scripts/worktree-cleanup.sh` | Inline post-merge **`git pull origin main`**, **`git worktree remove`**, and stale worktree name ref drop on owned paths |
+
+Hosting overlay contract: **`.cursor/rules/dot-sedea.mdc`** § *Worktree bootstrap mode* and § *Center `worktree-setup.sh`*. Split contract: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Attach worktree to VS Code workspace* / § *Detach worktree from VS Code workspace*.
+
+### Parse setup/cleanup JSON hints (binding)
+
+Each script prints **one JSON line on stdout** (human progress on stderr). On **non-zero exit**, parse failure JSON when present — branch on **`exitCode`**, **`nextAction`**, and **`message`**.
+
+| Hint field | Setup | Cleanup |
+|------------|-------|---------|
+| **`exitCode`** | Shell exit (**0** = success) | Same |
+| **`nextAction`** | **`attach-required`** → MCP attach (step 3) | **`none`** on success; **`detach-required`** → run MCP detach before retry |
+| **`worktreeRoot`**, **`worktreeName`** | Set **`WORKTREE_ROOT`** / sidecar + cleanup attestation | Same |
+| **`bootstrapMode`**, **`bootstrapStatus`** | Map to **`outputs`** — **`success`**, **`skipped-noop`**, **`skipped-idempotent`** allow implementation | N/A |
+| **`cleanupStatus`** | N/A | **`success`** → **`outputs.postMergeCleanupStatus: success`** |
+
+**Forbidden on default setup path:** raw **`git worktree add`**, inline **`bootstrap-worktree-dev.sh`**, or **`full`** bootstrap escalation when center setup fails (exit **11** warm-primary → structured retry; exit **12** overlay → fix dot-sedea). **Forbidden on default cleanup path:** inline **`git worktree remove`** + hosting **`git pull`** when **`worktree-cleanup.sh`** applies for an owned path after MCP detach.
 
 ## Structured choice (Mission Control)
 
@@ -301,16 +326,16 @@ Otherwise:
 
 1. Set `outputs.developerApprovedImplementation: true` and `outputs.planCompleteness` from validation.
 2. State one informational line (no modal): *Planning handoff approved on **pr-plan** lane. §§1–4 ready — implementing; §§5–8 fill on this lane as code lands.* When `planCompleteness: complete`, use: *PR plan complete — implementing.*
-3. Proceed immediately to [Generic flow](#generic-flow) (worktree add, sidecar, attach, bootstrap) — then [Spawned implementation lane](#spawned-implementation-lane).
-   - **Bootstrap gate (binding):** Complete Generic flow step 4 inline per [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory).
-   - Set `outputs.bootstrapStatus: pending` before running the script.
-   - **If bootstrap is not `success`:** STOP this turn — no product edits, no §§5–8, no ship chain. Follow **Failure** under [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory).
-   - **Forbidden substitute:** extension-level `npm ci`, `tsc`, or vitest passing does **not** set `bootstrapStatus: success` when the bootstrap script exited non-zero.
+3. Proceed immediately to [Generic flow](#generic-flow) (center setup, sidecar, attach) — then [Spawned implementation lane](#spawned-implementation-lane).
+   - **Bootstrap gate (binding):** Step **1** **`worktree-setup.sh`** must exit **0** and hint **`bootstrapStatus`** must allow implementation (**`success`**, **`skipped-noop`**, or **`skipped-idempotent`**).
+   - Set **`outputs.bootstrapStatus`** from the setup hint before product edits.
+   - **If setup fails or bootstrap hint is not success-class:** STOP — no product edits, no §§5–8, no ship chain. Follow **Failure** under [Worktree bootstrap (mandatory)](#worktree-bootstrap-mandatory).
+   - **Forbidden substitute:** extension-level `npm ci`, `tsc`, or vitest passing does **not** set `bootstrapStatus: success` when setup exited non-zero.
 4. Do **not** emit **`MC_PHASED_RESPONSE_V1`** for worktree-open on this path.
 
 ## Worktree-open gate
 
-**Layer 2 — single AskQuestion** before any `git worktree add`, sidecar session write, Mission Control worktree attach, or coding-agent prompt emission — **skip** when [Auto-authorize implementation (pr-plan spawn)](#auto-authorize-implementation-pr-plan-spawn) applies. After approval, [Generic flow](#generic-flow-single-repo) step **1** is **`git worktree add` only**; step **3** is **`sedea_add_worktree_folder` only** — see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding).
+**Layer 2 — single AskQuestion** before any center **`worktree-setup.sh`**, sidecar session write, Mission Control worktree attach, or coding-agent prompt emission — **skip** when [Auto-authorize implementation (pr-plan spawn)](#auto-authorize-implementation-pr-plan-spawn) applies. After approval, [Generic flow](#generic-flow-single-repo) step **1** is **center setup only**; step **3** is **`sedea_add_worktree_folder` only** — see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding).
 
 **Recap and structured choice:** Summarize completeness / plan path in **`display.markdown`** when using **`MC_PHASED_RESPONSE_V1`**. On spawned lanes, **`MC_PHASED_RESPONSE_V1` must be line 1** — see [Spawned lane — sentinel-first (binding)](#spawned-lane--sentinel-first-binding). Open every gate via **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** — prefer one message for recap + modal. See **`../README.md`** § *Recap, structured choice, act (plan-and-deliver)*, **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**, and **`.cursor/rules/mission-control-agent-runtime.mdc`**.
 
@@ -412,7 +437,7 @@ When the developer **confirms** a numbered step in the anchored PR plan’s **`#
 
 Reserved when this run is **not** a spawned implementation lane (see table above).
 
-1. Complete Generic flow steps 1–4 (including [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) — wait for `outputs.bootstrapStatus: success`) before emitting the external prompt.
+1. Complete Generic flow steps **1–4** (including center setup bootstrap hints — wait for **`outputs.bootstrapStatus: success`**) before emitting the external prompt.
 2. Emit a **session prompt** per [Session prompt structure](#session-prompt-structure) inside a [copy/paste-safe](#copypaste-safe-prompt-output-required) fence. State that bootstrap completed (`outputs.bootstrapStatus: success`) or document failure and that the external agent must not implement until bootstrap succeeds.
 3. Set `outputs.sessionPromptEmitted: true` and `outputs.implementationMode: "prompt-only"`.
 4. **Stop** — do not `cd` into the worktree to implement on this lane until step 1 reports bootstrap success.
@@ -432,24 +457,25 @@ When you emit the final session prompt for the user to paste into **a separate c
 
 Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-completeness) and an authorizing choice in the [Worktree-open gate](#worktree-open-gate).
 
-1. Create a worktree from `origin/main` — **`git worktree add` only** (see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding)):
+1. **Center worktree setup** — from **`HOSTING_ROOT`**, run **`.sedea/centers/sedea/scripts/worktree-setup.sh`** (see [Center worktree scripts (binding)](#center-worktree-scripts-binding)):
+
  ```bash
- git fetch origin main
- git worktree add <sibling-path> -b <worktree-name> origin/main
+ HOSTING_ROOT="<absolute-hosting-root>"   # spawn inputs.repoPath or walk-up to .sedea/centers/sedea/
+ WORKTREE_ROOT="<absolute-sibling-path>"   # repo basename prefix per rule 20
+ WORKTREE_NAME="<worktree-name>"           # rule 7 / rule 20
+ BASE_REF="${baseRef:-origin/main}"
+
+ "$HOSTING_ROOT/.sedea/centers/sedea/scripts/worktree-setup.sh" \
+   --hosting-root "$HOSTING_ROOT" \
+   --worktree-path "$WORKTREE_ROOT" \
+   --worktree-name "$WORKTREE_NAME" \
+   --base-ref "$BASE_REF"
  ```
- - **Forbidden (step 1):** Do **not** call **`sedea_add_worktree_folder`** to create the worktree — MCP attach only mounts an **existing** path. Worktree creation is **`git worktree add` only**.
- - Prefix sibling paths with the repo directory basename (see **Worktree setup** in `.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`).
- - Always create from **`origin/main`**, not **`main`** (same failure mode as in **efficient-pr-shipping**).
- - Worktree naming: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Worktree naming* (primary **hosting repo** → Sedea **`.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc`**; **hosting repo worktree** → `feat/`, `improve/`, `fix/`, …).
- - **Dirty-tree gate (hosting repo)** — Before `git worktree add`, run `git status --porcelain` in the repo that receives the worktree (`HOSTING_ROOT` when adding from the primary hosting repo).
- - **Submodule gitlink-only (non-blocking)** — When the active hosting repo pins `.sedea/` via git submodules (see **`.cursor/rules/dot-sedea.mdc`** § *Submodule pins* on the active hosting repo), and **every** porcelain line is a **modified submodule gitlink** under `.sedea/` (paths under `.sedea/centers/` or `.sedea/operations/`), verify pointer-only drift before proceeding:
- ```bash
- git diff --stat -- <submodule-path>
- ```
- **Proceed** when each affected submodule shows only a **2 insertions(+), 2 deletions(-)** gitlink change and no other paths appear in that stat. Routine submodule pin updates do **not** block worktree creation.
- - **Publishing pin to `origin/main`** — Local gitlink drift or a primary-clone submodule checkout update does **not** ship the pin. After a **center-repo** PR merges to **`defaultBranch`**, agents **must** run [`.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md`](.sedea/centers/sedea/skills/promote-center-submodule-pin/SKILL.md) **inline** on the hosting-repo lane — see **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Center submodule pin promotion (hosting repo)*.
- - **Still blocking** — **Stop** when porcelain includes **any** tracked path outside those `.sedea/` submodule gitlink lines (other application source on the hosting repo), when `git diff --stat` shows content changes inside a submodule (not pointer-only), or when the hosting repo has non-empty porcelain that is not explained by allowed submodule gitlinks alone.
- - Do **not** stash, commit, discard, or clean the user's WIP to clear a blocking dirty tree.
+
+ - **Forbidden (step 1):** **`sedea_add_worktree_folder`** — MCP attach is step **3** only. **Forbidden:** inline **`git worktree add`** / dirty-primary **`git status`** gate on the default path when this script exists on **`HOSTING_ROOT`**.
+ - Worktree naming: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** § *Worktree naming* (primary **hosting repo** → Sedea **`.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc`**).
+ - **Exit 0:** parse the stdout JSON line; set **`WORKTREE_ROOT`**, **`outputs.bootstrapMode`**, **`outputs.bootstrapStatus`** from hint (**`success`**, **`skipped-noop`**, **`skipped-idempotent`** → implementation allowed).
+ - **Non-zero:** parse failure JSON when present; set **`outputs.bootstrapStatus: failed`**, **`outputs.bootstrapFailureReason`** from **`message`**; stop with structured retry — exit **10** dirty primary (developer resolves on **`HOSTING_ROOT`**); exit **11** warm-primary (**no `full` fallback** on center path); exit **12** overlay missing / mode not allowed.
  - If `baseRef` input is supplied, it must be a remote integration ref such as `origin/main`; do not accept a local-only ref for worktree creation.
 
 2. **Record the session on the plan** (see [Sidecar state](#sidecar-state)). From the **hosting repo root**:
@@ -463,13 +489,13 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
  ```
  Skip when the session has no plan anchor.
 
-3. **Attach the worktree in Sedea** (same workbench) — **`sedea_add_worktree_folder` only** (see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding)): in Mission Control, invoke MCP **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` (optional `"name"` for the explorer label). See **20_efficient-pr-shipping.mdc** — *Squad Leader on HOSTING_ROOT vs agent sessions in worktrees* and *Attach the worktree in Sedea*.
+3. **Attach the worktree in Sedea** (same workbench) — when setup JSON **`nextAction`** is **`attach-required`**, invoke MCP **`sedea_add_worktree_folder`** with JSON `{ "path": "<absolute-worktree-root>" }` (optional `"name"` for the explorer label). See **20_efficient-pr-shipping.mdc** — *Squad Leader on HOSTING_ROOT vs agent sessions in worktrees* and *Attach the worktree in Sedea*.
 
  - **Forbidden (step 3):** Do **not** use editor **Add Folder to Workspace**, hand-edited **`.code-workspace`** files, or “open folder” as a substitute for **`sedea_add_worktree_folder`**. Workbench attach is **`sedea_add_worktree_folder` only** (after step 1 succeeds).
 
  This MCP attach is mandatory before post-setup work. If the MCP call fails, stop with `partial`; report the worktree path and the attach error, and keep `continuationStatus: "active"` so the Squad Leader does not close the implementation lane.
 
-4. **Worktree bootstrap (mandatory wait)** — see [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory). Run bootstrap **inline on this lane** and **wait** for `outputs.bootstrapStatus: success`. **Do not** proceed to step 5 until bootstrap succeeds — no parallel implementation.
+4. **Bootstrap complete (default path)** — When step **1** hint **`bootstrapStatus`** is **`success`**, **`skipped-noop`**, or **`skipped-idempotent`**, set **`outputs.bootstrapStatus: success`** (and **`outputs.bootstrapMode`** from hint). Set **`outputs.shipPhase: worktree`** on the first terminal line that reports setup complete. **Do not** run inline **`worktree-bootstrap`** on the default path. **Exception:** retry only per [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) when setup failed or developer attests **`--skip-*`** on a follow-up turn.
 
 5. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach):
  - **Spawned implementation lane** → continue with [Spawned implementation lane](#spawned-implementation-lane) (steps 1–7 there).
@@ -477,16 +503,16 @@ Run only **after** [Pre-worktree validation](#pre-worktree-validation-plan-compl
 
 ## Worktree bootstrap (mandatory)
 
-After Generic flow step 3 (`sedea_add_worktree_folder`) succeeds, prepare **`WORKTREE_ROOT`** for **implementation**, **commit**, **Before deploy** **`deploy-walk`**, and the rest of the [ship chain](#ship-chain-after-implementation-coding-session-lane). Bootstrap is a **separate mandatory step** on this lane — **finish it before any implementation** (worktree edits, plan §§ **5–8**, tests, or `npm`).
+After Generic flow step **3** (`sedea_add_worktree_folder`) succeeds, **`outputs.bootstrapStatus: success`** must be set from center setup hints (step **1**) before **implementation**, **commit**, **Before deploy** **`deploy-walk`**, and the rest of the [ship chain](#ship-chain-after-implementation-coding-session-lane).
 
 **Resolve paths**
 
 - **`HOSTING_ROOT`** — hosting repo that contains `.sedea/centers/sedea/` (see **20_efficient-pr-shipping.mdc** § *Hosting repo cwd for scripts*). Use spawn `inputs.repoPath` when it points at that root.
-- **`WORKTREE_ROOT`** — absolute path from step 1 (`git worktree add`) / sidecar `worktrees[].path`.
+- **`WORKTREE_ROOT`** — absolute path from setup hint **`worktreeRoot`** / step **1** `--worktree-path`.
 
-**Normative path:** [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) — execute **`worktree-bootstrap`** inline on **this** **`coding-session`** lane and wait for completion.
+**Normative path:** center **`worktree-setup.sh`** in Generic flow step **1** — bootstrap runs inside the shell; map hint **`bootstrapStatus`** to **`outputs`**.
 
-**Spawn exception (rare)** — Spawn **`worktree-bootstrap`** on a child lane **only** when a future mission protocol step explicitly requires a spawned bootstrap specialist. That path is **not** the default for **`coding-session`**; when used, the parent must **wait** for child `outputs.bootstrapStatus: success` before implementation (same gate as inline).
+**Retry / exception path:** [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) — inline **`worktree-bootstrap`** only when setup failed and the developer attests retry, or when a future protocol step explicitly requires spawned bootstrap. **Not** the default after successful setup.
 
 **`--skip-*` flags** — Use only when the developer attests partial setup. Record flags in chat and in `outputs.bootstrapSkipFlags`.
 
@@ -505,9 +531,11 @@ The partial terminal in step 2 may accompany the modal but does **not** replace 
 
 **Missing script** — Stop with `partial`, `bootstrapStatus: failed`, `bootstrapFailureReason` naming the missing path, `shipPhase: worktree`.
 
-## Worktree bootstrap (inline mandatory)
+## Worktree bootstrap (inline mandatory — retry / exception only)
 
-Run after attach succeeds (Generic flow step 3 or multi-repo step 4). **Normative default** — inline on **this** lane; **wait** for bootstrap to finish before Generic flow step 5 or [Spawned implementation lane](#spawned-implementation-lane).
+**Default path:** center **`worktree-setup.sh`** (Generic flow step **1**) — **do not** run this section when setup exited **0** with success-class **`bootstrapStatus`**.
+
+Use **only** when setup failed and the developer chooses retry with attested **`--skip-*`**, when **`worktree-setup.sh`** is unavailable on **`HOSTING_ROOT`**, or when a protocol step explicitly requires inline bootstrap instead of center setup.
 
 1. Set `outputs.bootstrapStatus: pending`.
 
@@ -545,7 +573,9 @@ Follow that skill’s **Completion (inline)** — report `bootstrapStatus`, `boo
 
 ### Spawned bootstrap (exception only)
 
-When a protocol step **explicitly** requires a spawned bootstrap child:
+When center **`worktree-setup.sh`** succeeded with success-class **`bootstrapStatus`**, **do not** spawn **`worktree-bootstrap`**.
+
+When a protocol step **explicitly** requires a spawned bootstrap child (setup unavailable or attested retry path):
 
 1. Emit **`AGENT_RUN_REQUEST_V1`** for **`worktree-bootstrap/SKILL.md`** with the same `inputs` as the inline table above.
 2. Set `outputs.bootstrapLaneCorrelationId` to the spawn UUID; set `outputs.bootstrapStatus: pending`.
@@ -556,14 +586,14 @@ When a protocol step **explicitly** requires a spawned bootstrap child:
 
 When the plan’s **Worktree setup** lists two or more repos, or the user asks for a cross-repo session:
 
-1. For **each** repo, **`git worktree add` only** with the **same worktree name** (unless the plan says otherwise) — never **`sedea_add_worktree_folder`** for creation (see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding)).
- - Validate every repo before creating any worktree using the same **Dirty-tree gate** as § *Generic flow* step 1. If one repo is blocking-dirty or missing the requested base ref, stop before creating a partial multi-repo session.
+1. For **each** repo, run **`.sedea/centers/sedea/scripts/worktree-setup.sh`** from that repo's **`HOSTING_ROOT`** with the **same worktree name** (unless the plan says otherwise) — never **`sedea_add_worktree_folder`** for creation (see [Hard rules](#hard-rules--git-worktree-vs-workbench-attach-binding)).
+ - Validate setup exit codes before creating the next repo's worktree. If one repo's setup fails, stop before a partial multi-repo session.
 
 2. Optionally create a **`.code-workspace`** file listing each worktree folder with absolute `path` values — use only if your team uses that layout; otherwise attach **each** worktree root with **`sedea_add_worktree_folder` only** in turn (never editor **Add Folder to Workspace**).
 
 3. **`plan-state.mjs set-worktrees`** with one JSON entry per repo; **`set-session --focus`** to the workspace file **or** primary worktree path per your team convention (must stay consistent with **`resolve --cwd`** expectations in **planning-target-resolution**).
 
-4. **Attach each worktree** with **`sedea_add_worktree_folder` only** (after each step-1 **`git worktree add`**), then [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) **once per `WORKTREE_ROOT`** (sequential inline bootstrap per repo). Wait for each repo’s `bootstrapStatus: success` before any implementation or prompt for that repo.
+4. **Attach each worktree** with **`sedea_add_worktree_folder` only** (after each step-1 setup succeeds), then confirm **`outputs.bootstrapStatus: success`** from each setup hint before any implementation or prompt for that repo.
 
 5. **Branch** per [Execution mode after worktree attach](#execution-mode-after-worktree-attach) (spawned lane implements each repo’s scope in turn, or prompt-only emits **one session prompt per repo** with per-repo scope guards).
 
@@ -616,7 +646,7 @@ flowchart TB
   PPR -->|result go| CPR
 ```
 
-Pre-ship setup on this lane (not shown): implement → [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy). **`worktree-bootstrap`** runs **inline** before implement.
+Pre-ship setup on this lane (not shown): implement → [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy). Center **`worktree-setup.sh`** runs before implement (bootstrap inside setup).
 
 | Step | Section | Mode | Commit required? | Modal? |
 |------|---------|------|------------------|--------|
@@ -1070,14 +1100,14 @@ Run on this lane **after** `prState: merged` **and before** [After deploy deploy
 
 **Legacy cleanup authorization modal** (`cleanup-apply` / `cleanup-skip` pick before **`--apply`**) is **obsolete** when auto-apply preconditions pass. Do not block After deploy on a cleanup modal when detect + ownership authorize apply.
 
-**Worktree removal ownership (binding).** **Do not remove worktrees you do not own.** Apply **`sedea_remove_worktree_folder`**, **`git worktree remove`**, and any cleanup script **`--apply`** **only** to **this pass’s** **`WORKTREE_ROOT`** when **all** preconditions in [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership* and [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc) § *Worktree removal ownership (binding)* hold. **`WORKTREE_ROOT`** must be the exact path from **this pass’s** **`git worktree add`** — **not** inferred from **`git worktree list`**, sidecar **`worktrees[]`**, or stale entries alone. **Forbidden:** repo-wide **`git worktree prune`**; removing paths another developer, dispatch, lane, or session created; **`git worktree remove`** on **`HOSTING_ROOT`**; hand-deleting directories while still mounted. **`git worktree list` is read-only** when ownership is unclear — stop and use structured choice. **`post-reconcile-workspace-cleanup.mjs --apply`** removes **only** candidates from **`detect-stale-workspaces`** for **this plan/session** after the gate above.
+**Worktree removal ownership (binding).** **Do not remove worktrees you do not own.** Apply **`sedea_remove_worktree_folder`**, center **`worktree-cleanup.sh`**, and any cleanup **`--apply`** **only** to **this pass’s** **`WORKTREE_ROOT`** when **all** preconditions in [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership* and [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc) § *Worktree removal ownership (binding)* hold. **`WORKTREE_ROOT`** must be the exact path from **this pass’s** center setup hint **`worktreeRoot`** — **not** inferred from **`git worktree list`**, sidecar **`worktrees[]`**, or stale entries alone. **Forbidden:** repo-wide **`git worktree prune`**; removing paths another developer, dispatch, lane, or session created; **`git worktree remove`** on **`HOSTING_ROOT`**; hand-deleting directories while still mounted. **`git worktree list` is read-only** when ownership is unclear — stop and use structured choice. Center **`worktree-cleanup.sh`** removes **only** candidates from **`detect-stale-workspaces`** for **this plan/session** after the gate above.
 
 **Purpose:** Sync **`HOSTING_ROOT`** with **`origin/main`**, detach/remove **this session’s** worktree from Mission Control and git, drop the local worktree name ref when eligible, and run optional **post-merge host rebuild** on **`HOSTING_ROOT`** per **`.cursor/rules/dot-sedea.mdc`** when documented — then **Developer: Reload Window** before After deploy verification — not from a stale worktree with **`main` behind**.
 
-**Worktree name ref cleanup gate (normative):** drop the local worktree name ref when **`post-reconcile-workspace-cleanup.mjs`** reports eligible — **not** merge-base / “safe to delete” heuristics.
+**Worktree name ref cleanup gate (normative):** drop the local worktree name ref when center **`worktree-cleanup.sh`** or **`post-reconcile-workspace-cleanup.mjs`** dry-run reports eligible — **not** merge-base / “safe to delete” heuristics.
 
 1. **Primary:** sidecar **`prs[]`** linked and every PR **`MERGED`** (`detect-stale-workspaces` **`mergedPr: true`**) **and** **`git ls-remote --heads origin <worktree-name>`** is empty after merge.
-2. **Worktree-linked fallback:** stale worktree candidate (session worktree name from **`git worktree add -b`**) when sidecar **`prs[]`** is empty (**`mergedPr: null`**) **and** remote head is gone **and** the worktree name is not checked out on another worktree — reason **`worktree_linked_remote_head_gone`**. Covers merged PRs never recorded in **`prs[]`** (worktree path is the linkage).
+2. **Worktree-linked fallback:** stale worktree candidate (session worktree name from center setup **`worktreeName`**) when sidecar **`prs[]`** is empty (**`mergedPr: null`**) **and** remote head is gone **and** the worktree name is not checked out on another worktree — reason **`worktree_linked_remote_head_gone`**. Covers merged PRs never recorded in **`prs[]`** (worktree path is the linkage).
 
 When **`mergedPr: false`** (open PRs in sidecar) or remote head still exists, **skip worktree name ref cleanup**, report one line, still remove worktree and pull **`main`** when authorized. Dry-run JSON includes **`remoteHeadGone`** per candidate when detect ran. When dry-run reports **`skippedWorktreeNames`** with reason **`linked_prs_not_merged`** but **`remoteHeadGone: true`**, add one line: verify sidecar **`prs[].repo`** matches **`$(basename "$HOSTING_ROOT")`** (not the worktree directory name) — legacy mis-keys block **`mergedPr`** until corrected or scripts apply the hosting-repo fallback.
 
@@ -1117,21 +1147,50 @@ Only **`cleanup-apply`** authorizes **`--apply`** when this exceptional modal op
 
 **Apply (after MCP detach):**
 
-Confirm **all** ownership preconditions (§ *Worktree removal ownership (binding)* above) for **each** candidate before step 1. **Forbidden:** **`--apply`** on paths not from **`detect-stale-workspaces`** for **this session**; repo-wide cleanup.
+Confirm **all** ownership preconditions (§ *Worktree removal ownership (binding)* above) for **each** candidate before step 1. **Forbidden:** cleanup on paths not from **`detect-stale-workspaces`** for **this session**; repo-wide cleanup.
 
-1. For **each** candidate **`worktreePath`**, invoke MCP **`sedea_remove_worktree_folder`** with `{ "path": "<absolute-worktree-root>" }` **before** git removal (rule **20** § *Detach merged worktrees*).
-2. Run:
+1. For **each** candidate **`worktreePath`**, invoke MCP **`sedea_remove_worktree_folder`** with `{ "path": "<absolute-worktree-root>" }` **before** center cleanup (rule **20** § *Detach merged worktrees*).
+
+2. For **each** candidate, run center cleanup from **`HOSTING_ROOT`** (parse stdout JSON per [Parse setup/cleanup JSON hints (binding)](#parse-setupcleanup-json-hints-binding)):
 
 ```bash
-node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
- --operations-user-id "$OPS_ID" --apply [--slug <slug>]
+HOSTING_ROOT="<absolute-hosting-root>"
+WORKTREE_ROOT="<absolute-worktree-root>"
+WORKTREE_NAME="<worktree-name>"
+
+"$HOSTING_ROOT/.sedea/centers/sedea/scripts/worktree-cleanup.sh" \
+  --hosting-root "$HOSTING_ROOT" \
+  --worktree-path "$WORKTREE_ROOT" \
+  --worktree-name "$WORKTREE_NAME" \
+  --ownership-path a \
+  --created-this-pass \
+  --mounted-via-mcp \
+  --detach-completed \
+  ${MERGE_SHA:+--merge-sha "$MERGE_SHA"} \
+  ${PR_NUMBER:+--pr-number "$PR_NUMBER"}
 ```
 
-The script pulls **`origin/main`** on **`HOSTING_ROOT`**, then runs the **post-merge host rebuild script** when **`.cursor/rules/dot-sedea.mdc`** on the active hosting repo documents **`postMergeHostRebuildScript`** and that path exists and is executable (same resolution as **`post-reconcile-workspace-cleanup.mjs`** on **`--apply`**).
+Use **`--ownership-path b`** and **`--dispatch-worktree-context`** instead of **`--created-this-pass`** when Path B (persisted **`worktreeContext`**) authorizes removal after reload.
 
-3. Merge script JSON into `outputs` (`cleanedWorktrees`, `deletedWorktreeNames`, `skippedWorktreeNames`, `mainPullStatus`, `postMergeHostRebuildStatus`, `postMergeCleanupStatus: success` \| `partial`).
-4. When **`postMergeHostRebuildStatus`** is **`success`**, tell the developer in one line: post-merge host rebuild completed on **`HOSTING_ROOT`** — use **Developer: Reload Window** before After deploy verification. When rebuild **`failed`**, report stderr and keep `postMergeCleanupStatus: partial`; offer retry or **`cleanup-skip`** before After deploy.
-5. On **next** turn, continue to [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff). Do **not** run inline **`deploy-walk`** (After deploy) in the same assistant turn as cleanup **`--apply`**.
+3. When cleanup exits **0**, prune sidecar worktree entries and run post-merge host rebuild:
+
+```bash
+cd "$HOSTING_ROOT"
+OPS_ID="<operationsUserId>"
+
+node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
+  --operations-user-id "$OPS_ID" prune-sessions --path "$WORKTREE_ROOT"
+```
+
+Then run the **post-merge host rebuild script** when **`.cursor/rules/dot-sedea.mdc`** documents **`postMergeHostRebuildScript`** (same resolution as **`post-reconcile-workspace-cleanup.mjs`** on **`--apply`**).
+
+4. Merge cleanup JSON and sidecar/rebuild results into `outputs` (`cleanedWorktrees`, `deletedWorktreeNames`, `skippedWorktreeNames`, `mainPullStatus`, `postMergeHostRebuildStatus`, `postMergeCleanupStatus: success` \| `partial`).
+
+5. When **`postMergeHostRebuildStatus`** is **`success`**, tell the developer in one line: post-merge host rebuild completed on **`HOSTING_ROOT`** — use **Developer: Reload Window** before After deploy verification. When rebuild **`failed`**, report stderr and keep `postMergeCleanupStatus: partial`; offer retry or **`cleanup-skip`** before After deploy.
+
+6. On **next** turn, continue to [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff). Do **not** run inline **`deploy-walk`** (After deploy) in the same assistant turn as cleanup **apply**.
+
+**`post-reconcile-workspace-cleanup.mjs --apply`:** **Detect/dry-run only** on this lane when center cleanup succeeded — **forbidden** duplicate **`git worktree remove`** in the same pass. **`plan-reconcile`** §5 may still invoke **`--apply`** as idempotent fallback when post-merge cleanup was skipped.
 
 **Spawned lane — post-merge cleanup sentinel (binding):** Use **`MC_PHASED_RESPONSE_V1`** **only** for the exceptional modal above — **not** on the default auto-apply path.
 
@@ -1175,14 +1234,10 @@ Run on the **spawned coding-session lane** when inline **`deploy-walk`** reports
 
 1. **Audit note** — Append one dated line under the plan **`## Follow-ups`** (or §7 deploy note when Follow-ups is absent): *Deploy verification — return to implementation (new worktree)* with the active deploy step or defect summary from chat.
 2. **Worktree name** — `fix/<short-description>` per **20_efficient-pr-shipping.mdc** § *Worktree naming* (hosting-repo worktree branch).
-3. Run [Generic flow](#generic-flow-single-repo) steps **1–4** from **`HOSTING_ROOT`**:
- - **`git fetch origin main`** then **`git worktree add <sibling-path> -b <worktree-name> origin/main`**
- - **`plan-state.mjs set-worktrees`** / **`set-session`** on **`HOSTING_ROOT`** for the **same** plan slug — append the new path; do not drop historical worktree entries unless the developer asks
- - **`sedea_add_worktree_folder`** with absolute new path
- - [Worktree bootstrap (inline mandatory)](#worktree-bootstrap-inline-mandatory) — wait for **`outputs.bootstrapStatus: success`**
+3. Run [Generic flow](#generic-flow-single-repo) steps **1–4** from **`HOSTING_ROOT`** (center **`worktree-setup.sh`**, sidecar, MCP attach, bootstrap hint).
 4. Set **`outputs.shipPhase: implementing`**, **`outputs.rowStatus: active`**, clear stale **`prState`** / merge-only outputs that no longer apply to the new fix pass when starting a post-merge fix (keep **`targetPlanPath`** / slug).
 5. Resume [Spawned implementation lane](#spawned-implementation-lane) on the **new** **`WORKTREE_ROOT`** — same plan §§ **5–8** scope unless the developer narrows the fix in chat.
-6. **Forbidden:** Re-opening the old session worktree path; **`git worktree add`** from a dirty non-gitlink tree; skipping MCP attach or bootstrap; treating deploy checklist closure as complete when **`returnToImplementation`** was set mid-walk.
+6. **Forbidden:** Re-opening the old session worktree path; center setup on a blocking-dirty primary (exit **10**); skipping MCP attach; treating deploy checklist closure as complete when **`returnToImplementation`** was set mid-walk.
 
 **After the fix ships:** Re-enter the [ship chain](#ship-chain-after-implementation-coding-session-lane) from [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) — Before deploy / After deploy walks apply to the **new** PR cycle as usual.
 
