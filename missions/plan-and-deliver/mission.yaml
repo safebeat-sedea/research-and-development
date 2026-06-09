@@ -4,6 +4,7 @@ description: >-
   scope breakdown, implementation, PR review, deploy verification, and plan hygiene.
 commands:
   - phrase: plan and deliver
+    default: true
     description: >-
       Open a delivery dispatch — PRD → plan tree → implementation and ship.
       One squad on this dispatch until resolved; specialists spawn on child lanes.

@@ -4,6 +4,7 @@ description: >-
   (noisy worktree) or code promotion via plan-and-deliver (clean fix).
 commands:
   - phrase: debug and fix
+    default: true
     description: >-
       Diagnose and fix an issue — logs first, then promote to production or
       hand off via Ad-Hoc PRD.
