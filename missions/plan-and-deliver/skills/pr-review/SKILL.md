@@ -297,7 +297,8 @@ Runs **inline** on the **`coding-session`** lane. When triage reaches a stable m
 
 | Milestone | `shipPhase` | Required `outputs` |
 |-----------|-------------|-------------------|
-| PR comments triaged / reconciliation done | `pr-review` | `targetPlanPath`, `shipPhase`, `rowStatus`, `prReviewStatus`, `githubReconciliationStatus`, `remainingTasks` |
+| PR comments triaged / reconciliation done | `pr-review` | `targetPlanPath`, `shipPhase`, `rowStatus`, `prReviewStatus`, `githubReconciliationStatus`, `mergeDelegationReady`, `remainingTasks` |
+| Agent merged PR (delegated path) | `pr-merged` | `targetPlanPath`, `shipPhase`, `rowStatus`, `prUrl`, `prNumber`, `mergeSha`, `mergedAt` |
 
 **Forbidden:** nudging manual **Ship recap** on the leader dispatch.
 
@@ -313,8 +314,18 @@ Return results through the active **`coding-session`** lane, not as a child-agen
 - `outputs.prReviewBlockers`
 - `outputs.prReviewFollowUps`
 - `outputs.githubReconciliationStatus`
+- `outputs.mergeDelegationReady`
 - `outputs.remainingTasks`
 - `outputs.continuationStatus`
+
+Set **`outputs.mergeDelegationReady: true`** when **all** apply:
+
+1. Every fetched review comment has an approved disposition (fixed, skipped with rationale, or captured follow-up).
+2. GitHub reconciliation ran when required (Step 5), or the skipped-only path completed with no pending Must fixes.
+3. No open **Must fix** blockers remain on this PR.
+4. `outputs.prReviewStatus` is **`terminal`** for this triage pass.
+
+Otherwise set **`mergeDelegationReady: false`** — **`coding-session`** must not run [Agent-delegated PR approve and merge](../coding-session/SKILL.md#agent-delegated-pr-approve-and-merge) until a later pass clears blockers.
 
 Keep `continuationStatus: "active"` until every PR review comment is fixed, skipped with rationale, converted to follow-up, or explicitly deferred by the developer, and GitHub reconciliation has run when required.
 
