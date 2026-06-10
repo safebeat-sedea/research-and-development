@@ -195,7 +195,7 @@ flowchart TB
 
 **Legend:** yellow = Squad Leader executable steps; blue = spawned child lanes and their spawns; purple = cadence branches outside §§1–5 (see **Cadence reference** and `development-process.md`).
 
-**Single-PR hoist:** after **`phase-planner`**, a **single-PR** assessment spawns **`pr-breakdown`** on the **ancestor** plan (not on the phase file) with `hoistFromPhasePath` — see `development-process.md` § *Single-PR hoist from a phase plan* and **`phase-planner`** § **5a-hoist**.
+**Single-PR hoist:** after **`phase-planner`**, a **single-PR** assessment **defaults** to inline **`pr-breakdown`** on the **ancestor** (not a full § 5 **`PR breakdown`** list on the phase file) with `hoistFromPhasePath` — **skill procedure**, not dismissal of phase-plan delivery ownership; the **phase-planner** lane and phase `.plan.md` remain the primary delivery anchor until **`phaseShipComplete`**. Override with **`decomposeOnPhasePlan: true`**. See `development-process.md` § *Single-PR hoist from a phase plan* and **`phase-planner`** § **5a-hoist** / § *Phase delivery ownership*.
 
 ## Hub missionInputs *(legacy — host-removed)*
 

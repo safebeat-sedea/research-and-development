@@ -181,6 +181,8 @@ Run **after** stage verification when **all** of the following hold:
 
 > *"Single-PR **`PR breakdown`** after **`phase-planner`** should **hoist** to the decomposition **ancestor** (the plan that owns this phase's **`Delivery phases`** row), not run set-level **`pr-breakdown`** on this phase file. Re-run **`pr-breakdown` inline on this phase-planner lane** with `targetPlanPath` = ancestor, plus `hoistFromPhasePath` / `hoistFromPhaseSlug`, `scopeParentIndex`, and `prBreakdownShape: \"single\"` — **do not** switch to the **`planner`** lane. Or set `decomposeOnPhasePlan: true` only when the developer explicitly wants a one-PR § 5 on this phase plan."*
 
+**Explaining hoist (binding):** When reporting this stop, **do not** tell the developer hoist is "correct by design." State that skills **default** single-PR to ancestor hoist; phase § 5 on this file remains available via **`decomposeOnPhasePlan: true`** on the **phase-planner** lane. Link the **phase plan** first in recap; ancestor row is ledger detail.
+
 Return `partial` with `remainingTasks` naming the hoist when **`phase-planner`** inline handoff omitted ancestor retargeting — **not** as permission to redirect to **`planner`**.
 
 When **`hoistFromPhasePath`** **is** set, the **target** must be the **ancestor** (Master or Phase plan whose **`Delivery phases`** list contains item **`scopeParentIndex`** for the hoisted phase). The phase file at **`hoistFromPhasePath`** is **scope-only** — do not use it as `targetPlanPath`. Acknowledge: *"Hoist mode: ancestor `<target-slug>`, phase scope `<hoistFromPhaseSlug>`, row N=<index>."* Then continue; **step 3.6** runs after step 3.

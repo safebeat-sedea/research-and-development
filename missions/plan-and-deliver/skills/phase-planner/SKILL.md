@@ -427,6 +427,13 @@ When **`hoistRequired`** is true (route `pr-breakdown-single`):
 3. Run **`pr-breakdown`** **inline** on the **ancestor** per [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b--5a-hoist) — **not** on this phase file unless the developer chooses **decompose on this phase plan**.
 4. Do **not** run **`pr-breakdown`** on this phase file unless the developer later chooses **decompose on this phase plan** (`decomposeOnPhasePlan: true`).
 
+**Explaining hoist to the developer (binding).** When the developer asks why phase § 5 is a pointer to the ancestor, or challenges hoist as wrong:
+
+- **Forbidden:** claiming hoist is "correct by design," "intentional," or the delivery model the developer should want.
+- **Required:** separate **skill default** (single-PR hoist to ancestor per this section) from **phase delivery ownership** (§ *Phase delivery ownership* — this lane owns delivery until **`phaseShipComplete`**).
+- **Required:** offer **PR breakdown on this phase plan** (`decomposeOnPhasePlan: true`) via Step **5b** structured choice when they want § 5 on the phase file.
+- **Recap order:** link the **phase plan** first; mention ancestor row **N** as hoist/ledger detail second.
+
 When route is `pr-breakdown-multi`, **`hoistRequired`** is false — run **`pr-breakdown`** **inline** on **this** phase plan with `prBreakdownShape: "multi"` per [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b--5a-hoist).
 
 ### 5b-decompose — lane ownership (binding)
@@ -563,6 +570,8 @@ When the developer picks **`start-coding-session`** (or explicit implement autho
 ## Phase delivery ownership (binding)
 
 After §§ 1–4 are drafted on this lane, **this phase-planner child lane owns phase delivery** until one of the terminal conditions below. The **Master Plan agent** (`planner` lane) must **not** re-offer §6 route menus, **`pr-breakdown`** approval, or phase-scoped expand options for the same phase while this lane is active.
+
+**User-facing recap (binding):** In status recaps, file links, and hoist explanations, cite the **target phase `.plan.md`** as the primary delivery document. Ancestor hoist (**§ 5a-hoist**) is procedural ledger detail — not permission to dismiss phase-scoped delivery expectations or to insist hoist is "correct by design" for the developer.
 
 **Owns on this lane (through ship-complete or explicit defer/abandon):**
 
