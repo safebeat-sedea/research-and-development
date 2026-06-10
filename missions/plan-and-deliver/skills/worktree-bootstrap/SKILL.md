@@ -62,7 +62,7 @@ warmUpRules:
 
 ## Warm-up manifest (spawned)
 
-Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea/docs/lane-manifest-contract.md) and **`../README.md`** § *Default warm-up*. Host merge: `effectiveWarmUp = dedupe(bootstrapRules → laneRules → skillWarmUp)`. Normative path is **inline** on **`coding-session`**; manifest applies when spawned or warm-up replay. **No `alwaysApply` frontmatter flip.**
+Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea/docs/lane-manifest-contract.md) and **`../README.md`** § *Default warm-up*. Host merge: `effectiveWarmUp = dedupe(bootstrapRules → laneRules → skillWarmUp)`. **Exception-only** inline retry on **`coding-session`** when center setup failed; manifest applies when spawned or warm-up replay. **No `alwaysApply` frontmatter flip.**
 
 ### `skillWarmUp` — frontmatter `warmUpRules`
 
@@ -99,12 +99,12 @@ Running bootstrap is **not** developer approval for worktrees — layer 2 **`dev
 
 ## Prerequisites (parent **`coding-session`** lane)
 
-This skill **does not** create worktrees or attach them to Sedea. The parent lane must finish first (see [`coding-session/SKILL.md`](../coding-session/SKILL.md) § *Hard rules — git worktree vs workbench attach (binding)*):
+This skill **does not** create worktrees or attach them to Sedea. The parent lane must finish first (see [`coding-session/SKILL.md`](../coding-session/SKILL.md) § *Hard rules — git worktree vs workbench attach (binding)* and § *Generic flow (single repo)*):
 
-1. **`git worktree add` only** — filesystem worktree exists at **`worktreePath`**. **Forbidden on parent before bootstrap:** **`sedea_add_worktree_folder`** used **instead of** `git worktree add`.
-2. **`sedea_add_worktree_folder` only** — worktree is a workspace root in Mission Control (unless the parent confirms attach already succeeded). **Forbidden on parent before bootstrap:** editor **Add Folder to Workspace** or skipping MCP attach because the directory exists on disk.
+1. **Center setup** — parent ran **`.sedea/centers/sedea/scripts/worktree-setup.sh`** from **`HOSTING_ROOT`**; worktree exists at **`worktreePath`**. **Forbidden on parent before retry:** **`sedea_add_worktree_folder`** before setup exits **0**, or inline **`git worktree add`** on the default path when the center script exists.
+2. **`sedea_add_worktree_folder` only** — worktree is a workspace root in Mission Control when setup JSON **`nextAction`** is **`attach-required`**. **Forbidden:** editor **Add Folder to Workspace** or skipping MCP attach.
 
-Then invoke **`worktree-bootstrap`** inline with **`worktreePath`** and **`hostingRoot`**. If **`worktreePath`** is missing or MCP attach failed, stop — do **not** substitute `git worktree add` or **`sedea_add_worktree_folder`** on this lane (see **Forbidden** in step 2 below).
+Then invoke **`worktree-bootstrap`** **inline** only when center setup failed and the developer attests retry — with **`worktreePath`** and **`hostingRoot`**. If **`worktreePath`** is missing or MCP attach failed, stop — do **not** substitute setup steps on this lane (see **Forbidden** in step 2 below).
 
 ## Structured choice (Mission Control)
 
