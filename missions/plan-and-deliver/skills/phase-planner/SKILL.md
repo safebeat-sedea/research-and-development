@@ -418,14 +418,16 @@ Apply:
 - If parent hint is `Delivery phases` but assessment says PR breakdown, or the reverse, do not auto-spawn. Surface the conflict as an open decision.
 - If either signal is missing or low-confidence, do not auto-spawn. Surface the uncertainty as an open decision.
 
-### 5a-hoist — Single-PR on ancestor (default)
+### 5a-hoist — Single-PR on ancestor (default procedure)
 
-When **`hoistRequired`** is true (route `pr-breakdown-single`):
+**Draft location ≠ phase lane.** Hoist moves **PR-list drafting** to the ancestor and leaves a **pointer note** on phase § 5 — it does **not** transfer phase delivery ownership (§ *Phase delivery ownership*). When **`hoistRequired`** is true (route `pr-breakdown-single`):
 
 1. Resolve **ancestor** = sidecar `parent:` of this phase plan (`parentPlanPath` / `parentPlanSlug` from spawn inputs when present). Verify the ancestor file exists and its dual-title section is **`Delivery phases`** (not already whole-plan **`PR breakdown`** only).
 2. **`StrReplace`** this phase plan's **`## 5. Delivery phases | PR breakdown`** body: replace `_TBD_` with a one-paragraph hoisted note — *PR breakdown for this phase is authored on ancestor `<ancestor-slug>` **`Delivery phases`** row **N**; do not draft § 5 **`PR breakdown`** here.*
 3. Run **`pr-breakdown`** **inline** on the **ancestor** per [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b--5a-hoist) — **not** on this phase file unless the developer chooses **decompose on this phase plan**.
-4. Do **not** run **`pr-breakdown`** on this phase file unless the developer later chooses **decompose on this phase plan** (`decomposeOnPhasePlan: true`).
+4. Do **not** run **`pr-breakdown`** on this phase file unless the developer chooses **decompose on this phase plan** (`decomposeOnPhasePlan: true`) via Step **5b**.
+
+When the developer asks about the phase § 5 pointer or challenges hoist: name **default procedure** (steps 1–4), **link the phase plan first** in recap, offer **PR breakdown on this phase plan** (`decomposeOnPhasePlan: true`) — **forbidden** "correct by design" or "the phase plan shouldn't own delivery."
 
 When route is `pr-breakdown-multi`, **`hoistRequired`** is false — run **`pr-breakdown`** **inline** on **this** phase plan with `prBreakdownShape: "multi"` per [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b--5a-hoist).
 
@@ -563,6 +565,8 @@ When the developer picks **`start-coding-session`** (or explicit implement autho
 ## Phase delivery ownership (binding)
 
 After §§ 1–4 are drafted on this lane, **this phase-planner child lane owns phase delivery** until one of the terminal conditions below. The **Master Plan agent** (`planner` lane) must **not** re-offer §6 route menus, **`pr-breakdown`** approval, or phase-scoped expand options for the same phase while this lane is active.
+
+In recaps and hoist explanations, **link the target phase `.plan.md` first** — see **§ 5a-hoist** (*draft location ≠ phase lane*).
 
 **Owns on this lane (through ship-complete or explicit defer/abandon):**
 
