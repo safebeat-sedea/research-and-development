@@ -90,17 +90,27 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/v
 
 Exit **0** when every **plan and deliver** lane role's manifest **`effectiveWarmUp`** covers today's legacy baseline (**sedea `alwaysApply` scan ∪ skill `warmUpRules`**). **`--bootstrap slim`** is the **§5.3 `alwaysApply` flip merge gate** (single bootstrap rule only) — expected to fail until phase 5 ships bootstrap-only **`alwaysApply`**. Hosting-repo CI: **`./scripts/verify-center-governance.sh`** (runs skill manifest + parity **full** + warm-up/parity integration tests).
 
+**Center governance CI (hosting repo).** GitHub Actions workflow **`.github/workflows/center-governance.yml`** runs on every PR and push to **`main`**. The job checks out the hosting repo with **recursive submodules**, installs script dependencies, then runs **`./scripts/verify-center-governance.sh`**.
+
+| Variable / secret | Where | Purpose |
+|-------------------|-------|---------|
+| **`GH_SUBMODULE_CHECKOUT_TOKEN`** | GitHub Actions secret on the hosting repo | PAT with **`contents:read`** on **`sedea-ai/app`** and **`sedea-centers/research-and-development`**. Required because the default **`GITHUB_TOKEN`** cannot read private submodule repos during **`actions/checkout`**. |
+| **`HOSTING_ROOT`** | Local / integration test env (optional) | Absolute path to the hosting repo root. **`verify-center-governance-integration.test.mjs`** defaults to the hosting root inferred from the script path when unset; set explicitly when running tests from a non-standard cwd. |
+
+**Local pre-PR check:** from the hosting repo root, **`./scripts/verify-center-governance.sh`** runs **`npm ci`** in **`missions/plan-and-deliver/scripts/`** then the same three verify steps as CI. No extra env vars are required for a standard clone with populated **`.sedea/centers/research-and-development`** submodule.
+
 **§5.6 operational sunset (L1–L5).** Before the legacy H8 directory-scan fallback is turned off in production, all gates in **`.sedea/centers/sedea/docs/lane-manifest-contract.md`** § *Legacy fallback operational sunset (PRD §5.6 L1–L5)* must pass. L2 is partially machine-enforced today via parity **`--bootstrap full`** in CI; L1/L3–L5 remain operator/host milestones documented in that section.
 
 **Spawn warm-up byte budget.** `verify-skill-manifest.mjs` sums on-disk bytes for each spawned skill's frontmatter **`warmUpRules` ∪ `laneRules`**, emits **`WARN:`** lines when over **256 KiB**, and reports **`spawn byte budget smoke`** in the OK line. Pass **`--enforce-spawn-byte-budget`** to exit **1** on over-cap skills (strict gate for post-flip manifest trimming).
 
-**Warm-up/parity integration tests.** From the hosting repo root after `npm ci` in `missions/plan-and-deliver/scripts/`:
+**Warm-up/parity integration tests.** **`./scripts/verify-center-governance.sh`** runs these as its third step (after **`npm ci`** in **`missions/plan-and-deliver/scripts/`**). To run only the integration suite locally:
 
 ```bash
+npm ci --prefix .sedea/centers/research-and-development/missions/plan-and-deliver/scripts
 HOSTING_ROOT="$(pwd)" node --test .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/verify-center-governance-integration.test.mjs
 ```
 
-Asserts **`verify-skill-manifest.mjs`** exit **0**, parity **`--bootstrap full`** exit **0**, and parity **`--bootstrap slim`** exit **1** (§5.3 merge gate smoke). **`./scripts/verify-center-governance.sh`** runs the same suite in CI.
+Asserts **`verify-skill-manifest.mjs`** exit **0**, parity **`--bootstrap full`** exit **0**, and parity **`--bootstrap slim`** exit **1** (§5.3 merge gate smoke).
 
 **Scripts vendor trees.** Any `node_modules/` or other tooling-only trees under `missions/*/scripts/` are **not** center governance assets — do not link-audit or gap-report them as protocol. Hosting repos document audit scope in **`.cursor/rules/`** (not in this center repo).
 
