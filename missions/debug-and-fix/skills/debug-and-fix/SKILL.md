@@ -2,7 +2,7 @@
 name: debug-and-fix
 description: >-
   Log-first debug loop in a dedicated worktree — bootstrap, analyze logs,
-  propose and apply fixes, verify with tests, recommend XOR exit path.
+  propose and apply fixes, verify with tests, recommend post-fix exit path.
 inputs:
   issueSummary:
     type: string
@@ -34,7 +34,7 @@ warmUpRules:
 
 # Debug and fix
 
-**Intent:** **Debug and Fix agent** runs a log-first diagnosis and fix loop in a dedicated hosting-repo worktree. Prioritize log access and debug instrumentation before substantive analysis. When the fix is verified, recommend an XOR exit: **Ad-Hoc PRD** (noisy worktree) or **code promotion** (clean fix).
+**Intent:** **Debug and Fix agent** runs a log-first diagnosis and fix loop in a dedicated hosting-repo worktree. Prioritize log access and debug instrumentation before substantive analysis. When the fix is verified, recommend a post-fix exit: **`code-promotion`** (parent runs **ad-hoc-prd → coding-session**) or **`findings-report-only`** (parent produces a debug session findings report with no downstream spawn).
 
 **Normative mode:** **Spawned only** on this mission — child lane owns worktree lifecycle for the debug session unless protocol explicitly re-spawns **`coding-session`** for promotion.
 
@@ -61,7 +61,7 @@ flowchart TD
   F --> G[Automated + guided tests]
   G --> H{Fixed?}
   H -->|no| C
-  H -->|yes| I[Recommend XOR exit]
+  H -->|yes| I[Recommend post-fix exit]
 ```
 
 ## Steps
@@ -114,17 +114,17 @@ Do **not** edit product code before bootstrap succeeds (`outputs.bootstrapStatus
 - If issue persists or a new issue appears → return to step **3** (logs first on new evidence).
 - If blocked (missing access, unrecoverable env) → set `fixStatus: blocked` and terminal with evidence.
 
-### 7 — Session cleanup vs XOR recommendation
+### 7 — Session cleanup vs post-fix recommendation
 
 When fix is verified:
 
-| Worktree state | `exitRecommendation` | Action |
-|----------------|---------------------|--------|
-| Many unrelated / noisy changes | `ad-hoc-prd` | Summarize fix + noise for Ad-Hoc PRD handover |
-| Few changes, needs cleanup | `code-promotion` after optional in-session cleanup | Remove temporary debug noise when safe; keep beneficial logs |
-| Clean, ready to ship | `code-promotion` | Hand off worktree paths to parent for **`coding-session`** spawn |
+| Worktree / fix state | `exitRecommendation` | Rationale for parent |
+|----------------------|---------------------|----------------------|
+| Clean fix, ready to ship | `code-promotion` | Parent runs **ad-hoc-prd → coding-session** (mission steps 5–5b) |
+| Fix verified; shipping deferred, noisy unrelated changes, or scope needs triage | `findings-report-only` | Parent produces **Debug session findings report** (mission step 6) — no downstream spawn |
+| Blocked before verification | `blocked` | Terminal with evidence; parent routes to findings report |
 
-Present structured choice confirming recommendation; parent owns XOR selection in mission step 4.
+Present structured choice confirming recommendation; **Squad Leader** owns post-fix exit selection in mission **step 4** (developer may override).
 
 ## Structured choice (Mission Control)
 
@@ -140,7 +140,7 @@ Every assistant turn closes with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** 
 | `worktreePath` | Absolute **`WORKTREE_ROOT`** |
 | `worktreeName` | Branch / worktree name |
 | `hostingRoot` | Absolute **`HOSTING_ROOT`** |
-| `exitRecommendation` | `ad-hoc-prd` \| `code-promotion` \| `blocked` |
+| `exitRecommendation` | `code-promotion` \| `findings-report-only` \| `blocked` |
 | `remainingTasks` | Open items for parent or developer |
 
 ### Host protocol line (required)
