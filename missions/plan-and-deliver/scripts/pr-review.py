@@ -34,6 +34,8 @@ Usage:
   cd <repo-root> && python3 .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py  # uses cwd input files
 """
 
+from __future__ import annotations
+
 import json
 import os
 import ssl
