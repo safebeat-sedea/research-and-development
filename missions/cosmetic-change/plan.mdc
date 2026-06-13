@@ -1,0 +1,196 @@
+---
+description: >-
+  Cosmetic change — bullet-list intake for UI/styling-only tweaks (few lines each,
+  no functional changes); single PR plan via new-plan + pr-plan, then coding-session
+  ship chain. Reuses plan-and-deliver skills.
+alwaysApply: false
+---
+
+# Mission plan
+
+**Execution model:** Squad Leader collects a cosmetic-only bullet list, spawns a **Cosmetic Plan agent** that scaffolds a minimal parent plan and runs **`new-plan`** + **`pr-plan`** inline. **`pr-plan`** spawns **`coding-session`** (§5d). Ship execution stays on the detached **`coding-session`** lane; the Squad Leader tracks planning closure and ship progress, then proposes dispatch resolution.
+
+**Skill reuse:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/) — **`new-plan`**, **`pr-plan`**, **`coding-session`**. Spawn contracts: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md).
+
+## Mission constraints (binding)
+
+| Constraint | Rule |
+|------------|------|
+| **Scope** | Cosmetic UI/styling only — few lines per item, **no functional behavior changes** |
+| **Intake** | Short bullet list; items may be unrelated but all must be cosmetic |
+| **PR count** | **Exactly one** PR plan per dispatch (single indexed child) |
+| **Skipped** | Full **`author-prd`**, **`planner`** Master Plan, **`pr-breakdown`**, **`delivery-phases`**, **`phase-planner`** |
+| **Out of scope redirect** | Functional changes, multi-PR decomposition, or complexity needing Master Plan → **`plan and deliver a single phase`** or **`plan and deliver`** (detached dispatch) |
+| **Ship chain** | Same detached **`coding-session`** order as plan-and-deliver §8 |
+
+### Operations filesystem invariant (binding)
+
+All **`.sedea/operations/`** writes from the **main hosting clone** only — see [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § **Operations persistence (main hosting root only)**.
+
+### Worktree removal ownership (binding)
+
+Same as plan-and-deliver — [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*; rule **20** § *Worktree removal ownership* in [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc).
+
+## Objectives
+
+1. **Cosmetic intake** — Collect a developer-confirmed bullet list of cosmetic-only changes (UI, styling, copy tweaks) with no functional scope.
+
+2. **Single PR plan** — Produce one PR plan under `.sedea/operations/` via minimal parent scaffold, **`new-plan`** (indexed child), and **`pr-plan`** inline (§§1–4 populated).
+
+3. **Standard ship** — Hand off to **`coding-session`** for implementation and the full plan-and-deliver ship chain (worktree, cut-point, deploy-walk, pre-pr-review, create-pr, pr-review, post-merge cleanup, optional plan-reconcile).
+
+4. **Squad Leader oversight** — Track planning completion and detached ship progress; gate **`MC_DISPATCH_RESOLVED_V1`**.
+
+## Squad operations
+
+```mermaid
+flowchart TB
+  classDef leader fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef child fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e
+  classDef detached fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+
+  CMD(["cosmetic change"]):::leader
+  CMD --> INT["§2 Intake bullet list"]:::leader
+  INT --> CP["§3 Spawn Cosmetic Plan agent"]:::child
+  CP --> NP["§4 new-plan + pr-plan inline"]:::child
+  NP --> CS["§5 pr-plan spawns coding-session"]:::detached
+  CS --> SHIP["Detached ship chain"]:::detached
+  INT --> LED["§6–§7 Leader ledger"]:::leader
+  LED --> RES["§8 MC_DISPATCH_RESOLVED_V1"]:::leader
+```
+
+| Role | Lane | Runs |
+|------|------|------|
+| **Squad Leader** | Leader | §§1–3 intake and spawn; §6–§8 ledger and resolution |
+| **Cosmetic Plan agent** | Child §3 | Minimal parent plan + **`new-plan`** + **`pr-plan`** inline |
+| **Coding session** | Detached (spawned from **`pr-plan`**) | Full **`coding-session`** ship chain |
+
+**Squad Leader `laneRules` (binding).**
+
+| Path | Role |
+|------|------|
+| `.sedea/centers/sedea/rules/2_ask-question-instructions.mdc` | Structured choice on every turn |
+| `.sedea/centers/sedea/rules/4_mission.mdc` | Mission protocol, spawn/reload |
+| `.sedea/centers/research-and-development/missions/cosmetic-change/plan.mdc` | **This** mission plan |
+| `.sedea/centers/research-and-development/docs/development-process.md` | Cadence and protocol branches |
+
+**Cosmetic Plan agent spawn `warmUpRules` (binding):** Merge target skill frontmatter defaults but **replace** `plan-and-deliver/plan.mdc` with **`cosmetic-change/plan.mdc`**.
+
+## Protocol
+
+### 1. Infer intent from the opening command phrase
+
+- **Type:** Branching logic
+- **Intent:** Match **`cosmetic change`** and prepare intake.
+- **Inputs:** Opening message; **`mission.yaml`** command inventory.
+- **Expected output:** Intent **`cosmetic-change`**; optional scope remainder for §2.
+- **Next-step resolution:** Phrase matches → §2. No match → structured choice to confirm intent or abort.
+
+**Procedure**
+
+1. Match **`cosmetic change`** case-insensitively (longest phrase first per [`.sedea/centers/sedea/rules/4_mission.mdc`](.sedea/centers/sedea/rules/4_mission.mdc) § **Mission command phrases**).
+2. Strip the phrase; pass remainder as optional scope hint to §2.
+3. Continue to §2.
+
+### 2. Collect cosmetic change intake
+
+- **Type:** Branching logic
+- **Intent:** Gather a confirmed cosmetic-only bullet list on the Squad Leader lane before §3 spawn.
+- **Inputs:** Opening remainder; `operationsUserId`.
+- **Expected output:** `changeList` (non-empty bullet list), `cosmeticOnlyConfirmed: true`, optional `title`.
+- **Next-step resolution:** List confirmed cosmetic-only → §3. Functional scope detected → structured choice: narrow to cosmetic, redirect to **`plan and deliver a single phase`** (detached), or abandon.
+
+**Procedure**
+
+1. Collect **bullet list** of changes — required; may pre-fill from opening remainder.
+2. **Cosmetic-only gate:** Confirm each item is UI/styling/copy with **no functional behavior change**. If any item alters logic, APIs, or data semantics, stop and offer redirect (see **Mission constraints**).
+3. Collect optional **title** for the plan tree (default from first bullet or user phrase).
+4. Present summary (title, bullet list); structured choice to proceed to Cosmetic Plan agent, revise list, redirect scope, or pause.
+5. **Forbidden:** spawn before list is confirmed cosmetic-only.
+
+### 3. Spawn Cosmetic Plan agent
+
+- **Type:** Agent engagement and handover
+- **execution:** spawned
+- **Intent:** Delegate minimal parent scaffold and **`new-plan`** + **`pr-plan`** inline to a focused planning agent.
+- **Target agent role:** Cosmetic Plan agent
+- **Assigned skills:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md), [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md) — executed **inline on the child lane** per §4 (not separate spawns).
+- **Required rule context:** Sedea baseline, **this `plan.mdc`**, **`development-process.md`**, [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc), plan-and-deliver **`skills/README.md`**.
+- **Inputs:** `changeList`, `title`, `operationsUserId`, `centerSlug: research-and-development`.
+- **Expected output:** Child terminal with `outputs.parentPlanPath`, `outputs.targetPlanPath`, `outputs.readyForImplementation`, `outputs.prPlanHandoffReady` (or equivalent per **`pr-plan`** **`## Completion (spawned)`** when spawn path used), ledger fields.
+- **Next-step resolution:** Terminal success with PR plan path → §6 ack on leader. Failure/partial → structured choice retry or abandon.
+
+**Spawn preflight**
+
+- **`name`** / **`description`** from intake **title** or first bullet — not generic placeholders.
+- **`initiatingPrompt`:** full bullet list and cosmetic-only confirmation.
+- **`warmUpRules`:** include **`cosmetic-change/plan.mdc`** instead of **`plan-and-deliver/plan.mdc`**.
+
+**Agent session closure:** Child **`AGENT_RESULT_RESPONSE_V1`**; leader waits for host delivery before §6.
+
+### 4. Minimal parent and PR plan (Cosmetic Plan agent lane)
+
+- **Type:** Simple skill execution (Cosmetic Plan agent — not Squad Leader)
+- **execution:** inline on child lane
+- **Intent:** Create one PR plan without full Master Plan / **`planner`** / **`pr-breakdown`**.
+- **Inputs:** §3 spawn `inputs` and `initiatingPrompt`.
+- **Expected output:** One parent plan with single **`### PR list`** row; one PR plan stub populated through **`pr-plan`** §§1–4; handoff ready for **`coding-session`**.
+- **Next-step resolution:** Success → **`pr-plan`** §5d spawn **`coding-session`** on §5. Blocked → terminal partial/failure to leader.
+
+**Procedure (Cosmetic Plan agent)**
+
+1. **Resolve `HOSTING_ROOT`**; operations writes on main hosting clone only.
+2. **Minimal parent plan** — scaffold under `.sedea/operations/<operationsUserId>/plans/` with:
+   - Title from intake **`title`**
+   - **`### PR list`** with **exactly one** row summarizing the bullet list as a single cosmetic concern
+   - Sidecar **`parent: null`**, **`status: started`** per [`.sedea/centers/sedea/rules/8_plan-board-contract.mdc`](.sedea/centers/sedea/rules/8_plan-board-contract.mdc)
+3. **`new-plan`** inline — `mode: indexed-child`, `childKind: pr-plan`, `index: 1`, parent paths from step 2.
+4. **`pr-plan`** inline — populate §§1–4 from bullet list; §§5–8 remain **`_TBD_`** for **`coding-session`** (normative).
+5. At **`pr-plan`** §5c/§5d — spawn **`coding-session`** with planning handoff `inputs` (`readyForImplementation`, `targetPlanPath`, `upstreamSkill: pr-plan`, etc.) per **`pr-plan/SKILL.md`**.
+6. Emit child terminal **`AGENT_RESULT_RESPONSE_V1`** with plan paths and handoff status.
+
+**Forbidden on this lane:** **`planner`**, **`pr-breakdown`**, **`delivery-phases`**, **`phase-planner`**, second PR row, Squad Leader **`MC_DISPATCH_RESOLVED_V1`**.
+
+### 5. Coding session (detached)
+
+- **Type:** Mission dispatch (detached) from Squad Leader perspective
+- **Intent:** Implementation and ship chain on **`coding-session`** lane spawned by **`pr-plan`** §5d.
+- **Inputs:** Spawn `inputs` from **`pr-plan`**; bullet list in `initiatingPrompt`.
+- **Expected output:** Ship milestones via **`coding-session`** terminal re-emits per plan-and-deliver §8.
+- **Next-step resolution:** Leader §7 tracks host-sync ship rows; §8 when gates allow.
+
+**Detached branches** — identical order to [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc) §8 detached table: **`coding-session`** → before deploy **`deploy-walk`** → **`pre-pr-review`** spawn → **`create-pr`** → **`pr-review`** → post-merge cleanup → after deploy **`deploy-walk`** → explicit **`plan-reconcile`**.
+
+The Squad Leader **does not** spawn **`coding-session`** from §§1–3.
+
+### 6. Planning closure acknowledgement
+
+- **Type:** Finish/stop logic
+- **Intent:** Acknowledge Cosmetic Plan agent terminal; register PR plan path on planning ledger.
+- **Inputs:** §3 child **`AGENT_RESULT_RESPONSE_V1`**.
+- **Expected output:** One-line status ack; open ship row when `readyForImplementation` reported.
+- **Next-step resolution:** Continue §7; do not re-run planning on leader lane.
+
+### 7. Ship cadence ledger
+
+- **Type:** Finish/stop logic
+- **Intent:** Track detached **`coding-session`** ship progress; gate dispatch resolution.
+- **Inputs:** Host-sync **`Mission Control: ship-ledger sync (section 8).`** messages; **`ship-ledger.v1.json`** when present.
+
+Same automation contract as plan-and-deliver §8 (*Mission Control host sync*) when the host registers mission slug **`cosmetic-change`**. **Forbidden:** manual Ship recap paste on the leader lane.
+
+**Pre-resolution checklist:** Before **`MC_DISPATCH_RESOLVED_V1`**, re-scan ship rows — do not propose **`resolved`** while `open`/`blocked` rows lack host-sync this session unless developer chose planning-only close via structured choice.
+
+### 8. Dispatch resolution (Squad Leader)
+
+- **Type:** Finish/stop logic
+- **Intent:** Close dispatch when objectives met or user signals wrap-up.
+- **Expected output:** `MC_DISPATCH_RESOLVED_V1` with `status` and `summary`.
+
+Per [`.sedea/centers/sedea/rules/4_mission.mdc`](.sedea/centers/sedea/rules/4_mission.mdc) § **Dispatch resolution**. Use **`resolved`** when planning and ship complete; **`partial`** when PR open or follow-up remains.
+
+## Related assets
+
+- Plan-and-deliver reference: [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc)
+- Single-phase (broader small-feature path): [`.sedea/centers/research-and-development/missions/single-phase/plan.mdc`](.sedea/centers/research-and-development/missions/single-phase/plan.mdc)
+- Cadence: [`.sedea/centers/research-and-development/docs/development-process.md`](.sedea/centers/research-and-development/docs/development-process.md)

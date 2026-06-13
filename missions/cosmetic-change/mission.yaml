@@ -1,0 +1,9 @@
+name: cosmetic change
+description: >-
+  Simple cosmetic UI and styling changes (few lines each, no functional changes)
+  from a short bullet list — single PR plan then coding-session ship chain.
+commands:
+  - phrase: cosmetic change
+    description: >-
+      Apply simple cosmetic UI/styling tweaks from a bullet list (few lines each,
+      no functional changes) via a single PR plan and standard ship chain.
