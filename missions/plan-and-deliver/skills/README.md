@@ -61,7 +61,7 @@ Mission Control delivery for skills that mix long plan output with structured us
 |-------|---------------------------------------|-----|
 | **`pr-breakdown`**, **`delivery-phases`** | §5d link + one-line summary + §6 modal | §6 act-after-select (depth-first); **`pr-breakdown`** **`approve-list`** may auto-expand PR **1** inline under **`planner`** |
 | **`pr-plan`** | §5c recap + modal (skipped when `skipPrPlanHandoffModal` auto-chain) | §5d spawn |
-| **`author-prd`**, **`ad-hoc-prd`** | Step 10 / 5 recap + open-item elaboration; resolution picks **and** Approve/Revise on same modal | Step 10a / 5a apply resolution; step 11 / 6 terminal on Approve |
+| **`author-prd`**, **`ad-hoc-prd`** | Step 10 / 5 recap + open-item elaboration; **one `questions` entry per open item**, then Approve/Revise as **last** question | Step 10a / 5a apply resolution for answered item; step 11 / 6 terminal on Approve |
 | **`planner`** | §7 draft + §7 approval modal same turn; §7a status + §7b next moves | §7c |
 | **`phase-planner`** | §4f echo / §5c route modal; Step **5f** after **`prPlanHandoffSkipped`** | §5b inline decompose / Step **5f** **`coding-session`** spawn |
 | **`new-plan`** | stub + parent link + populator gate | populator spawn |
@@ -78,7 +78,7 @@ Squad Leader steps **§3** and **§5** spawn child lanes for **`author-prd`** an
 
 | Skill | Typical invoker | Squad Leader ledger |
 |-------|-----------------|---------------------|
-| `author-prd` | Squad Leader §3 | Child lane owns PRD recap + approval (steps 10–11); **open-item resolution and Approve PRD co-present on the same modal** (step 10 — never resolve-only without Approve/Revise); leader §4 only after `terminal` + `developerApprovedPrd: true`; no nested child lanes |
+| `author-prd` | Squad Leader §3 | Child lane owns PRD recap + approval (steps 10–11); **one `questions` entry per open item, Approve/Revise last** (step 10 — never resolve-only without Approve/Revise); leader §4 only after `terminal` + `developerApprovedPrd: true`; no nested child lanes |
 | `planner` | Squad Leader §5 | Seed ledger; §6 ack when `continuationOwner: master-plan-agent` |
 | `phase-planner` | inline **`new-plan`** spawn | Runs **`delivery-phases`** / **`pr-breakdown`** inline on **its child lane**; owns phase subtree through ship-complete; **`planner`** ack-only while **`continuationOwner: phase-planner-agent`** is active |
 | `delivery-phases` | **`planner`** or **`phase-planner` inline** | Runs **`new-plan`** inline on invoker lane |

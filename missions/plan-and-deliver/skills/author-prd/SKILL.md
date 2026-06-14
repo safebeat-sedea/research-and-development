@@ -138,20 +138,21 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
 
  **Detect open items** before building the modal: `outputs.openQuestions`, missing mandatory or important sections, unresolved `TBD` markers, contradictions, and `planningReadiness: partial` or `blocked`.
 
- **When open items exist** — **same approval turn** (one modal):
+ **When open items exist** — **one modal, multiple questions**:
  - **`display.markdown`:** numbered list — each open item elaborated (section or PRD location, gap text, why a decision matters, agent-proposed resolution options).
- - **`askQuestion.options`:** per-item resolution picks (for example accept proposed resolution A/B, mark not applicable, defer to §12 follow-up, gather more evidence) **and always** **Approve PRD**, **Revise PRD**, **More details for option _** on the **same** options list.
- - **Forbidden:** a separate resolve-only modal that omits **Approve PRD** / **Revise PRD** until all items are cleared.
- - **Many open items:** batch across turns when one modal would be impractical; **each batch still co-presents** **Approve PRD** and **Revise PRD** (developer may approve mid-stream with remaining gaps documented in §12).
+ - **`askQuestion.questions`:** **one entry per open item** — each with its own `id`, `prompt`, and `options` scoped to **that item only** (for example accept proposed resolution A/B, mark not applicable, defer to §12 follow-up, gather more evidence). **Forbidden:** merging all open-item picks into a single `questions` entry.
+ - **Last question** (always final in the array): `id` e.g. `prd-approval`, `prompt` summarizing readiness to approve or revise, `options`: **Approve PRD**, **Revise PRD**, **More details for option _**.
+ - **Forbidden:** one combined question whose `options` mixes per-item resolution picks with **Approve PRD** / **Revise PRD**; a separate resolve-only modal that omits **Approve PRD** / **Revise PRD** until all items are cleared.
+ - **Many open items:** batch across turns when one modal would be impractical; **each batch still ends with** the **Approve PRD** / **Revise PRD** question as the **last** `questions` entry (developer may approve mid-stream with remaining gaps documented in §12).
 
- **When no open items remain** (or only surfaced §12 notes the developer may accept as-is) — minimum options:
+ **When no open items remain** (or only surfaced §12 notes the developer may accept as-is) — single `questions` entry with minimum options:
  - **Approve PRD** — accept for **`planner`** on this dispatch (allowed when `planningReadiness: ready` even if §12 lists planner-owned follow-ups)
  - **Revise PRD** — edit on this lane, return to step 10
  - **More details for option _**
 
  Do **not** treat the write alone as developer approval.
 
-10a. **On open-item resolution pick** — Apply the selected resolution to the PRD and source ledger, re-run step 7 completeness review, rewrite when needed (step 8), then return to step 10 with the same co-present approval shape.
+10a. **On open-item resolution pick** — Apply the selected resolution for **that question's item** to the PRD and source ledger, re-run step 7 completeness review, rewrite when needed (step 8), then return to step 10 with the same multi-question approval shape.
 
 11. **On approve** — Set `outputs.developerApprovedPrd: true`, emit terminal **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: terminal` and `continuationOwner: squad-leader`.
 

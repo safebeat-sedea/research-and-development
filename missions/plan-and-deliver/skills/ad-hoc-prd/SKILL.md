@@ -143,20 +143,21 @@ See [`.sedea/centers/research-and-development/rules/50_mission-control-display-m
 
  **Detect open items** before building the modal: `_TBD_` bullets in §§1–3, explicit risks or unknowns in **§3 Proposed solution**, thin or ambiguous acceptance criteria, and `outputs.complexityGuard: needs-master-plan-assessment`.
 
- **When open items exist** — **same approval turn** (one modal):
+ **When open items exist** — **one modal, multiple questions**:
  - **`display.markdown`:** numbered list — each open item elaborated (section, gap text, why a decision matters, agent-proposed resolution options).
- - **`askQuestion.options`:** per-item resolution picks (for example accept proposed resolution A/B, mark not applicable, defer to planner, gather more evidence) **and always** **Approve PRD**, **Revise PRD**, **More details for option _** on the **same** options list.
- - **Forbidden:** a separate resolve-only modal that omits **Approve PRD** / **Revise PRD** until all items are cleared.
- - **Many open items:** batch across turns when one modal would be impractical; **each batch still co-presents** **Approve PRD** and **Revise PRD**.
+ - **`askQuestion.questions`:** **one entry per open item** — each with its own `id`, `prompt`, and `options` scoped to **that item only** (for example accept proposed resolution A/B, mark not applicable, defer to planner, gather more evidence). **Forbidden:** merging all open-item picks into a single `questions` entry.
+ - **Last question** (always final in the array): `id` e.g. `prd-approval`, `prompt` summarizing readiness to approve or revise, `options`: **Approve PRD**, **Revise PRD**, **More details for option _**.
+ - **Forbidden:** one combined question whose `options` mixes per-item resolution picks with **Approve PRD** / **Revise PRD**; a separate resolve-only modal that omits **Approve PRD** / **Revise PRD** until all items are cleared.
+ - **Many open items:** batch across turns when one modal would be impractical; **each batch still ends with** the **Approve PRD** / **Revise PRD** question as the **last** `questions` entry.
 
- **When no open items remain** — minimum options:
+ **When no open items remain** — single `questions` entry with minimum options:
  - **Approve PRD** — developer accepts this Ad-Hoc PRD for **`planner`** input
  - **Revise PRD** — edit the `.ad-hoc-prd.md` on this lane, then return to step 5
  - **More details for option _**
 
  Do **not** treat the write alone as developer approval. Mention optional **manual move** to **`joint/docs/`** only if **the developer** wants shared visibility.
 
-5a. **On open-item resolution pick** — Apply the selected resolution to the `.ad-hoc-prd.md`, then return to step 5 with the same co-present approval shape.
+5a. **On open-item resolution pick** — Apply the selected resolution for **that question's item** to the `.ad-hoc-prd.md`, then return to step 5 with the same multi-question approval shape.
 
 6. **On approve** — Set `outputs.developerApprovedPrd: true`, ensure `prdRef` / `prdPath` / `prdTitle` reflect the approved file, then emit the terminal **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: terminal` and `continuationOwner: "squad-leader"`.
 7. **On revise** — Apply edits to the Ad-Hoc PRD file, then repeat step 5 until the developer approves or abandons (report `aborted` / `abandoned` only when they clearly stop).
