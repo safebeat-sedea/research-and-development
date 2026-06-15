@@ -390,6 +390,19 @@ Path: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/
 
 You know the state: §§ 1–4 and **`### Decomposition assessment`** are drafted; dual-title § 5 list body and § 6 stay `_TBD_`.
 
+### Step 5-open-items — Open-item modal contract
+
+Apply the shared planning open-item contract from `../README.md` to every **phase-planner** gate that can surface more than one unresolved item: parent-row mismatches, route conflicts between parent hint and assessment, missing or low-confidence route signals, phase-boundary observations, diagram simplification notes, parent Changes bullets that do not map to the phase, and implementation-handoff caveats.
+
+**When open items exist** — use **one modal with multiple `questions[]` entries**:
+
+- **`display.markdown`:** numbered list of open items. For each item, include the parent row or phase section it affects, the gap/conflict/caveat, why it matters for downstream decomposition, and the agent's proposed resolution options.
+- **`askQuestion.questions`:** one scoped question per open item, with its own stable `id`, `prompt`, and item-only `options` (for example `accept-phase-boundary`, `revise-phase-section`, `use-parent-route`, `use-assessment-route`, `defer-to-caveats`, `skip-no-change`, `more-details`). **Forbidden:** one combined question whose options mix several item decisions.
+- **Final question:** always append the terminal phase-planner gate question last in the array. Use the normal gate for the current step: **Approve phase plan and route**, route selection, implementation handoff after inline `pr-plan` skip, defer/abandon, or follow-up route menu. **Forbidden:** a resolve-only modal that omits the terminal approve/route/handoff question until every item is cleared.
+- **Many open items:** batch across turns when needed; each batch still ends with the terminal phase-planner gate question as the final `questions[]` entry.
+
+**When no open items remain** — use the existing single terminal gate question for Step **5b**, Step **5c**, Step **5f**, or the relevant follow-up route menu.
+
 ### 5a — Determine route signal
 
 Compare two signals:
@@ -409,8 +422,8 @@ Apply:
 - If both signals agree on `delivery-phases`, next route is `delivery-phases`.
 - If both signals agree on PR breakdown, next route is `pr-breakdown`; preserve single vs multi as `prBreakdownShape` (`"single"` or `"multi"`).
 - **Single-PR and multi-PR** both run **`pr-breakdown`** inline on **this phase plan** with the matching `prBreakdownShape` — **forbidden:** retargeting `targetPlanPath` to the decomposition ancestor (see **development-process.md** § *Single-PR on a phase plan (draft location — binding)*).
-- If parent hint is `Delivery phases` but assessment says PR breakdown, or the reverse, do not auto-spawn. Surface the conflict as an open decision.
-- If either signal is missing or low-confidence, do not auto-spawn. Surface the uncertainty as an open decision.
+- If parent hint is `Delivery phases` but assessment says PR breakdown, or the reverse, do not auto-spawn. Surface the conflict as an open item per **Step 5-open-items** and keep the terminal route/approval question last.
+- If either signal is missing or low-confidence, do not auto-spawn. Surface the uncertainty as an open item per **Step 5-open-items** and keep the terminal route/approval question last.
 
 ### 5b-decompose — lane ownership (binding)
 
@@ -568,7 +581,7 @@ When **`AGENT_RESULT_RESPONSE_V1`** bubbles to inline **`new-plan`** / **`delive
 
 ## One choice per turn — surface observations
 
-Match the discipline in **`planner`**: perform exactly what was chosen; do not silently expand scope. If you notice gaps (parent Changes bullets that do not map to a phase, diagram simplifications, assessment vs parent hint mismatch), list them as short **numbered notes** in **`display.markdown`** (or brief prose) and close the **same turn** with **AskQuestion** (revise pass, accept as-is, or **More details for option _**).
+Match the discipline in **`planner`**: perform exactly what was chosen; do not silently expand scope. If you notice gaps (parent Changes bullets that do not map to a phase, diagram simplifications, assessment vs parent hint mismatch), list them as short **numbered notes** in **`display.markdown`** and apply **Step 5-open-items**: one scoped `questions[]` entry per note or batch item, then the current terminal phase-planner gate question last.
 
 ## Scope guard
 

@@ -548,6 +548,19 @@ After **Echo to chat** (§§1–5 + complexity table), end with **one short stat
 
 When the full section echo is too long for one message, use rule **2** priority **3** split only: prior message = echo; **next** message = **`MC_PHASED_RESPONSE_V1`** sentinel-first with Step **7b** options — never a prose-only follow-up. On the **initial §§1–5 draft turn**, include **`MC_PHASED_RESPONSE_V1`** in the **same** message as **`AGENT_RESULT_RESPONSE_V1`** — phased **line 1**, terminal **last line** (rule **2** § *Same message as spawn terminal*).
 
+### Step 7a.1 — Open-item modal contract
+
+Apply the shared planning open-item contract from `../README.md` to every **planner** review gate that surfaces multiple unresolved items: initial draft observations, section revision needs, high-complexity route caveats, route-choice caveats, inline decomposition blockers, and follow-up flags.
+
+**When open items exist** — use **one modal with multiple `questions[]` entries**:
+
+- **`display.markdown`:** numbered list of open items. For each item, include the section or route it affects, the gap or caveat, why the decision matters, and the agent's proposed resolution options.
+- **`askQuestion.questions`:** one scoped question per open item, with its own stable `id`, `prompt`, and item-only `options` (for example `accept-proposed`, `revise-section`, `defer-to-caveats`, `skip-no-change`, `more-details`). **Forbidden:** one combined question whose options mix several item decisions.
+- **Final question:** always append the terminal planner gate question last in the array. Use the normal gate for the current step: Step **7b** primary next moves, Step **7c** route choice, §7 Caveats approval, or the relevant resume/expand gate. **Forbidden:** a resolve-only modal that omits the terminal next-move or approval question until every item is cleared.
+- **Many open items:** batch across turns when needed; each batch still ends with the terminal planner gate question as the final `questions[]` entry so the developer can approve, route, revise, or defer with the surfaced context visible.
+
+**When no open items remain** — use the existing single terminal gate question for Step **7b**, Step **7c**, §7 approval, or resume/expand.
+
 ### Step 7b — Structured choice: primary next moves
 
 Invoke **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** in the **same turn** as step **7a** recap when practical. **Obsolete:** structured choice in a **separate** assistant message after step **7a** without a phased sentinel on that follow-up. Build options from plan state and Step 6c band.
@@ -676,7 +689,7 @@ When the developer asks to commit, push, or open a PR for plan files under **`.s
 
 ### Observations (numbered flags)
 
-When you notice gaps while working, list **numbered observations** in recap prose (Flag 1, Flag 2, …). Then **AskQuestion** / **`MC_PHASED_RESPONSE_V1`** per flag or batch: **Apply fix**, **Skip**, **More details for option _** — prefer recap + modal in one message.
+When you notice gaps while working, list **numbered observations** in **`display.markdown`** (Flag 1, Flag 2, …) and apply **Step 7a.1 — Open-item modal contract**: one scoped `questions[]` entry per observation or batch item, then the current terminal planner gate question last. Prefer recap + modal in one message.
 
 After handling flags, return to **Step 7b**.
 

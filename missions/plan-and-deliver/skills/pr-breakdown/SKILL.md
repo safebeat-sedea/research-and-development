@@ -205,11 +205,24 @@ Do **not** remove an existing assessment authored by **`phase-planner`** / **`pl
 
 Run this step **only** when the dual-title heading is still the **dual** form and the list body is `_TBD_` (after step 3.5).
 
+### Step 4-open-items — Open-item modal contract
+
+Apply the shared planning open-item contract from `../README.md` to every **pr-breakdown** gate that can surface multiple unresolved items: route conflicts, parent-row mismatch warnings, single-vs-multi PR uncertainty, sequencing concerns, PR boundary observations, eligibility blockers, child-row expansion blockers, and list-approval caveats.
+
+**When open items exist** — use **one modal with multiple `questions[]` entries**:
+
+- **`display.markdown`:** numbered list of open items. For each item, include the target section or PR row, the gap/conflict/blocker, why it matters for single-concern or depth-first expansion, and the agent's proposed resolution options.
+- **`askQuestion.questions`:** one scoped question per open item, with its own stable `id`, `prompt`, and item-only `options` (for example `accept-proposed-boundary`, `split-pr`, `merge-pr`, `revise-sequencing`, `defer-row`, `skip-no-change`, `more-details`). **Forbidden:** one combined question whose options mix decisions for several PR rows or concerns.
+- **Final question:** always append the terminal pr-breakdown gate question last in the array. Use the normal gate for the current step: route decision, **Approve PR breakdown**, expand eligible PR row(s), revise, defer, or abandon. **Forbidden:** a resolve-only modal that omits list approval or expansion until every item is cleared.
+- **Many open items:** batch across turns when needed; each batch still ends with the terminal pr-breakdown gate question as the final `questions[]` entry.
+
+**When no open items remain** — use the existing single terminal gate question for Step **4**, Step **6**, or follow-up expansion.
+
 When the skill was spawned with `routeLock: "pr-breakdown"` (or with `parentAgentRole: "master-plan-agent"` or `"phase-planner-agent"` after the developer chose **PR breakdown**), the route family is already decided upstream. Do not offer **Delivery phases** as a normal choice. Instead:
 
 - If `### Decomposition assessment` recommends `PR breakdown` single-PR, use `pr_breakdown_single`.
 - If it recommends `PR breakdown` multi-PR, or the recommendation is ambiguous but PR-ready, use `pr_breakdown_multi`.
-- If it strongly recommends `Delivery phases`, stop and surface the conflict to the developer: continue with PR breakdown anyway, switch to `delivery-phases`, or revise the assessment. Do not silently bounce to `delivery-phases`.
+- If it strongly recommends `Delivery phases`, stop and surface the conflict to the developer as an open item per **Step 4-open-items**: continue with PR breakdown anyway, switch to `delivery-phases`, or revise the assessment. Do not silently bounce to `delivery-phases`; keep the terminal route decision question last.
 
 When no upstream route lock exists, use **AskQuestion** to ask:
 
@@ -344,6 +357,8 @@ Required **`options`** (adapt labels; keep **K** visible in the **`prompt`** whe
 | `abandon` | Abandon this branch |
 | `more-details` | More details for option _ |
 
+When approval or expansion has open items (sequencing caveats, row-specific blockers, K/shape concerns, parent-row mismatches, or eligibility blockers), apply **Step 4-open-items**: put one scoped `questions[]` entry per item before this approval/expansion question, and keep this approval/expansion question last in the array.
+
 **Inline under `planner` or `phase-planner`:** Structured-choice approval is mandatory before indexed **`new-plan`** handoff **except** when **`upstreamRouteApproved: true`** or **`skipPrBreakdownApprovalModal: true`** from **`phase-planner`** with **`autoContinue: true`** (see **Cascade route approval** in act-after-select below) — then run **`approve-list`** act-after-select **same turn** without opening Step **6** modal. Do **not** emit **`AGENT_RESULT_RESPONSE_V1`** for this skill when **`parentAgentRole`** is **`master-plan-agent`** or **`phase-planner-agent`** — report **`## Completion (inline)`** to the invoker instead. Run **`new-plan`** **inline** on this lane (no child lanes for **`new-plan`**); **`coding-session`** child lanes may open from inline **`pr-plan`**.
 
 **Standalone (spawned):** After structured-choice approval, emit **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: "active"` when spawning **`new-plan`** child lanes — **not** in the structured-choice message. On **revise**, run step **6a** then repeat recap → structured choice.
@@ -401,7 +416,7 @@ Only return `continuationStatus: "terminal"` when every row is explicitly `compl
 
 ## One primary choice per turn — surface observations
 
-Match the discipline in **`planner`**, **`delivery-phases`**, and **`phase-planner`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (Changes bullets that do not map to a PR, sequencing tension, assessment vs draft mismatch), list short **numbered observations** in **`display.markdown`** (or brief prose) and close the **same turn** with **AskQuestion** (revise pass, accept as-is, or **More details for option _**). When you need an explicit accept/skip decision on flags, use **AskQuestion** with one `option` per flag plus **More details for option _**.
+Match the discipline in **`planner`**, **`delivery-phases`**, and **`phase-planner`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (Changes bullets that do not map to a PR, sequencing tension, assessment vs draft mismatch), list short **numbered observations** in **`display.markdown`** and apply **Step 4-open-items**: one scoped `questions[]` entry per observation or batch item, then the current terminal pr-breakdown gate question last.
 
 ## Scope guard
 

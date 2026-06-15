@@ -159,6 +159,19 @@ Acknowledge the state in one line.
 
 ## Step 4 — Decision gate (when section is `_TBD_`)
 
+### Step 4-open-items — Open-item modal contract
+
+Apply the shared planning open-item contract from `../README.md` to every **delivery-phases** gate that can surface multiple unresolved items: route caveats, phase-boundary observations, phase-count concerns, sequencing concerns, list approval caveats, child-row expansion blockers, and depth-first eligibility blockers.
+
+**When open items exist** — use **one modal with multiple `questions[]` entries**:
+
+- **`display.markdown`:** numbered list of open items. For each item, include the target section or phase row, the gap/caveat/blocker, why it matters for phase decomposition or depth-first expansion, and the agent's proposed resolution options.
+- **`askQuestion.questions`:** one scoped question per open item, with its own stable `id`, `prompt`, and item-only `options` (for example `accept-phase-boundary`, `split-phase`, `merge-phase`, `revise-sequencing`, `defer-row`, `skip-no-change`, `more-details`). **Forbidden:** one combined question whose options mix decisions for several phase rows or concerns.
+- **Final question:** always append the terminal delivery-phases gate question last in the array. Use the normal gate for the current step: decomposition route, **Approve phase list**, expand next eligible phase row, revise, defer, or abandon. **Forbidden:** a resolve-only modal that omits list approval or expansion until every item is cleared.
+- **Many open items:** batch across turns when needed; each batch still ends with the terminal delivery-phases gate question as the final `questions[]` entry.
+
+**When no open items remain** — use the existing single terminal gate question for Step **4**, Step **6**, or follow-up expansion.
+
 When the skill was spawned with `routeLock: "delivery-phases"` (or with `parentAgentRole: "master-plan-agent"` or `"phase-planner-agent"` after the developer chose **Delivery phases**), the decision is already made upstream. Acknowledge *"Route locked: Delivery phases."* and skip directly to Step 5. Do not ask the developer to choose `Delivery phases` vs `PR breakdown` again.
 
 When no upstream route lock exists, use **AskQuestion** to ask:
@@ -252,6 +265,8 @@ Required **`options`** (adapt labels; keep **K** visible in the **`prompt`** whe
 | `abandon` | Abandon this branch |
 | `more-details` | More details for option _ |
 
+When approval or expansion has open items (phase-count concerns, phase-boundary observations, sequencing caveats, row-specific blockers, or depth-first eligibility blockers), apply **Step 4-open-items**: put one scoped `questions[]` entry per item before this approval/expansion question, and keep this approval/expansion question last in the array.
+
 **Inline under `planner` or `phase-planner`:** Structured-choice approval is mandatory before indexed **`new-plan`** handoff. Do **not** emit **`AGENT_RESULT_RESPONSE_V1`** for this skill when **`parentAgentRole`** is **`master-plan-agent`** or **`phase-planner-agent`** — report **`## Completion (inline)`** to the invoker instead. Run **`new-plan`** **inline** on this lane (no child lanes for **`new-plan`**); **`phase-planner`** child lanes may still open from inline **`new-plan`**.
 
 **Standalone (spawned):** After structured-choice approval, emit **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: "active"` when spawning **`new-plan`** child lanes — **not** in the structured-choice message. Close the turn with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** while waiting for **`new-plan`** child results per step **6b** — do not prose-only announce wait.
@@ -309,7 +324,7 @@ Only return `continuationStatus: "terminal"` when every row is explicitly `compl
 
 ## One primary choice per turn — surface observations
 
-Match the discipline in **`planner`** and **`phase-planner`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (diagram vs phase boundary, duplicate wording, phase count vs assessment), list short **numbered observations** in **`display.markdown`** (or brief prose) and close the **same turn** with **AskQuestion** (revise pass, accept as-is, or **More details for option _**). When you need an explicit accept/skip decision on flags, use **AskQuestion** with one `option` per flag plus **More details for option _**.
+Match the discipline in **`planner`** and **`phase-planner`**: perform exactly what was chosen; scope stays on the chosen pass. If you notice gaps (diagram vs phase boundary, duplicate wording, phase count vs assessment), list short **numbered observations** in **`display.markdown`** and apply **Step 4-open-items**: one scoped `questions[]` entry per observation or batch item, then the current terminal delivery-phases gate question last.
 
 ## Scope guard
 
