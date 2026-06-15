@@ -153,6 +153,19 @@ The regular parent-confirmation gate below is **skipped** when that pre-resoluti
 3. **Capture the exact `Plan:` placeholder for item N.** The selected row must contain exactly one `Plan:` line that is still pending. Accept `_TBD`, `_TBD_`, or a clear spawn-hint placeholder after `Plan:`. If the row has no `Plan:` line, has multiple `Plan:` lines, or already links a `.plan.md`, stop with `partial` and report the row problem; do not create a duplicate child.
 4. **Capture parent row prose for the child stub.** When item **N** includes sub-bullets per the dev-process **§ 6 / § 5 contents rule** (decomposition decision, scope sentence, `Plan:`), treat that text as **already reviewed on the parent** — copy the scope sentence (and optional decomposition line) into the child `overview:` and `## Overview` when writing the stub. Do **not** ask the developer to re-approve that prose.
 
+### Indexed child — Open-item modal contract
+
+Apply the shared planning open-item contract from `../README.md` § *Planning open-item modal contract* when indexed-child validation surfaces multiple unresolved items before or after stub write: parent **`Plan:`** placeholder shape problems, duplicate or missing `Plan:` lines, child-kind vs parent-heading mismatch recoverable with developer input, thin or ambiguous parent row prose for the stub, depth-first eligibility blockers that need explicit defer/override, child stub YAML or overview issues, or blocked parent-link verification after write.
+
+**When open items exist** — use **one modal with multiple `questions[]` entries**:
+
+- **`display.markdown`:** numbered list — each item cites parent list item **N**, the `Plan:` line or stub field affected, the gap, why the decision matters for the plan tree, and the agent's proposed resolution options.
+- **`askQuestion.questions`:** one scoped question per open item (for example `fix-plan-placeholder`, `accept-stub-overview`, `override-eligibility`, `revise-row-prose`, `defer`, `more-details`). **Forbidden:** one combined question mixing placeholder, stub, and populator decisions.
+- **Final question:** append the normal terminal gate for the current step: confirm indexed expand, revise stub, defer population, abandon child, or approve populator handoff — per step **3** populator approval or post-write verification. **Forbidden:** resolve-only modals without the terminal routing question.
+- **Many open items:** batch across turns when needed; each batch still ends with the terminal indexed-child gate question as the final `questions[]` entry.
+
+**When no open items remain** — proceed with stub write, parent `Plan:` replacement, or populator handoff using the existing single terminal gate.
+
 **Stop conditions**
 
 - Heading still `Delivery phases | PR breakdown` or body `_TBD_` — stop; run **`delivery-phases`** or **`pr-breakdown`** (mission / structured choice) to decide decomposition first.
@@ -190,11 +203,24 @@ A plan without a parent is a **root delivery plan** (`parent: null` in the sidec
 
 Lock the parent using the bullets above; **planning-target-resolution** is normative for combining signals.
 
-**Confirm** before writing on this path (unless **Indexed child spawn** already skipped the gate). Wrong parent is the expensive failure mode. Example:
+**Confirm** before writing on this path (unless **Indexed child spawn** already skipped the gate). Wrong parent is the expensive failure mode.
+
+### Parent derivation — Open-item modal contract
+
+Apply the shared planning open-item contract from `../README.md` § *Planning open-item modal contract* when **parent derivation** surfaces multiple unresolved items: conflicting parent candidates, ambiguous session anchors, missing explicit `null` vs slug choice, or thin scope for a standalone root plan.
+
+**When open items exist** — use **one modal with multiple `questions[]` entries**:
+
+- **`display.markdown`:** numbered list of open items. For each item, include the candidate parent slug/path, the gap or conflict, why the parent choice matters for the plan tree, and the agent's proposed resolution options.
+- **`askQuestion.questions`:** one scoped question per open item, with its own stable `id`, `prompt`, and item-only `options` (for example `accept-parent-candidate`, `use-null-root`, `paste-different-slug`, `defer`, `more-details`). **Forbidden:** one combined question whose options mix decisions for several parent candidates.
+- **Final question:** always append the terminal **new-plan** parent-confirmation question last in the array: confirm write with resolved parent (or `null` for root), revise parent choice, defer scaffold, **More details for option _**. **Forbidden:** a resolve-only modal that omits parent confirmation until every item is cleared.
+- **Many open items:** batch across turns when needed; each batch still ends with the terminal parent-confirmation question as the final `questions[]` entry.
+
+**When no open items remain** — use the existing single terminal parent-confirmation question (confirm write · paste different slug · `null` root · defer · **More details for option _**).
+
+Example recap line when no open items:
 
 > Parent: `<parent-slug>` (from `plan-state resolve`). OK? Reply yes to write, paste a different slug, or `null` for a **root delivery plan**.
-
-If two candidates conflict, present both and ask.
 
 ## Slug and filename
 
@@ -274,7 +300,7 @@ Always write the sidecar. `parent:` required; use YAML `null` unquoted for a **r
  - the link target is the relative child filename just created;
  - no sibling item changed.
 
- If verification fails, return `partial` with `remainingTasks` that names `plan-reconcile`; do not proceed to the populator spawn until the parent link is trustworthy.
+ If verification fails, surface blocked parent-link issues as open items per **Indexed child — Open-item modal contract** before returning `partial`; include `plan-reconcile` in `remainingTasks` when the developer defers repair. Do not proceed to the populator spawn until the parent link is trustworthy or the developer explicitly accepts blocked state with documented defer.
 
 2. **Link the child** using an absolute `file://` URL to the real path under `.sedea/operations/.../plans/...` so the developer can open it.
 
@@ -298,7 +324,7 @@ Set `outputs.populatorApprovalStatus: "waived-upstream"` and one line: *Parent l
 - `requestedPopulatorSkill` is absent (stub-only create).
 - The developer explicitly chose **Revise child stub first** or **Defer population** on a prior turn (re-open step 3).
 
-3. **Populator approval gate (indexed spawn only — when not auto-authorized).** If this skill was spawned with `requestedPopulatorSkill` and [Auto-authorize populator](#auto-authorize-populator-upstream-decomposition-spawn) does **not** apply, present the created child stub and verified parent `Plan:` link to the developer before spawning the populator. Collect approval via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — **preferred:** stub link + modal in one message. Required options:
+3. **Populator approval gate (indexed spawn only — when not auto-authorized).** If this skill was spawned with `requestedPopulatorSkill` and [Auto-authorize populator](#auto-authorize-populator-upstream-decomposition-spawn) does **not** apply, present the created child stub and verified parent `Plan:` link to the developer before spawning the populator. Apply **Indexed child — Open-item modal contract** when stub review surfaces open items (thin overview, YAML quoting risk, parent link not yet verified). When open items exist, one scoped `questions[]` entry per item, then the terminal populator gate question last. Collect approval via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**, **`../README.md`** § *Planning open-item modal contract*, and **`../README.md`** § *Recap, structured choice, act* — **preferred:** stub link + modal in one message. Terminal populator options (final `questions[]` entry when no open items, or last entry after item resolutions):
  - **Approve child stub and populate now**
  - **Revise child stub first**
  - **Defer population**

@@ -318,7 +318,7 @@ Full sentences (not the short-bullet rule).
 
 ### 4f — Echo to chat
 
-Echo §§ 1–4 with the same headers as the file. Surface flags (unmapped parent bullets, **`_TBD_`** in **Considered & rejected**).
+Echo §§ 1–4 with the same headers as the file. Surface flags (unmapped parent bullets, **`_TBD_`** in **Considered & rejected**, thin reasoning) as numbered open items in **`display.markdown`** when multiple gaps exist before §5c; apply **Step 5-open-items — Open-item modal contract**. When only one minor flag exists, echo it in recap and proceed to §5a.
 
 ### 4a-bis — Append canonical `deploy-test-plan-verified` todo
 
@@ -403,9 +403,26 @@ When inline under **`phase-planner`**, include **`invokerRole: phase-planner-age
 
 Set **`implementationHandoffStatus: "offered"`** when §5c modal is emitted; **`deferred`** when the developer picks **`defer`**; **`spawned-coding-session`** after §5d.
 
+### Step 5-open-items — Open-item modal contract
+
+Apply the shared planning open-item contract from `../README.md` § *Planning open-item modal contract* to every **pr-plan** gate that can surface multiple unresolved items before implementation handoff: §5a readiness blockers, blocked or untrusted parent `Plan:` links, unmapped parent change bullets, thin **Considered & rejected**, ambiguous row match, optional §5–8 pre-fill sketch choices, and non-blocking follow-up flags from step **4f**.
+
+**When open items exist** — use **one modal with multiple `questions[]` entries**:
+
+- **`display.markdown`:** numbered list of open items. For each item, include the PR plan section or parent row affected, the gap or blocker, why it matters for readiness or handoff, and the agent's proposed resolution options.
+- **`askQuestion.questions`:** one scoped question per open item (for example `accept-scope-bullet`, `map-parent-bullet`, `defer-considered-rejected`, `repair-parent-link`, `prefill-section-N`, `mark-non-blocking`, `more-details`). **Forbidden:** one combined question whose options mix per-item resolutions with terminal handoff choices.
+- **Final question:** always append the terminal **pr-plan** §5c handoff question last in the array (start coding session · revise section · pre-fill §§5–8 · defer · commit reminder · **More details for option _**). **Forbidden:** a resolve-only modal that omits §5c routing until every item is cleared — **except** when **`skipPrPlanHandoffModal: true`** (auto-chain only; inline completion without §5c).
+- **Many open items:** batch across turns when needed; each batch still ends with the §5c terminal question unless **`skipPrPlanHandoffModal`** applies.
+
+**When no open items remain** — use the existing single §5c terminal handoff question.
+
+**Act after selection.** Apply each chosen item resolution, rewrite affected plan sections, re-run §5a readiness checks, then re-open the same modal shape until §5c can offer implementation handoff or defer.
+
 ### 5c — Hand back (recap + structured choice)
 
-Per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act (plan-and-deliver)*. Do **not** use “Turn A/B” labels in developer-facing chat.
+Per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**, **`../README.md`** § *Planning open-item modal contract*, and **`../README.md`** § *Recap, structured choice, act (plan-and-deliver)*. Do **not** use “Turn A/B” labels in developer-facing chat.
+
+Invoke **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per **Step 5-open-items** — when readiness blockers or §4f flags remain, one scoped `questions[]` entry per open item, then the §5c terminal options table as the **final** `questions[]` entry.
 
 **Preferred (one assistant message):** **AskQuestion tool** with brief recap, or **`MC_PHASED_RESPONSE_V1`** with:
 
@@ -426,7 +443,7 @@ Do **not** echo the full §§ 1–4 body in chat unless the developer asked for 
 
 #### Structured choice — approval modal
 
-Invoke **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *PR plan — next move*). When using without a phased envelope, sentinel + JSON only — no prose before the sentinel.
+Invoke **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *PR plan — next move*) per **Step 5-open-items**. When using without a phased envelope, sentinel + JSON only — no prose before the sentinel. When open items exist, item-scoped questions precede the terminal handoff options below as the **last** `questions[]` entry:
 
 Required options (brief `label`; put detail in `prompt` when needed):
 
@@ -499,7 +516,7 @@ On **fill** requests for § 5–8, draft the requested section with explicit *sk
 
 ## One primary choice per turn — surface observations
 
-Perform exactly what was chosen. List short **numbered observations** for gaps (parent list mismatch, thin **Considered & rejected**, heavy § 3). No typed flag-control vocabulary.
+Perform exactly what was chosen. List short **numbered observations** for gaps (parent list mismatch, thin **Considered & rejected**, heavy § 3, blocked parent link) in **`display.markdown`** and apply **Step 5-open-items — Open-item modal contract**: one scoped `questions[]` entry per observation, then the §5c terminal handoff question last. Prefer recap + modal in one message.
 
 ## Scope guard
 
