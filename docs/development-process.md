@@ -89,7 +89,7 @@ Implementation and ship use **git worktrees** only — not **`git checkout -b`**
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/verify-skill-manifest.mjs
 ```
 
-Exit **0** when manifest and disk match; **1** prints paths only on disk or only in YAML. Plan-and-deliver authors also see **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`** § *Adding or removing a skill*.
+Exit **0** when manifest and disk match, warm-up parity passes, and nullable-parent spawn wire lint passes (planner **`AGENT_RUN_REQUEST_V1`** examples must use **`"parent":"null"`** when **`inputs.parent.type`** is **`string`** — JSON **`null`** fails); **1** prints mismatch or lint errors. Plan-and-deliver authors also see **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`** § *Adding or removing a skill*.
 
 **Lane warm-up parity (`verify-lane-warmup-parity.mjs`).** After changing definitive **`laneRules`** tables or skill **`warmUpRules`**, run from the hosting repo root:
 

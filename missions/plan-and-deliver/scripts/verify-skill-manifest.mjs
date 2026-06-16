@@ -5,11 +5,15 @@
  * preflight row 11 — README § Definitive laneRules for author-prd, planner,
  * coding-session).
  *
+ * Also lints AGENT_RUN_REQUEST_V1 spawn examples on planner skills (R&D and Sedea
+ * maintenance copies): when frontmatter declares inputs.parent.type: string, JSON
+ * null for parent is forbidden — wire encoding must use "parent":"null".
+ *
  * Run from hosting repo root (directory containing .sedea/):
  *
  *   node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/verify-skill-manifest.mjs
  *
- * Exit 0 when lists match and warm-up manifest parity passes; exit 1 otherwise.
+ * Exit 0 when lists match, warm-up manifest parity passes, and spawn wire lint passes; exit 1 otherwise.
  */
 
 import fs from 'node:fs/promises';
@@ -146,6 +150,12 @@ function parseSkillEntriesFromYaml(text) {
 }
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+
+/** JSON null for parent in spawn wire — forbidden when inputs.parent.type is string. */
+const JSON_NULL_PARENT_IN_SPAWN_RE = /"parent"\s*:\s*null(?=\s*[,}])/;
+
+/** Repo-relative planner SKILL.md paths scanned for nullable-parent wire lint. */
+const SEDEA_PLANNER_SKILL_GLOB = '.sedea/centers/sedea/missions';
 
 function readStringArray(value, label, repoRelativePath) {
   if (value === undefined || value === null) return [];
@@ -400,6 +410,89 @@ async function validateSkillFrontmatter(repoRelativePath) {
   return undefined;
 }
 
+async function listSedeaPlannerSkillFiles(hostingRoot) {
+  const out = [];
+  const sedeaMissions = path.join(hostingRoot, SEDEA_PLANNER_SKILL_GLOB);
+  let missions;
+  try {
+    missions = await fs.readdir(sedeaMissions, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const m of missions) {
+    if (!m.isDirectory()) continue;
+    const skillPath = path.join(
+      sedeaMissions,
+      m.name,
+      'skills',
+      'planner',
+      'SKILL.md',
+    );
+    try {
+      const st = await fs.stat(skillPath);
+      if (st.isFile()) {
+        out.push(
+          normalizeRepoPath(
+            path.relative(hostingRoot, skillPath).replace(/\\/g, '/'),
+          ),
+        );
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  return out;
+}
+
+function extractSpawnExampleLines(body) {
+  const lines = [];
+  for (const line of body.split('\n')) {
+    if (line.includes('AGENT_RUN_REQUEST_V1') && line.includes('"inputs"')) {
+      lines.push(line.trim());
+    }
+  }
+  return lines;
+}
+
+async function validateNullableParentSpawnWire(hostingRoot, repoRelativePaths) {
+  const errors = [];
+  const seen = new Set();
+  for (const rel of repoRelativePaths) {
+    if (seen.has(rel)) continue;
+    seen.add(rel);
+    const abs = path.join(hostingRoot, rel);
+    let raw;
+    try {
+      raw = await fs.readFile(abs, 'utf8');
+    } catch {
+      continue;
+    }
+    const fmMatch = FRONTMATTER_RE.exec(raw);
+    if (!fmMatch) continue;
+    let parsed;
+    try {
+      parsed = parseYaml(fmMatch[1]);
+    } catch {
+      continue;
+    }
+    const parentInput = parsed?.inputs?.parent;
+    if (typeof parentInput !== 'object' || parentInput?.type !== 'string') {
+      continue;
+    }
+    const body = raw.slice(fmMatch[0].length);
+    const spawnLines = extractSpawnExampleLines(body);
+    for (const line of spawnLines) {
+      if (JSON_NULL_PARENT_IN_SPAWN_RE.test(line)) {
+        errors.push(
+          `${rel}: AGENT_RUN_REQUEST_V1 spawn example uses JSON null for \`parent\` — ` +
+            `inputs.parent is type string; wire encoding must be \`"parent":"null"\` (see planner spawn contract)`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 async function main() {
   ({ enforceSpawnByteBudget } = parseMainArgs(process.argv));
   const hostingRoot = await resolveHostingRoot();
@@ -428,6 +521,21 @@ async function main() {
     process.exit(1);
   }
 
+  const sedeaPlannerSkills = await listSedeaPlannerSkillFiles(hostingRoot);
+  const rdPlannerSkills = [...disk].filter((rel) =>
+    /\/skills\/planner\/SKILL\.md$/.test(rel),
+  );
+  const spawnWirePaths = [...rdPlannerSkills, ...sedeaPlannerSkills];
+  const spawnWireErrors = await validateNullableParentSpawnWire(
+    hostingRoot,
+    spawnWirePaths,
+  );
+  if (spawnWireErrors.length) {
+    process.stderr.write('nullable-parent spawn wire lint failed:\n');
+    for (const e of spawnWireErrors) process.stderr.write(`  ${e}\n`);
+    process.exit(1);
+  }
+
   const onlyYaml = [...listed].filter((p) => !disk.has(p)).sort();
   const onlyDisk = [...disk].filter((p) => !listed.has(p)).sort();
 
@@ -436,6 +544,7 @@ async function main() {
     process.stdout.write(
       `OK: center.yaml skillEntries (${listed.size}) matches disk (${disk.size}); ` +
         `frontmatter valid; warmUp/laneRules manifest parity passed on plan-and-deliver spawned skills; ` +
+        `nullable-parent spawn wire lint passed on ${spawnWirePaths.length} planner skill path(s); ` +
         `spawn byte budget smoke: ${overCap.length} skill(s) over ${WARM_UP_BYTE_CAP} bytes` +
         (enforceSpawnByteBudget ? ' (--enforce-spawn-byte-budget)' : '') +
         `\n`,
