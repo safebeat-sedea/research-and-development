@@ -20,6 +20,10 @@ alwaysApply: false
    - **Findings report only** — no planning, no **`coding-session`**; Squad Leader produces a **Debug session findings report** from child outputs.
 4. **Reuse plan-and-deliver** — Downstream delivery delegates to existing R&D skills; this mission owns debug orchestration only.
 
+### Ship chain inheritance (binding)
+
+**Code promotion** delegates ship execution to plan-and-deliver **`coding-session`** — this mission does **not** duplicate ship-chain or review-cycle procedure. After PR creation on that path, the same inline **`pr-review`** / **`pr-review.py`** boundary applies per [plan-and-deliver/plan.mdc § Post-PR handoff](../plan-and-deliver/plan.mdc). Load [plan-and-deliver `pr-review/SKILL.md`](../plan-and-deliver/skills/pr-review/SKILL.md) from **`coding-session`** [Post-create-pr handoff gate](../plan-and-deliver/skills/coding-session/SKILL.md#post-create-pr-handoff-gate) — do not substitute generic **`gh`** PR inspection.
+
 ## Protocol
 
 ```mermaid

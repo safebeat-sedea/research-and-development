@@ -33,6 +33,10 @@ Same as plan-and-deliver: all **`.sedea/operations/`** writes from the **main ho
 
 Same as plan-and-deliver — [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*; rule **20** § *Worktree removal ownership*.
 
+### Post-PR review inheritance (binding)
+
+Detached **`coding-session`** ship chains reuse plan-and-deliver mechanics — this wrapper does **not** own PR review-cycle steps. After **`create-pr`**, the inline **`pr-review`** / **`pr-review.py`** boundary from [plan-and-deliver/plan.mdc § Post-PR handoff](.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc) applies unchanged. Do **not** restate the review procedure here; when the developer picks **`start-pr-review`**, load [plan-and-deliver `pr-review/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-review/SKILL.md) via [Post-create-pr handoff gate](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md#post-create-pr-handoff-gate).
+
 ## Objectives
 
 1. **Ad-hoc PRD intake** — From a short change request, produce a developer-approved Ad-Hoc PRD under `.sedea/operations/<operationsUserId>/docs/` via **`ad-hoc-prd`** (not full **`author-prd`**).
