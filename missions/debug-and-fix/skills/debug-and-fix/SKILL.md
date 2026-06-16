@@ -125,6 +125,8 @@ When fix is verified:
 | Fix verified; shipping deferred, noisy unrelated changes, or scope needs triage | `findings-report-only` | Parent produces **Debug session findings report** (mission step 6) — no downstream spawn |
 | Blocked before verification | `blocked` | Terminal with evidence; parent routes to findings report |
 
+For `code-promotion`, include enough `fixSummary` and `testEvidence` detail for the parent to seed the standalone PR plan anchor. The parent must create or populate a PR plan before spawning **`coding-session`**; do not imply that the debug worktree alone is sufficient for ship-chain handoff.
+
 Present structured choice confirming recommendation; **Squad Leader** owns post-fix exit selection in mission **step 4** (developer may override).
 
 ## Structured choice (Mission Control)
@@ -143,6 +145,8 @@ Every assistant turn closes with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** 
 | `hostingRoot` | Absolute **`HOSTING_ROOT`** |
 | `exitRecommendation` | `code-promotion` \| `ad-hoc-prd` \| `findings-report-only` \| `blocked` |
 | `remainingTasks` | Open items for parent or developer |
+
+When `exitRecommendation: code-promotion`, `fixSummary` and `testEvidence` must be suitable for PR-plan seeding: name the verified change, affected areas, automated/manual test evidence, and any deploy-test considerations discovered during debugging. If that evidence is incomplete, prefer `findings-report-only` or include the missing evidence in `remainingTasks`.
 
 ### Host protocol line (required)
 
