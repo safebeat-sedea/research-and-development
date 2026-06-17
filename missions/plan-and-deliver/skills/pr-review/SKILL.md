@@ -217,10 +217,11 @@ From the **`issue-comments`** line in the Step 1 script output, scan for prior *
 
 ### Step 3 — Validate and classify
 
-For each **new** (not filtered in Step 2) comment, verify it against the **current** codebase and assign one of four dispositions:
+For each **new** (not filtered in Step 2) comment, verify it against the **current** codebase and assign one of five dispositions:
 
 - **Must fix** — issue is valid, actionable, and blocks the PR before merge.
 - **Should fix** — issue is valid and worth addressing in this PR if the developer approves the extra fix pass.
+- **Rule-update required** — review feedback requires creating or updating hosting-repo **`.cursor/rules/*.mdc`** files (not product source alone). Classify here when the comment targets rule documentation, governance text, or §5-style hosting-repo rule alignment — even when no code change is needed. Hand off to **`coding-session`** [Post-review repo rules handoff](../coding-session/SKILL.md#post-review-repo-rules-handoff) after developer approval — do **not** silently edit `.mdc` files before the disposition gate.
 - **Skipped (no follow-up)** — issue is already fixed in the working tree, factually wrong, or pure noise (e.g. linter chatter the project doesn't enforce). Nothing to track.
 - **Skipped → follow-up** — issue is *valid* but *out of scope* for this PR's single concern. Strategy #6 forbids silently expanding the PR; propose a `## Follow-ups` bullet in Step 3a so the item isn't lost.
 
@@ -232,7 +233,7 @@ Run this gate only after Step 3a has prepared proposed follow-ups and Step **4**
 
 Before applying any code, plan, or GitHub changes, open the **disposition gate** in Step **4** (`MC_PHASED_RESPONSE_V1` or **AskQuestion** with the **contextual** option set in Step **4** § *Build disposition options*). **Do not** duplicate the gate in prose.
 
-**Contextual options (binding):** List **only** disposition actions valid for this PR's Step 3 classification counts — see Step **4** § *Build disposition options*. **Forbidden:** showing **`apply-must`** or **`apply-must-should`** when **`mustCount`** and **`shouldCount`** are both **0**; showing **`follow-ups-only`** when **`followUpCount`** is **0**. **`more-details`** is always included.
+**Contextual options (binding):** List **only** disposition actions valid for this PR's Step 3 classification counts — see Step **4** § *Build disposition options*. **Forbidden:** showing **`apply-must`** or **`apply-must-should`** when **`mustCount`** and **`shouldCount`** are both **0**; showing **`apply-rule-updates`** when **`ruleUpdateCount`** is **0**; showing **`follow-ups-only`** when **`followUpCount`** is **0**. **`more-details`** is always included.
 
 No source edits, plan edits, commits, pushes, GitHub replies, resolves, minimizes, or review re-requests may happen until the developer chooses an approval option shown in the modal.
 
@@ -260,10 +261,11 @@ Plan files live under **`.sedea/operations/`** on the primary hosting repo. In t
 
 ### Step 4 — Report and disposition gate
 
-Print **every** comment in its original form (quote the body). For each one, state one of four dispositions:
+Print **every** comment in its original form (quote the body). For each one, state one of five dispositions:
 
 - **Must fix** — why it blocks and what edit is proposed or applied after approval.
 - **Should fix** — why it is useful and what edit is proposed or applied after approval.
+- **Rule-update required** — which **`.cursor/rules/*.mdc`** path(s) need create/update and why; reference [Post-review repo rules handoff](../coding-session/SKILL.md#post-review-repo-rules-handoff) as the follow-up path on the open PR.
 - **Skipped (no follow-up)** — why it doesn't apply (already fixed, factually wrong, pure noise).
 - **Skipped → follow-up** — paraphrase the planning concern + the `(target: …)` hint (if any) proposed in Step 3a. Reference the slug so the user can approve or reject: *"Proposed for `<slug>.plan.md` § Follow-ups."*
 
@@ -279,12 +281,13 @@ After Step 3 classification, compute:
 |----------|------|
 | **`mustCount`** | Comments classified **Must fix** |
 | **`shouldCount`** | Comments classified **Should fix** |
+| **`ruleUpdateCount`** | Comments classified **Rule-update required** |
 | **`followUpCount`** | Comments classified **Skipped → follow-up** |
-| **`skippedOnly`** | **`mustCount === 0`** and **`shouldCount === 0`** and **`followUpCount === 0`** and at least one **Skipped (no follow-up)** |
+| **`skippedOnly`** | **`mustCount === 0`** and **`shouldCount === 0`** and **`ruleUpdateCount === 0`** and **`followUpCount === 0`** and at least one **Skipped (no follow-up)** |
 
 **`display.markdown`** (required before modal):
 
-1. Triage counts — one line or table: Must / Should / Skipped (no follow-up) / Skipped → follow-up.
+1. Triage counts — one line or table: Must / Should / Rule-update required / Skipped (no follow-up) / Skipped → follow-up.
 2. **Omitted-options explainer** when any standard option is hidden — e.g. *"Apply Must / Apply Must + Should are not shown — 0 Must and 0 Should items on this PR."*
 
 **`askQuestion.options`** — include **only** applicable rows (always end with **`more-details`**):
@@ -293,6 +296,7 @@ After Step 3 classification, compute:
 |-----------|--------------|---------------|
 | `apply-must` | **`mustCount > 0`** | Apply Must fixes only |
 | `apply-must-should` | **`mustCount > 0` or `shouldCount > 0`** | Apply Must + Should fixes |
+| `apply-rule-updates` | **`ruleUpdateCount > 0`** | Apply rule updates — `.mdc` edits on open PR |
 | `follow-ups-only` | **`followUpCount > 0`** | Follow-ups only — no source edits |
 | `skip-reject` | Triage non-empty | When **`skippedOnly`**: *Skip / reject — reconcile on GitHub (recommended)*; else *Skip / reject selected comments* |
 | `submit-manual-review` | **`skippedOnly`** or (**`followUpCount > 0`** and **`mustCount === 0`** and **`shouldCount === 0`**) | Submit manual review on GitHub — open **`coding-session`** [Manual review submission (external-wait)](../coding-session/SKILL.md#manual-review-submission-external-wait) |
@@ -316,13 +320,17 @@ Run on the **developer's response turn** when they pick **`merged-pr-proceed`**:
 | Scenario | Typical options |
 |----------|-----------------|
 | Must present | `apply-must`, `apply-must-should`, `skip-reject`, `merged-pr-proceed`, `more-details` |
-| Skip-only (0 Must / 0 Should / 0 follow-up) | `skip-reject` (recommended), `submit-manual-review`, `merged-pr-proceed`, `more-details` |
-| Follow-up only (0 Must / 0 Should) | `follow-ups-only`, `submit-manual-review`, `skip-reject`, `merged-pr-proceed`, `more-details` |
+| Rule-update only (0 Must / 0 Should / 0 follow-up) | `apply-rule-updates`, `skip-reject`, `submit-manual-review`, `merged-pr-proceed`, `more-details` |
+| Skip-only (0 Must / 0 Should / 0 rule-update / 0 follow-up) | `skip-reject` (recommended), `submit-manual-review`, `merged-pr-proceed`, `more-details` |
+| Follow-up only (0 Must / 0 Should / 0 rule-update) | `follow-ups-only`, `submit-manual-review`, `skip-reject`, `merged-pr-proceed`, `more-details` |
 | Mixed (Must + follow-up) | `apply-must`, `apply-must-should`, `follow-ups-only`, `skip-reject`, `merged-pr-proceed`, `more-details` |
+| Mixed (rule-update + code) | `apply-must`, `apply-must-should`, `apply-rule-updates`, `skip-reject`, `merged-pr-proceed`, `more-details` |
 
 **Forbidden:** “Review the PR and tell me when to continue”, “wait for the user to review”, fixed five-option menus when counts make options inert, or ending the turn without structured choice when dispositions need approval.
 
 **Act** (edits, plan append, GitHub reconciliation) runs on the **developer's response turn** after modal selection — not in the same turn as the disposition gate.
+
+When the developer picks **`apply-rule-updates`**, run **`coding-session`** [Post-review repo rules handoff](../coding-session/SKILL.md#post-review-repo-rules-handoff) on the **next** turn — apply approved **`.mdc`** edits in **`WORKTREE_ROOT`**, commit/push to the **same open PR**, then re-run Step **5** in the **same turn** as push. When **`apply-rule-updates`** is combined with **`apply-must`** / **`apply-must-should`**, complete code fixes first, then run the rule-update handoff before Step **5**.
 
 When fixes are applied and ready to land, use a **separate** structured-choice gate before commit/push. Include at least:
 
