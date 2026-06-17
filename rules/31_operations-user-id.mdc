@@ -1,66 +1,87 @@
 ---
 description: >-
-  Canonical operationsUserId — Mission Control context, filesystem paths, skill
-  inputs/outputs, and plan-state CLI flag.
+  Dispatch scope and phase-tagged operations storage — Mission Control binding,
+  bundle directory, hybrid DB vs filesystem fallback. Supersedes operationsUserId
+  / joint as agent path-construction contracts (filename retained until rename PR).
 alwaysApply: false
 ---
 
-# Operations user id
+# Dispatch scope (supersedes operations user id)
 
-**On-demand rule.** Mission Control warm-up loads [`.sedea/centers/research-and-development/rules/bootstrap.mdc`](bootstrap.mdc) as the sole R&D `alwaysApply: true` bootstrap. Read **this file** when you need `operationsUserId`, plans union paths, and `plan-state.mjs --operations-user-id` — not on every dispatch warm-up.
+**On-demand rule.** Mission Control warm-up loads [`.sedea/centers/research-and-development/rules/bootstrap.mdc`](bootstrap.mdc) as the sole R&D `alwaysApply: true` bootstrap. Read **this file** when you need dispatch-scoped operations paths, phase-tagged storage contracts, or legacy CLI flags during hybrid migration — not on every dispatch warm-up.
 
-One opaque stable string identifies the developer’s private tree under **`.sedea/operations/`**. Use the same naming everywhere agents and docs refer to it.
+**Filename note:** This rule file retains the legacy **`31_operations-user-id`** path until a follow-on rename PR. Content here **supersedes** agent-facing **`operationsUserId`** and **`joint`** namespace instructions.
 
-## Canonical forms
+Normative hosting layout: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § **Operations storage phases**, § **Dispatch bundles under `operations/`**, and § **Plans (dispatch-scoped discovery)**.
 
-| Surface | Form | Example |
-|---------|------|---------|
-| Mission Control warm-up, skill `inputs` / `outputs`, MCP | **`operationsUserId`** (camelCase) | Pass through spawn `inputs`; refresh with **`sedea_get_current_user`** |
-| Filesystem path segment | **`<operationsUserId>`** in prose placeholders | `.sedea/operations/<operationsUserId>/plans/<slug>.plan.md` |
-| `plan-state.mjs` CLI (hosting repo, no MC context) | **`--operations-user-id <id>`** before the subcommand | Same value as **`operationsUserId`**; kebab-case flag only on the CLI |
+---
 
-## Plans union
+## Agent dispatch scope (binding)
 
-Per **`.sedea/centers/sedea/rules/0_hosting-repo.mdc`**:
+Every Mission Control agent lane on a dispatch is bound to **one dispatch scope**:
 
-1. **`.sedea/operations/joint/...`** — shared namespace (literal `joint`).
-2. **`.sedea/operations/<operationsUserId>/...`** — per-user private namespace.
+| Field | Source | Agent use |
+|-------|--------|-----------|
+| **`dispatchId`** | Warm-up / spawn preamble (**Active dispatch UUID**) | Stable dispatch identity; never infer from epoch folder name alone |
+| **Bundle directory** | Warm-up / spawn preamble (absolute path) | Read/write dispatch bundle artifacts **only** under this directory |
+| **Slot id** | Lane identity block | Open **only** `dispatch-lane.<slotId>.v1.json` for this lane unless spawn handover names another lane file in the **same** bundle |
 
-Slug collision: the **user** tree wins over **`joint`** when both define the same slug.
+**Forbidden:**
 
-## Path placeholders in documentation
+- Constructing `.sedea/operations/<user-id>/...` or `.sedea/operations/joint/...` paths for lane work
+- Cross-reading **`parent-child-registry.v1.json`**, **`dispatch-tab.v1.json`**, or ship-ledger from **other** dispatch bundle folders
+- **`ls -lt`** (or any mtime sort) across all dispatch folders under `.sedea/operations/`
+- Inferring dispatch scope from “newest” folder, parallel tabs, or PR index alone without **`targetPlanSlug`** + active **`dispatchId`**
 
-Ellipses in path examples (for example `` `.sedea/operations/.../plans/` ``, `` `joint/...` ``) mark **omitted middle segments** — they are **not** literal directory names and are **not** valid filesystem paths. Substitute the real segment: literal **`joint`**, the Mission Control **`operationsUserId`**, or a concrete plan **`slug`**. Do not create directories named `...` or treat placeholder paths as link targets.
+Refresh host identity with MCP **`sedea_get_current_user`** when a skill requires it — **not** to derive operations filesystem paths.
 
-## Agent behavior
+---
 
-- If **`operationsUserId`** is missing in a spawned skill that requires it, return **`partial`** with `outputs.missingFields: ["operationsUserId"]` — do not invent an id or read from focused files alone.
-- When documenting **`plan-state.mjs`** or **`pr-review.py`**, show **`--operations-user-id`** in command examples, **`cd "$HOSTING_ROOT"`** before the script path, and state that agents pass the Mission Control **`operationsUserId`** value.
+## Phase-tagged storage (hybrid migration)
 
-## Hosting repo cwd (scripts)
+Operations persistence is migrating from filesystem bundles to workspace-bound RxDB/SQLite. Follow the **active phase** in Sedea rule **0** — do not mix legacy and new contracts on the same turn.
 
-**`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** run from **`HOSTING_ROOT`** (hosting repo containing `.sedea/`), not from a hosting repo worktree’s `git rev-parse --show-toplevel` alone. Full contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
+| Phase | Agent contract |
+|-------|----------------|
+| **Phase 0 — governance** | Filesystem bundles; scope = **`dispatchId`** + **bundle directory** + explicit plan paths from spawn **`inputs`** |
+| **Hybrid** | DB-first for covered dispatch entities; filesystem fallback when entity not in workspace DB (host logs fallback — agents do not open raw DB URLs) |
+| **DB-only** | Dispatch CRUD via workspace DB; no epoch-folder discovery |
 
-## Worked example (`plan-state.mjs`)
+During **Phase 0** and **hybrid**, the host may still resolve internal filesystem paths. That resolution is **host-internal** — agents must not document or rely on **`operationsUserId`** path segments.
 
-Flag order is **global** — **`--operations-user-id <id>` before the subcommand** (see rule **20** § *Commit and push cadence*).
+---
+
+## Plans and docs paths
+
+| Surface | Rule |
+|---------|------|
+| **PR / phase plans** | Use **`targetPlanPath`**, **`parentPlanPath`**, or other explicit spawn **`inputs`** — absolute or workspace-relative paths supplied by Mission Control |
+| **Follow-up edits** | Reuse the anchored absolute plan path from the lane — do not re-derive from directory segments under `.sedea/operations/` |
+| **Docs reports** | Write only when a skill names the doc type; path comes from Mission Control handover or skill procedure on the **main hosting clone** |
+
+**Path placeholders in documentation:** `` `...` `` inside path examples marks **omitted middle segments**, not a folder named `...`. Substitute the **bundle-relative** or **handover-supplied** segment — never literal **`joint`** or a user-id segment you constructed yourself.
+
+---
+
+## Legacy CLI (`plan-state.mjs`) — hybrid only
+
+Until Hub/CLI governance PR lands, **`plan-state.mjs`** may still accept **`--operations-user-id <id>`** for CLI-only flows without Mission Control context. On **Mission Control agent lanes**, prefer explicit plan paths from spawn **`inputs`**; do not treat the CLI flag as the primary scope contract.
+
+**Hosting repo cwd:** **`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.py`** run from **`HOSTING_ROOT`** — see [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
 
 ```bash
 WORKTREE_ROOT="$(pwd)"   # hosting repo worktree (or primary hosting repo when same)
-# Set HOSTING_ROOT: walk up until .sedea/centers/sedea/ or .sedea/ exists — see rule 20 § *Resolve HOSTING_ROOT*
+# Set HOSTING_ROOT: walk up until .sedea/centers/sedea/ or .sedea/ exists — see rule 20
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-  --operations-user-id "$OPS_ID" resolve --cwd "$WORKTREE_ROOT"
-
-node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-  --operations-user-id "$OPS_ID" upsert-pr \
-  --slug <slug-from-resolve> \
-  --repo "$(basename "$HOSTING_ROOT")" \
-  --number <pr-number>
+  resolve --cwd "$WORKTREE_ROOT"
 ```
 
-**`pr-review.py`:** same **`HOSTING_ROOT`** — `cd "$HOSTING_ROOT" && PR_REVIEW_INPUT="<absolute-path>" python3 .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/pr-review.py` (see [`pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pr-review/SKILL.md)).
+When Mission Control supplies a plan anchor, pass that plan's absolute path to completeness and sidecar scripts via **`--file`** / spawn **`inputs`** rather than reconstructing scope from legacy user-id flags.
 
-Without **`--operations-user-id`**, the CLI searches **`joint`** plans only and may warn that user-scoped paths were skipped — do not treat that as "no plans exist" for the developer.
+---
+
+## Spawned skill outputs
+
+If a spawned skill requires dispatch scope fields that Mission Control did not inject, return **`partial`** with `outputs.missingFields` naming the missing binding (for example `dispatchId`, `bundleDirectory`) — do not invent ids or read sibling dispatch folders to recover scope.
