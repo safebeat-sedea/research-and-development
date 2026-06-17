@@ -37,6 +37,10 @@ Same as plan-and-deliver — [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.
 
 Detached **`coding-session`** ship chains reuse plan-and-deliver mechanics — this wrapper does **not** own PR review-cycle steps. After **`create-pr`**, the inline **`pr-review`** / **`pr-review.py`** boundary from [plan-and-deliver/plan.mdc § Post-PR handoff](.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc) applies unchanged. Do **not** restate the review procedure here; when the developer picks **`start-pr-review`**, load [plan-and-deliver `pr-review/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-review/SKILL.md) via [Post-create-pr handoff gate](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md#post-create-pr-handoff-gate).
 
+### Repo rules ship inheritance (binding)
+
+Detached **`coding-session`** lanes execute canonical plan-and-deliver repo-rules behavior — this wrapper does **not** duplicate reconcile or post-review rule-update steps. **Pre-PR:** [plan-and-deliver `coding-session/SKILL.md` § *Repo rules reconciliation (binding)*](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md#repo-rules-reconciliation-binding) and [Repo rules reconciliation gate](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md#repo-rules-reconciliation-gate) — plan §5 → **`.cursor/rules/*.mdc`** before ship cut-point. **Post-review:** when inline **`pr-review`** classifies **Rule-update required**, follow [Post-review repo rules handoff](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md#post-review-repo-rules-handoff) after the disposition gate — see [plan-and-deliver `pr-review/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-review/SKILL.md).
+
 ## Objectives
 
 1. **Ad-hoc PRD intake** — From a short change request, produce a developer-approved Ad-Hoc PRD under `.sedea/operations/<operationsUserId>/docs/` via **`ad-hoc-prd`** (not full **`author-prd`**).
