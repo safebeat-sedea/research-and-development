@@ -165,7 +165,20 @@ flowchart TD
 | “Plan and deliver — small auth tweak for SSO” | **`plan and deliver`** → §2 intake (description + sources) → §3 **`author-prd`** |
 | “This Confluence link won’t load” | **`plan and deliver`** §2 **AskQuestion** (paste, different path, or switch **`create`**) |
 
-**Referenced skills:** **`author-prd`** (plan-and-deliver §3); **`ad-hoc-prd`** (debug-and-fix only).
+**Referenced skills:** **`author-prd`** (plan-and-deliver §3); **`ad-hoc-prd`** (**`debug-and-fix`**, **`single-phase`**).
+
+### Mission routing (expedited paths)
+
+Normative mission slugs, PR caps, and complexity ceilings (protocol detail in each **`missions/<slug>/plan.mdc`**; hub listings in **`mission.yaml`** and center **`README.md`**):
+
+| Command | Mission | PR cap | Complexity ceiling | PRD skill |
+|---------|---------|--------|-------------------|-----------|
+| **`plan and deliver`** | plan-and-deliver | — | **> 20** → route §6 **Delivery phases** | **`author-prd`** |
+| **`plan and deliver a single phase`** | single-phase | **1–6** | **≤ 20** (**> 20** → **`plan and deliver`**) | **`ad-hoc-prd`** |
+| **`quick fix`** | quick-fix | **1** | **≤ 6** (**> 6** → **`plan and deliver a single phase`** or **`plan and deliver`**) | — |
+| **`debug and fix`** | debug-and-fix | — | — | **`ad-hoc-prd`** |
+
+**Cross-reference hygiene (binding):** **`single-phase`** protocol, hub listings, and cadence cross-refs must cite **1–6 PRs** and complexity **≤ 20** — not legacy three-PR / **≤ 12** wording. **`quick-fix`** out-of-scope redirects to **`plan and deliver a single phase`** must state those caps so agents do not infer the old ceiling.
 
 ### Root delivery plans vs legacy Hub parent intake
 

@@ -22,7 +22,7 @@ alwaysApply: false
 | **Intake** | Short bullet list; items may be unrelated but each must qualify under scope and complexity |
 | **PR count** | **Exactly one** PR plan per dispatch (single indexed child) |
 | **Skipped** | Full **`author-prd`**, **`planner`** Master Plan, **`pr-breakdown`**, **`delivery-phases`**, **`phase-planner`** |
-| **Out of scope redirect** | Complexity **>6**, multi-PR decomposition, or work needing Master Plan → **`plan and deliver a single phase`** or **`plan and deliver`** (detached dispatch) |
+| **Out of scope redirect** | Complexity **>6**, multi-PR decomposition, or work needing Master Plan → **`plan and deliver a single phase`** (**1–6** PRs, complexity **≤ 20**) or **`plan and deliver`** (detached dispatch) |
 | **Ship chain** | Same detached **`coding-session`** order as plan-and-deliver §8 |
 
 ### Operations filesystem invariant (binding)
@@ -111,7 +111,7 @@ flowchart TB
 - **Intent:** Gather a confirmed quick-fix bullet list on the Squad Leader lane before §3 spawn.
 - **Inputs:** Opening remainder; `operationsUserId`.
 - **Expected output:** `changeList` (non-empty bullet list), `complexityConfirmed: true` (each item ≤6), `scopeConfirmed: true`, optional `title`.
-- **Next-step resolution:** List confirmed in scope and complexity → §3. Out-of-scope or complexity **>6** → structured choice: narrow list, redirect to **`plan and deliver a single phase`** or **`plan and deliver`** (detached), or abandon.
+- **Next-step resolution:** List confirmed in scope and complexity → §3. Out-of-scope or complexity **>6** → structured choice: narrow list, redirect to **`plan and deliver a single phase`** (**1–6** PRs, complexity **≤ 20**) or **`plan and deliver`** (detached), or abandon.
 
 **Procedure**
 
@@ -207,5 +207,5 @@ Per [`.sedea/centers/sedea/rules/4_mission.mdc`](.sedea/centers/sedea/rules/4_mi
 ## Related assets
 
 - Plan-and-deliver reference: [`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`](.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc)
-- Single-phase (broader small-feature path): [`.sedea/centers/research-and-development/missions/single-phase/plan.mdc`](.sedea/centers/research-and-development/missions/single-phase/plan.mdc)
+- Single-phase (broader small-feature path — **1–6** PRs, complexity **≤ 20**): [`.sedea/centers/research-and-development/missions/single-phase/plan.mdc`](.sedea/centers/research-and-development/missions/single-phase/plan.mdc)
 - Cadence: [`.sedea/centers/research-and-development/docs/development-process.md`](.sedea/centers/research-and-development/docs/development-process.md)

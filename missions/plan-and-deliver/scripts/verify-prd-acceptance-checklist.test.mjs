@@ -9,7 +9,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,19 +66,29 @@ async function pathExists(relPath) {
   }
 }
 
+function quoteShellArg(arg) {
+  if (!/[\s"]/.test(arg)) return arg;
+  return `"${arg.replace(/"/g, '\\"')}"`;
+}
+
+function runNpm(args, cwd) {
+  const opts = {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  };
+  if (process.platform === 'win32') {
+    execSync(['npm', ...args].map(quoteShellArg).join(' '), { ...opts, shell: true });
+    return;
+  }
+  execFileSync('npm', args, opts);
+}
+
 function runVitest(packageDir, testPattern) {
   const pkgRoot = path.join(hostingRoot, packageDir);
   // CI center-governance workflow only npm ci's scripts/; install extension deps here.
-  execFileSync('npm', ['ci'], {
-    cwd: pkgRoot,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  execFileSync('npm', ['test', '--', '--run', testPattern], {
-    cwd: pkgRoot,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  runNpm(['ci'], pkgRoot);
+  runNpm(['test', '--', '--run', testPattern], pkgRoot);
 }
 
 test('PRD acceptance map documents §2 criteria with automated + manual coverage', () => {
