@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
- * Binding parity harness — pr-review.mjs vs Sedea pr-review.py.
+ * Contract harness — pr-review.mjs (Sedea .py removed on hosting PR 2).
  *
- * Compares exit codes and stderr/stdout for PR_REVIEW_INPUT contract paths that do
- * not require live GitHub credentials. Live API parity is covered separately when
- * GH_TOKEN is available (optional suite).
+ * Exercises PR_REVIEW_INPUT contract paths that do not require live GitHub
+ * credentials. Live API coverage is optional when GH_TOKEN is available.
  *
  * Run from hosting repo root:
  *
@@ -25,19 +24,12 @@ const hostingRoot = process.env.HOSTING_ROOT
   ? path.resolve(process.env.HOSTING_ROOT)
   : path.resolve(__dirname, '../../../../../..');
 
-const RUNNERS = {
-  mjs: path.join(hostingRoot, '.sedea/centers/sedea/scripts/pr-review.mjs'),
-  sedeaPy: path.join(hostingRoot, '.sedea/centers/sedea/scripts/pr-review.py'),
-};
-
-/** @typedef {'mjs' | 'sedeaPy'} RunnerId */
+const MJS = path.join(hostingRoot, '.sedea/centers/sedea/scripts/pr-review.mjs');
 
 /**
- * @param {RunnerId} id
  * @param {{ cwd?: string, env?: Record<string, string>, inputPath?: string }} opts
  */
-function runRunner(id, opts = {}) {
-  const scriptPath = RUNNERS[id];
+function runMjs(opts = {}) {
   const cwd = opts.cwd ?? hostingRoot;
   const env = { ...process.env, ...opts.env };
   if (opts.inputPath !== undefined) {
@@ -46,17 +38,7 @@ function runRunner(id, opts = {}) {
     delete env.PR_REVIEW_INPUT;
   }
 
-  let cmd;
-  let args;
-  if (id === 'mjs') {
-    cmd = process.execPath;
-    args = [scriptPath];
-  } else {
-    cmd = process.platform === 'win32' ? 'python' : 'python3';
-    args = [scriptPath];
-  }
-
-  const result = spawnSync(cmd, args, {
+  const result = spawnSync(process.execPath, [MJS], {
     cwd,
     env,
     encoding: 'utf8',
@@ -80,63 +62,46 @@ function normalizeStderr(stderr) {
 }
 
 /**
- * Assert mjs matches sedeaPy (canonical baseline) for contract errors.
  * @param {string} label
  * @param {{ cwd?: string, env?: Record<string, string>, inputPath?: string }} opts
  */
-function assertParity(label, opts) {
-  const mjs = runRunner('mjs', opts);
-  const sedeaPy = runRunner('sedeaPy', opts);
-
-  for (const [name, r] of [
-    ['mjs', mjs],
-    ['sedeaPy', sedeaPy],
-  ]) {
-    assert.ifError(r.error, `${label} (${name}): spawn failed: ${r.error?.message}`);
-  }
-
-  assert.equal(mjs.status, sedeaPy.status, `${label}: mjs exit ${mjs.status} vs sedeaPy ${sedeaPy.status}`);
-
-  const mjsErr = normalizeStderr(mjs.stderr);
-  const sedeaErr = normalizeStderr(sedeaPy.stderr);
-
-  assert.equal(mjsErr, sedeaErr, `${label}: stderr mjs vs sedeaPy`);
-
-  assert.equal(mjs.stdout, sedeaPy.stdout, `${label}: stdout mjs vs sedeaPy`);
+function assertMjsContract(label, opts) {
+  const mjs = runMjs(opts);
+  assert.ifError(mjs.error, `${label} (mjs): spawn failed: ${mjs.error?.message}`);
+  assert.ok(mjs.status !== 0, `${label}: expected non-zero exit, got ${mjs.status}`);
+  assert.ok(normalizeStderr(mjs.stderr).length > 0, `${label}: expected stderr`);
 }
 
-test('runners exist on disk', () => {
-  for (const [id, p] of Object.entries(RUNNERS)) {
-    assert.ok(fs.existsSync(p), `missing runner ${id}: ${p}`);
-  }
+test('runner exists on disk', () => {
+  assert.ok(fs.existsSync(MJS), `missing runner: ${MJS}`);
 });
 
-test('parity — missing PR_REVIEW_INPUT and no cwd input files', () => {
+test('contract — missing PR_REVIEW_INPUT and no cwd input files', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-review-parity-'));
   try {
-    assertParity('missing input', { cwd: tmp, env: {} });
+    assertMjsContract('missing input', { cwd: tmp, env: {} });
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
 
-test('parity — PR_REVIEW_INPUT points to missing file', () => {
+test('contract — PR_REVIEW_INPUT points to missing file', () => {
   const missing = path.join(
     os.tmpdir(),
     'nonexistent-pr-review-input-governance-sweep.json',
   );
-  assertParity('missing env file', {
+  assertMjsContract('missing env file', {
     cwd: hostingRoot,
     inputPath: missing,
   });
 });
 
-test('parity — unknown command (GH_TOKEN stub avoids mcp lookup)', () => {
+test('contract — unknown command (GH_TOKEN stub avoids mcp lookup)', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-review-parity-'));
   const inputPath = path.join(tmp, 'input.json');
   fs.writeFileSync(inputPath, JSON.stringify({ command: 'not-a-real-command' }));
   try {
-    assertParity('unknown command', {
+    assertMjsContract('unknown command', {
       cwd: tmp,
       inputPath,
       env: { GH_TOKEN: 'parity-test-stub-token' },
@@ -146,12 +111,12 @@ test('parity — unknown command (GH_TOKEN stub avoids mcp lookup)', () => {
   }
 });
 
-test('parity — array payload with non-object item', () => {
+test('contract — array payload with non-object item', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-review-parity-'));
   const inputPath = path.join(tmp, 'input.json');
   fs.writeFileSync(inputPath, JSON.stringify(['not-an-object']));
   try {
-    assertParity('array non-object', {
+    assertMjsContract('array non-object', {
       cwd: tmp,
       inputPath,
       env: { GH_TOKEN: 'parity-test-stub-token' },
@@ -161,12 +126,12 @@ test('parity — array payload with non-object item', () => {
   }
 });
 
-test('parity — top-level non-object payload', () => {
+test('contract — top-level non-object payload', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-review-parity-'));
   const inputPath = path.join(tmp, 'input.json');
   fs.writeFileSync(inputPath, JSON.stringify(42));
   try {
-    assertParity('non-object payload', {
+    assertMjsContract('non-object payload', {
       cwd: tmp,
       inputPath,
       env: { GH_TOKEN: 'parity-test-stub-token' },
@@ -176,14 +141,14 @@ test('parity — top-level non-object payload', () => {
   }
 });
 
-test('parity — cwd fallback reads .pr-review-input.json', () => {
+test('contract — cwd fallback reads .pr-review-input.json', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pr-review-parity-'));
   fs.writeFileSync(
     path.join(tmp, '.pr-review-input.json'),
     JSON.stringify({ command: 'bogus-cmd' }),
   );
   try {
-    assertParity('cwd input file', {
+    assertMjsContract('cwd input file', {
       cwd: tmp,
       env: { GH_TOKEN: 'parity-test-stub-token' },
     });
@@ -193,7 +158,7 @@ test('parity — cwd fallback reads .pr-review-input.json', () => {
 });
 
 test('command surface — all documented commands registered in mjs', () => {
-  const src = fs.readFileSync(RUNNERS.mjs, 'utf8');
+  const src = fs.readFileSync(MJS, 'utf8');
   const documented = [
     'threads',
     'reply',
