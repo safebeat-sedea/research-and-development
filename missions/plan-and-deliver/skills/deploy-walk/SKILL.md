@@ -7,6 +7,9 @@ description: >-
  numbered step-by-step testing instructions for the developer. Three-state lifecycle
  in `**Status:**`; capstone todo when done.
  Does not auto-run plan-reconcile.
+designation:
+  allowed: Walk deploy test plan; run agent-executable verification; flip steps with evidence
+  forbidden: Application implementation; unchecked manual steps without evidence; dispatch resolution
 inputs:
   targetPlanPath:
     type: string

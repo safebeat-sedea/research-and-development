@@ -10,6 +10,9 @@ description: >-
  §§ 1–4 follow **pr-plan**. Target resolved per
  planning-target-resolution. Use under mission dispatch, **pr-breakdown**
  protocol branch, or natural language (decompose into PRs, draft PR breakdown).
+designation:
+  allowed: PR breakdown decomposition; Single-concern strategy, Sequencing, PR list on planning lane
+  forbidden: Application implementation; worktree ship; spawn coding-session without pr-plan handoff
 inputs:
   targetPlanPath:
     type: string

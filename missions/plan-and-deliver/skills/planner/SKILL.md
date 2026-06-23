@@ -11,6 +11,9 @@ description: >-
  and section 7 (Caveats) stay as TBD stubs for follow-up turns. Use when the user
  opens a fresh planning chat from the "feature plan: design + changes"
  plan-board prompt, or says "planner" / "draft a master plan".
+designation:
+  allowed: Master Plan authoring; inline pr-breakdown, new-plan, pr-plan on planning lane
+  forbidden: Application implementation; worktree ship; MC_DISPATCH_RESOLVED_V1 on child
 inputs:
   seedBlock:
     type: string

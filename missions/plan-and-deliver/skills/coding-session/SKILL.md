@@ -14,6 +14,9 @@ description: >-
  per-PR plans with plan-ws-completeness.mjs (_TBD_ in body requires completion or
  explicit override incomplete plan). Use under mission dispatch, natural language, or
  after planning when handing off implementation.
+designation:
+  allowed: Worktree implementation; plan §§5–8 fill; ship protocol steps
+  forbidden: PRD rewrite; mission rule edits; dispatch resolution on leader lane
 inputs:
   targetPlanPath:
     type: string

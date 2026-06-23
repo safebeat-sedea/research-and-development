@@ -8,6 +8,9 @@ description: >-
  is omitted entirely from this report (not Defer, flags, or summary). Spawned by
  coding-session after the implementation cut point;
  coding-session obtains developer approval before any follow-up mutation.
+designation:
+  allowed: Pre-PR diff review; score plan, rules, quality; go or no-go before create-pr
+  forbidden: Open PR without clean go; scope outside committed diff; dispatch resolution
 inputs:
   anchorType:
     type: string

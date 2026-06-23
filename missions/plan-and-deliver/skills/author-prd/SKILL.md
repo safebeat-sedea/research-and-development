@@ -1,6 +1,9 @@
 ---
 name: author-prd
 description: Gather evidence and draft or update a flexible Product or Feature Requirements Document.
+designation:
+  allowed: Gather evidence; draft or update PRD under operations docs; PRD approval gate
+  forbidden: Application code; center or mission rule edits; spawn children; git ship
 inputs:
   prdTitle:
     type: string

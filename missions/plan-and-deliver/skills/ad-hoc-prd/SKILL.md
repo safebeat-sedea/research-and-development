@@ -8,6 +8,9 @@ description: >-
  link is required. For **Ad-Hoc PRD creator** agent sessions — explicit
  mission dispatch or upstream agent only. Does not edit
  `.plan.md` files or run/spawn **`planner`**.
+designation:
+  allowed: Scaffold ad-hoc PRD under operations docs; gather change-request evidence
+  forbidden: Application code; Master Plan or PR plan edits; spawn planner; git ship
 inputs:
   createIntent:
     type: boolean

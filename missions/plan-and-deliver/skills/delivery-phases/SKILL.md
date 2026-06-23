@@ -9,6 +9,9 @@ description: >-
  links follow **new-plan** indexed handoff (inline under **planner**; spawned when standalone); bodies follow **phase-planner**. Target
  resolved per planning-target-resolution. Use under mission dispatch, **delivery-phases**
  protocol branch, or natural language (decompose phases, draft delivery phases).
+designation:
+  allowed: Phase decomposition from parent plan; delivery-phases stubs and §5 assessment
+  forbidden: Application implementation; worktree ship; spawn coding-session directly
 inputs:
   targetPlanPath:
     type: string

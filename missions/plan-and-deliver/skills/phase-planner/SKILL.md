@@ -10,6 +10,9 @@ description: >-
  planning-target-resolution. Use under mission dispatch, **`phase-planner`** protocol
  branch, natural language, or after **`new-plan`** ignition on a `Delivery phases`
  child stub.
+designation:
+  allowed: Phase plan §§1–4; inline delivery-phases or pr-breakdown; spawn pr-plan for PR rows
+  forbidden: Application implementation; worktree ship on planning lane; coding-session inline
 inputs:
   targetPlanPath:
     type: string

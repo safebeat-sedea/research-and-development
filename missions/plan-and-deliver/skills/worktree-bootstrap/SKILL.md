@@ -7,6 +7,9 @@ description: >-
  when setup failed — not spawn-by-default. Does not commit, spawn deploy-walk, or run
  the ship chain. Does not implement product code on open PRs, or edit plan files unless
  the spawner requests a skip attestation path.
+designation:
+  allowed: Exception-only bootstrap retry when center worktree-setup failed; attested skip flags
+  forbidden: Product implementation; ship chain; default-path setup substitution
 inputs:
   worktreePath:
     type: string

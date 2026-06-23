@@ -4,6 +4,9 @@ description: >-
   Spawnable detached lane for hosting-repo .cursor/rules/*.mdc ship work deferred
   from coding-session terminal. Full rules-only ship chain with rule/ worktree
   prefix; fire-and-forget parallel fork from planner and phase-planner.
+designation:
+  allowed: Hosting-repo .cursor/rules/*.mdc ship in dedicated worktree; rules ship chain
+  forbidden: Center or mission edits; product application code; parent dispatch resolution
 inputs:
   targetPlanPath:
     type: string

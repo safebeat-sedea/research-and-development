@@ -4,6 +4,9 @@ description: >-
  Inline coding-session procedure to create or prepare a GitHub PR from a reviewed
  implementation branch using PR plan lineage and pre-pr-review result. Executed by
  the active coding-session agent only — not spawned, no warmUpRules.
+designation:
+  allowed: Create GitHub PR from reviewed branch; PR description per ship rules
+  forbidden: Implementation edits; merge without authorization; dispatch resolution
 inputs:
   targetPlanPath:
     type: string

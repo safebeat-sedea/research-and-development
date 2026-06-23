@@ -4,6 +4,9 @@ description: >-
  Inline coding-session procedure for plan-state.mjs reconcile (PR-tracked archival),
  archive candidates, follow-ups triage, and post-ship workspace cleanup. Executed by
  the active coding-session agent only — not spawned, no warmUpRules.
+designation:
+  allowed: Post-ship plan hygiene; archive candidates; stale workspace cleanup fallback
+  forbidden: New feature implementation; worktree product edits; dispatch resolution
 inputs:
   targetPlanPath:
     type: string

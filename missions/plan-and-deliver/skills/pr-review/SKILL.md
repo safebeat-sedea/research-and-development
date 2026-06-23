@@ -4,6 +4,9 @@ description: >-
  Inline coding-session procedure for GitHub PR comment triage and fix loops.
  Executed by the active coding-session agent only — not spawned, no warmUpRules.
  Resolves comments only after developer approval.
+designation:
+  allowed: Triage PR review comments; authorized comment fixes in worktree
+  forbidden: Open PRs; merge; planning rewrites; dispatch resolution
 ---
 
 # PR Review Workflow

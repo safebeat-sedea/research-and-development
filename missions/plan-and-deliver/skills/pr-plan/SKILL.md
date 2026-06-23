@@ -10,6 +10,9 @@ description: >-
  development-process.md. Target resolved per planning-target-resolution. Use under
  mission dispatch, **pr-plan** protocol branch, natural language, or after **new-plan**
  ignition on a `PR breakdown` child stub.
+designation:
+  allowed: Populate PR plan §§1–4; spawn coding-session handoff after §5c approval
+  forbidden: Application implementation; worktree ship on planning lane; fill §§5–8 here
 inputs:
   targetPlanPath:
     type: string

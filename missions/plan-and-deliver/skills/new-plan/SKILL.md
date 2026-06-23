@@ -12,6 +12,9 @@ description: >-
  modal and runs the populator immediately. Use under mission dispatch or
  when the developer asks to scaffold a plan via **new-plan** (standalone) or expand
  a parent list item **N** (indexed-child) from a numbered dual-title list.
+designation:
+  allowed: Ignite plan stubs from parent decomposition; Plan Board sidecar rows
+  forbidden: Application implementation; worktree ship; inline product code edits
 inputs:
   mode:
     type: string
