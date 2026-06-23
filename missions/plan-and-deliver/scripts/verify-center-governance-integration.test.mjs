@@ -46,6 +46,11 @@ test('verify-skill-manifest.mjs exits 0 with spawn byte-budget smoke line', () =
   assert.match(out, /spawn byte budget smoke:/);
 });
 
+test('verify-designation.mjs exits 0 on catalog SKILL.md and Pathfinder warm-up', () => {
+  const out = runScript('verify-designation.mjs');
+  assert.match(out, /OK: designation verified/);
+});
+
 test('verify-lane-warmup-parity.mjs --bootstrap full exits 0 for all roles', () => {
   const out = runScript('verify-lane-warmup-parity.mjs', ['--bootstrap', 'full']);
   assert.match(out, /OK: lane warm-up parity passed/);

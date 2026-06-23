@@ -3,6 +3,9 @@ name: quick-fix-plan
 description: >-
   Quick Fix Plan agent — minimal parent plan scaffold plus inline new-plan and
   pr-plan for a single PR (complexity ≤6). Spawned from quick-fix §3 only.
+designation:
+  allowed: Quick-fix parent plan scaffold; inline new-plan and pr-plan on planning lane
+  forbidden: Application implementation; worktree ship; dispatch resolution on leader lane
 inputs:
   intakeMode:
     type: string

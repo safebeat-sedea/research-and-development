@@ -3,6 +3,9 @@ name: debug-and-fix
 description: >-
   Log-first debug loop in a dedicated worktree — bootstrap, analyze logs,
   propose and apply fixes, verify with tests, recommend post-fix exit path.
+designation:
+  allowed: Debug worktree setup; log analysis; targeted fixes and verification in scope
+  forbidden: PRD rewrite; mission rule edits; dispatch resolution on leader lane
 inputs:
   issueSummary:
     type: string
