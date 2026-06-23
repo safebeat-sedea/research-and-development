@@ -520,6 +520,43 @@ When Mission Control delivers a child result from **`phase-planner`** or **`codi
 
 Silence or missing downstream metadata is not completion; return `partial` and keep the phase row open.
 
+#### Parallel **`hosting-repo-rules`** fork after **`coding-session`** terminal (fire-and-forget)
+
+When Step **5e** aggregates a **`coding-session`** child **`AGENT_RESULT_RESPONSE_V1`** terminal (spawned from inline **`pr-plan`** §5d or §5f on this phase subtree), evaluate the parallel rules fork **in the same aggregation pass** as **`prShipComplete`** merge — mirror **`planner`** Step **7c** *Parallel **`hosting-repo-rules`** fork* semantics on the **phase subtree product PR row**.
+
+**Spawn trigger (all required):**
+
+| # | Condition |
+|---|-----------|
+| 1 | Plan-anchored run — `outputs.targetPlanPath` present on **`coding-session`** terminal |
+| 2 | `outputs.repoRulesReconciliationStatus` is **`pending`** **or** product PR plan §5 lists `.mdc` action bullets not covered by `outputs.reconciledRepoRulesPaths` |
+| 3 | Product terminal merge-ready — `outputs.prShipComplete: true` **or** documented deferral on the product row |
+
+**Do not spawn when:** `outputs.repoRulesReconciliationStatus` is **`complete`** or **`skipped-none`**; §5 is `_None — no repo rule updates required for this PR._` only; scope is center/mission governance (route **Alignment Drift Brief** per rule **5** instead).
+
+**When all triggers match:**
+
+1. Emit fire-and-forget **`AGENT_RUN_REQUEST_V1`** for **`hosting-repo-rules/SKILL.md`** — **same turn** as Step **5e** terminal merge when possible. **Forbidden:** add the rules child to **`pendingByParent`**, **`activeLanes`** wait sets, or a separate **`shipRows`** entry.
+2. Spawn **`inputs`** (from **`coding-session`** terminal + product PR plan):
+
+| Input | Source |
+|-------|--------|
+| `targetPlanPath` | Product PR plan from **`coding-session`** `outputs.targetPlanPath` |
+| `targetPlanSlug` | Same plan slug |
+| `sourceCodingSessionCorrelationId` | **`coding-session`** child `correlationId` |
+| `pendingRepoRulesPaths` | Gap between §5 bullets and `outputs.reconciledRepoRulesPaths`, or terminal handoff list |
+| `repoRulesReconciliationStatus` | Echo from terminal — must be **`pending`** or deferral signal |
+| `ledgerParent` | This phase plan slug (`outputs.targetPlanSlug`) or spawn **`inputs.ledgerParent`** |
+
+3. On the **existing product PR row** under this phase subtree, set **`rulesUpdatesStatus: spawned`** and record **`hostingRepoRulesCorrelationId`**. Let the async child update **`rulesUpdatesStatus`** / **`rulesPrUrl`** on return.
+4. **Continue phase delivery** — per-PR / phase expand and **`phaseShipComplete`** aggregation proceed **without** waiting on rules PR merge.
+
+**Async rules child terminal merge:** When Mission Control later delivers **`hosting-repo-rules`** **`AGENT_RESULT_RESPONSE_V1`**, match by **`hostingRepoRulesCorrelationId`**. Update product row **`rulesUpdatesStatus`** (`complete` | `failed` | `abandoned`) and optional **`rulesPrUrl`**. **Re-emit updated** terminal (standalone spawned) or **`## Completion (inline)`** (when invoker runs this skill inline) with merged ledger fields.
+
+**Forbidden:** blocking next PR index or phase expand until rules PR merges; separate **`shipRows`** sub-row; adding rules lane to **`pendingByParent`**.
+
+Normative overview: **`../README.md`** § *Parallel **`hosting-repo-rules`** fork (fire-and-forget)* and **`hosting-repo-rules/SKILL.md`** § *Spawn trigger*.
+
 ## Step 5f — Implementation handoff after inline pr-plan skip (binding)
 
 When inline **`pr-plan`** merges into this lane with **`prPlanHandoffSkipped: true`** and **`implementationHandoffStatus: not-offered`**, **this phase-planner lane owns the next implementation handoff** — not the Master Plan lane, not a detached **`coding-session`** entry, and not prose redirect.
@@ -617,6 +654,7 @@ Required `outputs` fields:
 - `outputs.continuationStatus` — `active` while route approval, inline decomposition, nested **`phase-planner`** / **`coding-session`** child lanes, or phase ship work remains; `terminal` only per **Phase delivery ownership** ( **`phaseShipComplete`**, explicit defer/abandon, or unrecoverable failure)
 - `outputs.phaseShipComplete` — `true` when every PR under this phase is ship-complete (§5e)
 - `outputs.prShipComplete` — echo when aggregating a **`coding-session`** terminal for a PR under this phase
+- Product PR row ledger (parallel rules fork) — per affected PR row when Step **5e** spawns or merges **`hosting-repo-rules`**: **`rulesUpdatesStatus`** (`not-spawned` | `spawned` | `in-progress` | `complete` | `failed` | `abandoned`), optional **`hostingRepoRulesCorrelationId`**, optional **`rulesPrUrl`**
 - `outputs.parentPlanningFollowUpNotification`, `outputs.parentPlanningFollowUps`, `outputs.pendingParentFollowUps` — when §5e merged child parent follow-up notification
 
 Stop after the terminal line. Do not emit **`AGENT_RUN_REQUEST_V1`** for **`delivery-phases`** or **`pr-breakdown`** (see **`../README.md`** § *Terminal stop (normative)*).

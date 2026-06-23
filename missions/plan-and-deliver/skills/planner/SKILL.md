@@ -640,6 +640,43 @@ Execute **only** what the user selected in **AskQuestion** (or the matching **`o
 
 **Spawn-chain ship notifications:** When Mission Control delivers **`agent-result-response delivered`** with **`outputs.prShipComplete`** or **`outputs.phaseShipComplete`** (bubbled from **`coding-session`** → **`pr-plan`** / **`new-plan`** → **`pr-breakdown`** / **`phase-planner`** → **`delivery-phases`**), merge into the ledger per **`../README.md`** § *Upstream ship-complete notification*, **re-emit updated** **`AGENT_RESULT_RESPONSE_V1`** (same **`correlationId`**) when this lane is standalone spawned, then return to Step **7b** with expand options when indices unlock.
 
+#### Parallel **`hosting-repo-rules`** fork after **`coding-session`** terminal (fire-and-forget)
+
+When Mission Control delivers a **`coding-session`** child **`AGENT_RESULT_RESPONSE_V1`** terminal (direct spawn from inline **`pr-plan`** §5d or bubbled through Step **7c** aggregation), evaluate the parallel rules fork **in the same aggregation pass** as **`prShipComplete`** merge — **before** returning to Step **7b** expand menus.
+
+**Spawn trigger (all required):**
+
+| # | Condition |
+|---|-----------|
+| 1 | Plan-anchored run — `outputs.targetPlanPath` present on **`coding-session`** terminal |
+| 2 | `outputs.repoRulesReconciliationStatus` is **`pending`** **or** product PR plan §5 lists `.mdc` action bullets not covered by `outputs.reconciledRepoRulesPaths` |
+| 3 | Product terminal merge-ready — `outputs.prShipComplete: true` **or** documented deferral on the product row |
+
+**Do not spawn when:** `outputs.repoRulesReconciliationStatus` is **`complete`** or **`skipped-none`**; §5 is `_None — no repo rule updates required for this PR._` only; scope is center/mission governance (route **Alignment Drift Brief** per rule **5** instead).
+
+**When all triggers match:**
+
+1. Emit fire-and-forget **`AGENT_RUN_REQUEST_V1`** for **`hosting-repo-rules/SKILL.md`** — **same turn** as terminal merge when possible. **Forbidden:** add the rules child to **`pendingByParent`**, **`activeLanes`** wait sets, or a separate **`shipRows`** entry.
+2. Spawn **`inputs`** (from **`coding-session`** terminal + product PR plan):
+
+| Input | Source |
+|-------|--------|
+| `targetPlanPath` | Product PR plan from **`coding-session`** `outputs.targetPlanPath` |
+| `targetPlanSlug` | Same plan slug |
+| `sourceCodingSessionCorrelationId` | **`coding-session`** child `correlationId` |
+| `pendingRepoRulesPaths` | Gap between §5 bullets and `outputs.reconciledRepoRulesPaths`, or terminal handoff list |
+| `repoRulesReconciliationStatus` | Echo from terminal — must be **`pending`** or deferral signal |
+| `ledgerParent` | **`outputs.masterPlanSlug`** or spawn **`inputs.ledgerParent`** |
+
+3. On the **existing product PR row** in this lane's ledger, set **`rulesUpdatesStatus: spawned`** and record **`hostingRepoRulesCorrelationId`**. Let the async child update **`rulesUpdatesStatus`** / **`rulesPrUrl`** on return.
+4. **Continue depth-first expand** — offer Step **7b** **`expand-next-eligible`** when sequencing gates allow **without** waiting on rules PR merge.
+
+**Async rules child terminal merge:** When Mission Control later delivers **`hosting-repo-rules`** **`AGENT_RESULT_RESPONSE_V1`**, match by **`hostingRepoRulesCorrelationId`**. Update product row **`rulesUpdatesStatus`** (`complete` | `failed` | `abandoned`) and optional **`rulesPrUrl`**. **Re-emit updated** **`AGENT_RESULT_RESPONSE_V1`** (same **`correlationId`**) when standalone spawned.
+
+**Forbidden:** blocking next-row PR expand until rules PR merges; separate **`shipRows`** sub-row; adding rules lane to **`pendingByParent`**.
+
+Normative overview: **`../README.md`** § *Parallel **`hosting-repo-rules`** fork (fire-and-forget)* and **`hosting-repo-rules/SKILL.md`** § *Spawn trigger*.
+
 ### Resume / PR-expand handoff (binding)
 
 When this skill resumes on a spawned **Master Plan** child lane (Mission Control reload, Squad Leader re-spawn for one PR index, or **`single-phase`** / **`plan and deliver`** resume after inline **`new-plan` + `pr-plan`** completes §§1–4):
@@ -751,6 +788,7 @@ Required `outputs` fields:
 - `outputs.remainingTasks` — pending user or agent actions; empty only when `continuationStatus` is `terminal`
 - `outputs.expandEligibleIndices`, `outputs.expandNextEligibleIndex` — echo from inline decomposition after spawn-chain ship-complete merges
 - `outputs.prShipComplete`, `outputs.phaseShipComplete` — when this lane merged bubbled ship terminals from nested **`coding-session`** / **`phase-planner`** chains
+- Product PR row ledger (parallel rules fork) — per affected PR row when Step **7c** spawns or merges **`hosting-repo-rules`**: **`rulesUpdatesStatus`** (`not-spawned` | `spawned` | `in-progress` | `complete` | `failed` | `abandoned`), optional **`hostingRepoRulesCorrelationId`**, optional **`rulesPrUrl`**
 - `outputs.parentPlanningFollowUpNotification`, `outputs.parentPlanningFollowUps`, `outputs.pendingParentFollowUps` — when bubbled from nested **`coding-session`** with parent follow-up notification (**`../README.md`** § *Upstream parent follow-up notification*)
 - `outputs.implementationHandoffStatus` — `not-offered` | `offered` | `deferred` | `spawned-coding-session` merged from inline **`pr-plan`** (required when a PR plan handoff is pending or completed on this lane)
 - `outputs.spawnCorrelationId` — UUID from inline **`pr-plan`** §5d when **`implementationHandoffStatus`** is **`spawned-coding-session`**
