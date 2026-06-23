@@ -7,7 +7,7 @@ description: >-
  Ad-Hoc PRD is upstream root input for **`planner`**; no existing `.plan.md`
  link is required. For **Ad-Hoc PRD creator** agent sessions — explicit
  mission dispatch or upstream agent only. Does not edit
- `.plan.md` files or run/spawn **`planner`**.
+ `.plan.md` files or run/spawn **`planner`** from this lane (invokers own downstream spawn).
 designation:
   allowed: Scaffold ad-hoc PRD under operations docs; gather change-request evidence
   forbidden: Application code; Master Plan or PR plan edits; spawn planner; git ship
@@ -80,7 +80,18 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 | `.sedea/centers/research-and-development/rules/31_operations-user-id.mdc` | User-private docs path |
 | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md` | Spawn preflight |
 
-**Intent:** **Ad-Hoc PRD creator agent** turns a short **change request** (bug or small improvement) into a **minimal Ad-Hoc PRD** — a **standalone root artifact**. **Master Plans** and all other plans are **downstream** of the PRD (see **development-process**); this skill does **not** require or resolve a parent `.plan.md`, and does **not** spawn **`planner`**.
+**Intent:** **Ad-Hoc PRD creator agent** turns a short **change request** (bug or small improvement) into a **minimal Ad-Hoc PRD** — a **standalone root artifact**. **Master Plans** and all other plans are **downstream** of the PRD (see **development-process**); this skill does **not** require or resolve a parent `.plan.md`, and does **not** spawn **`planner`** from this lane.
+
+### Downstream `planner` (invoker-owned — binding)
+
+This skill **never** emits **`AGENT_RUN_REQUEST_V1`** for **`planner`**. Downstream Master Plan work is **invoker protocol**, not ad-hoc PRD scope:
+
+| Invoker | After terminal PRD approval (`developerApprovedPrd: true`) |
+|---------|-----------------------------------------------------------|
+| **`single-phase`** Squad Leader | **Same leader turn:** auto-chain **`single-phase/plan.mdc`** §4 seed compile → §5 spawn **`planner`** (no duplicate PRD approval on leader) |
+| **`debug-and-fix`** Squad Leader | Continue post-fix protocol per **`debug-and-fix/plan.mdc`** — **`ad-hoc-prd`** captures fix context; **`planner`** only when developer routes to **`plan and deliver`** / **`single-phase`**, not by default from §5c alone |
+
+**Forbidden:** reading "does not spawn **`planner`**" as "no **`planner`** on the dispatch" — **`single-phase`** §5 **`planner`** spawn is **expected** after this child terminal. **`outputs.prdRef`** / **`outputs.prdPath`** are the handoff inputs for §4 seed compile on the invoker lane.
 
 **File type:** **`.ad-hoc-prd.md`** so tooling recognizes the shape (§§ 1–3 + **Master Plan** placeholder line).
 
@@ -192,7 +203,7 @@ Set `continuationOwner` and `continuationStatus`:
 
 - After the initial write (step 4), before developer approval: `continuationOwner: "ad-hoc-prd-agent"`, `continuationStatus: "active"`. Emit an **`AGENT_RESULT_RESPONSE_V1`** with `developerApprovedPrd: false` so the invoking Squad Leader **acknowledges only** — do **not** advance **`single-phase`** §4 or **`debug-and-fix`** §7 from that result alone.
 - While required inputs are missing: `continuationOwner: "ad-hoc-prd-agent"`, `continuationStatus: "active"`, `developerApprovedPrd: false` — Squad Leader collects only when this skill cannot run step 5 (see missing-fields cases below).
-- On developer **Approve PRD**: `continuationOwner: "squad-leader"`, `continuationStatus: "terminal"`, `developerApprovedPrd: true`, `prdRef` populated — invoking Squad Leader may continue (**`single-phase`** §4 → §5, or **`debug-and-fix`** §7).
+- On developer **Approve PRD**: `continuationOwner: "squad-leader"`, `continuationStatus: "terminal"`, `developerApprovedPrd: true`, `prdRef` populated — invoking Squad Leader may continue (**`single-phase`** §4 → §5 **`planner`**, or **`debug-and-fix`** post-fix routing per that mission's `plan.mdc`).
 - `partial` with `continuationStatus: "active"` when file writing fails or content is too thin to offer approval until clarification.
 
 **Continuation ownership.** When spawned under **`single-phase`** or **`debug-and-fix`**, this lane owns the PRD approval gate (steps 5–7), mirroring **`author-prd`** approval semantics on plan-and-deliver. The **invoking Squad Leader** does **not** duplicate approval **AskQuestion** on the leader lane. This skill does not spawn **`planner`**. A child result with `developerApprovedPrd: false` is never permission to continue the invoking mission's downstream steps.
@@ -243,4 +254,4 @@ Use this shape for every new **`.ad-hoc-prd.md`** file.
 ## Out of scope
 
 - Does **not** create or edit **`.plan.md`** files or sidecars (use **`new-plan`** / **`planner`** downstream).
-- Does **not** auto-run or spawn **`planner`**. The Squad Leader uses `outputs.prdRef` to continue the protocol.
+- Does **not** auto-run or spawn **`planner`** on this lane. Invokers own downstream spawn — **`single-phase`** §4 → §5 after terminal approval; see § *Downstream `planner` (invoker-owned)* above.
