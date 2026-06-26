@@ -18,12 +18,8 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 /** Repo root containing `.sedea/` (hosting repo). */
 let SEDEA_REPO_ROOT = null;
-/** Absolute plan directories (user scope first, then joint; subdirs only if present). */
+/** Absolute plan directories (all operations scopes; non-joint scopes before joint). */
 let SEDEA_PLAN_DIRS = null;
-/** From global argv `--operations-user-id` (set before ensureSedeaContext); opaque operations user id string. */
-let SEDEA_CLI_OPERATIONS_USER_ID = null;
-/** One-shot stderr when no operations user id is configured. */
-let SEDEA_MISSING_OPERATIONS_USER_ID_WARNED = false;
 
 // ---------- small utils ----------
 
@@ -98,29 +94,31 @@ function spawnGitOutput(cwd, args) {
   });
 }
 
-async function resolveEffectiveOperationsUserId(_repoRoot, cliId) {
-  if (cliId && cliId.length > 0) return cliId;
-  return null;
+async function listOperationsScopeSegments(repoRoot) {
+  const ops = path.join(repoRoot, '.sedea', 'operations');
+  let entries;
+  try {
+    entries = await fs.readdir(ops, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const scopes = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  const nonJoint = scopes.filter((scope) => scope !== 'joint').sort((a, b) => a.localeCompare(b));
+  const joint = scopes.includes('joint') ? ['joint'] : [];
+  return [...nonJoint, ...joint];
 }
 
-async function buildPlanDirs(repoRoot, operationsUserId) {
+async function buildPlanDirs(repoRoot) {
   const ops = path.join(repoRoot, '.sedea', 'operations');
   const dirs = [];
-  async function pushScope(scope) {
+  const scopes = await listOperationsScopeSegments(repoRoot);
+  for (const scope of scopes) {
     const plansDir = path.join(ops, scope, 'plans');
     const subs = [plansDir, path.join(plansDir, 'roadmap-topics')];
     for (const d of subs) {
       if (await dirExists(d)) dirs.push(d);
     }
   }
-  if (operationsUserId) await pushScope(operationsUserId);
-  else if (!SEDEA_MISSING_OPERATIONS_USER_ID_WARNED) {
-    SEDEA_MISSING_OPERATIONS_USER_ID_WARNED = true;
-    process.stderr.write(
-      'plan-state: no --operations-user-id — only operations/joint plans are visible\n',
-    );
-  }
-  await pushScope('joint');
   return dirs;
 }
 
@@ -129,8 +127,7 @@ async function ensureSedeaContext() {
   const repoRoot = findSedeaRepoRoot(SCRIPT_DIR);
   if (!repoRoot) die('plan-state: could not find .sedea (walk up from script path failed)');
   SEDEA_REPO_ROOT = repoRoot;
-  const operationsUserId = await resolveEffectiveOperationsUserId(repoRoot, SEDEA_CLI_OPERATIONS_USER_ID);
-  SEDEA_PLAN_DIRS = await buildPlanDirs(repoRoot, operationsUserId);
+  SEDEA_PLAN_DIRS = await buildPlanDirs(repoRoot);
 }
 
 function parseGithubRemote(url) {
@@ -781,7 +778,7 @@ function pathTargeted(candidate, target) {
 // ---------- subcommand: reconcile ----------
 
 // `reconcile [--dry-run] [--prune-worktrees]` — iterate every active plan
-// (Sedea `.sedea/operations/{joint|<operationsUserId>}/plans/` and roadmap subdirs),
+// (Sedea `.sedea/operations/<scope>/plans/` and roadmap subdirs),
 // query `gh pr view` for every PR listed in the sidecar, and:
 //   all MERGED   → set sidecar `archived: true` and `status: completed` on
 //                  <slug>.state.yaml (rule 8), and append a bullet under
@@ -1953,41 +1950,7 @@ function requireString(flags, name) {
 
 // ---------- entry ----------
 
-/** Strip leading `--operations-user-id` before the subcommand. */
-function parseGlobalLeadingArgs(argv) {
-  const rest = [...argv];
-  let operationsUserId = null;
-  while (rest.length > 0) {
-    const a = rest[0];
-    if (a === '--operations-user-id') {
-      const v = rest[1];
-      if (!v || String(v).startsWith('--')) die('plan-state: --operations-user-id requires a value');
-      operationsUserId = String(v);
-      rest.splice(0, 2);
-      continue;
-    }
-    if (a.startsWith('--operations-user-id=')) {
-      operationsUserId = a.slice('--operations-user-id='.length);
-      if (!operationsUserId) die('plan-state: --operations-user-id= requires a value');
-      rest.splice(0, 1);
-      continue;
-    }
-    break;
-  }
-  return { operationsUserId, rest };
-}
-
-const USAGE = `Usage: plan-state [--operations-user-id <id>] <subcommand> [flags]
-
-Global:
-  --operations-user-id <id>
-                       Per-user plan tree: .sedea/operations/<id>/plans/
-                       (<id> is an opaque operations user id.) Union with
-                       .sedea/operations/joint/plans/. Required for the
-                       per-user tree when not using Mission Control host
-                       context. If omitted, only joint plans are searched
-                       (stderr warns once). Same slug in user + joint: user
-                       tree wins (listed first).
+const USAGE = `Usage: plan-state <subcommand> [flags]
 
 Subcommands:
   resolve --cwd <path>
@@ -2078,10 +2041,8 @@ Subcommands:
 
 async function main() {
   const raw = process.argv.slice(2);
-  const { operationsUserId, rest } = parseGlobalLeadingArgs(raw);
-  SEDEA_CLI_OPERATIONS_USER_ID = operationsUserId;
-  const sub = rest[0];
-  const subRest = rest.slice(1);
+  const sub = raw[0];
+  const subRest = raw.slice(1);
   if (!sub || sub === '--help' || sub === '-h') {
     process.stdout.write(USAGE);
     return;
