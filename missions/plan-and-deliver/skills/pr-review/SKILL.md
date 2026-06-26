@@ -65,7 +65,7 @@ Script: `.sedea/centers/sedea/scripts/pr-review.mjs` (reads PAT from `GH_TOKEN`,
 
 ### Hosting repo cwd (`pr-review.mjs` and `plan-state.mjs`)
 
-**`pr-review.mjs`** and **`plan-state.mjs`** run from **`HOSTING_ROOT`** (hosting repo whose root contains **`.sedea/`**), not from a worktree’s `git rev-parse --show-toplevel` alone. Canonical contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)* and [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) § *Worked example*.
+**`pr-review.mjs`** and **`plan-state.mjs`** run from **`HOSTING_ROOT`** (hosting repo whose root contains **`.sedea/`**), not from a worktree’s `git rev-parse --show-toplevel` alone. Canonical contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)* and [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) § *Legacy CLI (`plan-state.mjs`) — hybrid only*.
 
 - **`WORKTREE_ROOT`** — hosting repo worktree where you edit code (`git` / `gh` in Step 0).
 - **`HOSTING_ROOT`** — walk up until **`.sedea/centers/sedea/`** or **`.sedea/`** exists; **`cd "$HOSTING_ROOT"`** before **`node …/plan-state.mjs`** or **`node …/pr-review.mjs`**.
@@ -166,33 +166,28 @@ Always confirm which PR is being reviewed (print URL and title) before proceedin
 
 Before Step 1, attempt to upsert the resolved PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. This is the same `upsert-pr` call documented in rule **20** § *Commit and push cadence* step 4 ([`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc)) — running it here as well closes the gap when **`pr-review`** triage ends with all comments skipped (no follow-up commit-and-push pass, so that upsert never fires) or when the PR is otherwise quiet enough that no second push happens. The helper is idempotent, so running it on every **`pr-review`** invocation is harmless.
 
-**`plan-state.mjs`** lives in the center tree: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs`. It discovers plans only under the **union** of `.sedea/operations/joint/...` (literal `joint`) and `.sedea/operations/<operationsUserId>/...` on the **hosting repo** (parent directory of `.sedea/`). Pass the per-user scope when needed:
-
-- **`--operations-user-id <id>`** before the subcommand (from Mission Control **`operationsUserId`** in agent runs, or explicit CLI).
-
-If the id is omitted, only `joint` plans are visible (stderr warns once). **Slug collision:** the same slug in both trees → the **user** tree wins (listed first).
+**`plan-state.mjs`** lives in the center tree: `.sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs`. On Mission Control lanes, prefer spawn **`inputs.targetPlanPath`** when known; otherwise **`resolve --cwd "$WORKTREE_ROOT"`** discovers the anchored plan under **`.sedea/operations/…/plans/`** — do **not** construct **`.sedea/operations/<user-id>/...`** or **`joint/plans`** paths. See rule **31** § *Dispatch scope (binding)*.
 
 ```bash
 WORKTREE_ROOT="$(pwd)" # hosting repo worktree (after cd into it)
-# HOSTING_ROOT: walk up until .sedea/centers/sedea/.sedea/ exists — see rule 20 § *Resolve HOSTING_ROOT*
+# HOSTING_ROOT: walk up until .sedea/centers/sedea/ exists — see rule 20 § *Resolve HOSTING_ROOT*
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" resolve --cwd "$WORKTREE_ROOT"
+  resolve --cwd "$WORKTREE_ROOT"
 # → exit 0 prints "<slug>\t<planPath>"; exit 2 = no plan; other = error.
 
 # If resolve succeeded, upsert the PR number from Step 0 into the sidecar:
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" upsert-pr \
- --slug <slug-from-resolve> \
- --repo "$(basename "$HOSTING_ROOT")" \
- --number <pull_number-from-Step-0>
+  upsert-pr \
+  --slug <slug-from-resolve> \
+  --repo "$(basename "$HOSTING_ROOT")" \
+  --number <pull_number-from-Step-0>
 ```
 
 Skip silently when `resolve` exits non-zero (session has no plan) or when `pull_number` is unknown (Step 0 fell through every resolution path). Never block **`pr-review`** on a helper failure — log and continue with Step 1.
 
-**Capture the resolved slug + full `planPath`** (or the lack thereof) for Step 3a. After `resolve`, parse the path segment immediately after `.sedea/operations/` — it is either **`joint`** or the **user uuid** — and edit that same `<slug>.plan.md` (sidecar `<slug>.state.yaml` sits beside it). Re-running `resolve` later only to recover the path wastes a shell call.
+**Capture the resolved slug + full `planPath`** (or the lack thereof) for Step 3a. Edit that same `<slug>.plan.md` (sidecar `<slug>.state.yaml` sits beside it). Re-running `resolve` later only to recover the path wastes a shell call when **`targetPlanPath`** is already in inline context.
 
 ### Step 1 — Collect comments (`pr-review.mjs` only — no `gh` substitute)
 
@@ -250,7 +245,7 @@ Per [`development-process.md`](../../../../docs/development-process.md) § *Cade
 
 **Skip this step entirely** when Step 0's sub-step returned no slug (`resolve` exited non-zero, or no PR plan is linked yet). Acknowledge once: *"No plan linked to this PR; skipping follow-ups capture. Out-of-scope flags surface in the Step 4 report only — copy anything actionable into a new plan or follow-up issue if needed."*
 
-Otherwise, for every comment marked **Skipped → follow-up** in Step 3, prepare a one-sentence bullet for the linked PR plan file **`planPath`** from Step 0 (`…/.sedea/operations/joint/plans/<slug>.plan.md` or `…/.sedea/operations/<operationsUserId>/plans/<slug>.plan.md`). Do **not** append yet. The Step 3b developer approval gate must approve follow-up capture before any plan mutation. Each proposed bullet:
+Otherwise, for every comment marked **Skipped → follow-up** in Step 3, prepare a one-sentence bullet for the linked PR plan file **`planPath`** from Step 0 (absolute path from **`resolve`** or inline **`targetPlanPath`**). Do **not** append yet. The Step 3b developer approval gate must approve follow-up capture before any plan mutation. Each proposed bullet:
 
 - Paraphrases the comment's substantive concern in one sentence — do **not** quote the GitHub body verbatim (the comment thread already preserves it).
 - Carries an optional `(target: <hint>)` suffix when routing is obvious — `Master Plan`, `current phase plan`, `sibling plan`, `new-plan (standalone)`, `drop`.

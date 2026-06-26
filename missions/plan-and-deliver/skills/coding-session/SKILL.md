@@ -737,7 +737,7 @@ Post-merge **worktree removal**, **`HOSTING_ROOT` `git pull origin main`**, and 
 | **Forbidden** | Proactive **AskQuestion** or chat offers to run full **`plan-reconcile`** archive + cleanup as routine post-merge wrap-up before After deploy |
 | **Forbidden** | Destructive git cleanup outside [Post-merge workspace cleanup](#post-merge-workspace-cleanup) (authorized apply) or **`plan-reconcile`** §5 fallback |
 | **When to detect** | After **`prState: merged`** (post-create-pr, **`check-pr-status`**, or developer return) before After deploy walk |
-| **How** | From **`HOSTING_ROOT`**: `node …/plan-state.mjs --operations-user-id "$OPS_ID" detect-stale-workspaces --slug <slug> --json` |
+| **How** | From **`HOSTING_ROOT`**: `node …/plan-state.mjs detect-stale-workspaces --slug <slug> --json` |
 | **If empty** | One line: no stale worktree paths on disk — proceed to [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) when merge confirmed |
 | **If stale** | Short recap (path, worktree name, **`mergedPr`**) then route to [Post-merge workspace cleanup](#post-merge-workspace-cleanup) — **not** remove-worktree options on this detect-only pass |
 | **After deploy / archive** | [Plan-reconcile handoff (inline)](#plan-reconcile-handoff-inline) for archive when deploy verification **`done`** — §5 cleanup skips paths already cleaned |
@@ -1293,10 +1293,9 @@ When **`mergedPr: false`** (open PRs in sidecar) or remote head still exists, **
 
 ```bash
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" detect-stale-workspaces --slug <slug> --json
+  detect-stale-workspaces --slug <slug> --json
 ```
 
 When **`candidates`** is empty and sidecar **`worktrees[]`** / session focus is already clear, set `outputs.postMergeCleanupStatus: skipped_no_stale` and proceed to [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) on the **next** turn.
@@ -1305,7 +1304,7 @@ When **`candidates`** is empty and sidecar **`worktrees[]`** / session focus is 
 
 ```bash
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
- --operations-user-id "$OPS_ID" --dry-run [--slug <slug>]
+  --dry-run [--slug <slug>]
 ```
 
 Present **`actions`**, **`skippedWorktreeNames`** (when worktree name ref cleanup waits on remote), and **`mergedPr`** per candidate in recap when dry-run output is non-trivial. **When auto-apply applies**, proceed to **`--apply`** on the **next** turn without waiting for **`cleanup-apply`** selection.
@@ -1352,10 +1351,9 @@ Use **`--ownership-path b`** and **`--dispatch-worktree-context`** instead of **
 
 ```bash
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-  --operations-user-id "$OPS_ID" prune-sessions --path "$WORKTREE_ROOT"
+  prune-sessions --path "$WORKTREE_ROOT"
 ```
 
 Then run the **post-merge host rebuild script** when **`.cursor/rules/dot-sedea.mdc`** documents **`postMergeHostRebuildScript`** (same resolution as **`post-reconcile-workspace-cleanup.mjs`** on **`--apply`**).
@@ -1519,7 +1517,7 @@ Run when the developer explicitly says *plan reconcile* / *reconcile plans* on t
 
 If any precondition fails, report one line what is missing; offer defer or complete the missing ship step first. **Do not** archive before merge and deploy verification are complete.
 
-**Broad reconcile** (developer phrase without a single PR plan anchor): may run when **`operationsUserId`** is valid — skip ship-chain preconditions but still use **AskQuestion** before mutations per **`plan-reconcile/SKILL.md`** **Flow**.
+**Broad reconcile** (developer phrase without a single PR plan anchor): may run when active **dispatch scope** resolves — skip ship-chain preconditions but still use **AskQuestion** before mutations per **`plan-reconcile/SKILL.md`** **Flow**.
 
 1. Load `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/plan-reconcile/SKILL.md` and run it **inline on this lane** — **do not** emit **`AGENT_RUN_REQUEST_V1`** for **`plan-reconcile`**.
 
@@ -1899,7 +1897,7 @@ Use the Read tool on each path below, then acknowledge before starting the task.
 
 ---
 
-Implement the scoped change described in `@<absolute-hosting-repo-root>/.sedea/operations/joint/plans/<slug>.plan.md` §§ 5–7 for this PR.
+Implement the scoped change described in `@<absolute-targetPlanPath>` §§ 5–7 for this PR.
 
 **Follow-ups discipline.** Append to `## Follow-ups` on that plan when you discover scope-adjacent items.
 

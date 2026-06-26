@@ -324,7 +324,7 @@ Child spawns must satisfy the same README table for the target skill role (skill
 
 - **Type:** Branching logic
 - **Intent:** Gather structured product context on the **Squad Leader** lane before spawning **`author-prd`** (mandatory on every **`plan and deliver`** dispatch).
-- **Inputs:** Opening seeds from §1; `operationsUserId` from Mission Control context.
+- **Inputs:** Opening seeds from §1; active dispatch **bundle directory** from lane identity (for **`author-prd`** spawn **`inputs`**).
 - **Expected output:** Intake bundle: `prdTitle`, `prdDescription`, `operation` (`create` | `manage`), optional `targetPath`, `sourceMaterials[]`, optional `sectionPolicy`.
 - **Next-step resolution:**
   - Intake complete and user confirms summary → §3 spawn **`author-prd`** (auto-advance).
@@ -359,7 +359,7 @@ When fetch fails (auth, VPN, paywall, empty body), use **AskQuestion** once:
 
 | Option | Action |
 |--------|--------|
-| **Paste PRD body** or save to `@path` under **`.sedea/operations/<operationsUserId>/docs/`** | Re-read; set **`manage`** |
+| **Paste PRD body** or save to `@path` under **`<bundleDirectory>/docs/`** on the active dispatch | Re-read; set **`manage`** |
 | **Switch to create** — draft new PRD via **`author-prd`** | Set **`operation: create`**; continue §2 intake |
 | **Provide a different readable `@path`** | Retry read |
 | **More details for option _** | Elaborate; re-ask |
@@ -381,7 +381,7 @@ Do **not** invent PRD content from a URL alone.
 
 **Procedure**
 
-1. Compile child **`inputs`** from §2: `prdTitle`, `prdDescription`, `operation`, `targetPath` when set, `sourceMaterials`, optional `sectionPolicy`, `existingPrdBody` when **`manage`**, `operationsUserId`.
+1. Compile child **`inputs`** from §2: `prdTitle`, `prdDescription`, `operation`, `targetPath` when set, `sourceMaterials`, optional `sectionPolicy`, `existingPrdBody` when **`manage`**, and dispatch **`bundleDirectory`** when the spawn preamble supplies it.
 2. Set **`initiatingPrompt`** with the user's description and numbered source list; instruct the child to extend the source ledger and **not** invent scope from title alone.
 3. Run **`skills/README.md`** § *Universal spawn preflight* (including display metadata). Set **`name`** / **`description`** from **`prdTitle`** — not generic child placeholders.
 4. Emit exactly one **`AGENT_RUN_REQUEST_V1`** for **`author-prd`** with a new `correlationId`, dispatch-unique `slug`, and preflight **`inputs`**.
@@ -687,7 +687,7 @@ Before treating §8 as fully operational on a **`plan and deliver`** dispatch, e
 |------------|--------|
 | Milestone has no scripted terminal contract | **Mission gap** — extend the ship skill; do not add manual recap |
 | Child finished but host sync skipped | Fix terminal **`outputs`**; re-emit **`AGENT_RESULT_RESPONSE_V1`** on the ship lane |
-| Gap cannot be closed in-session | Start **mission completeness triage** as a **new** Mission Control dispatch on **sedea** (`mission completeness triage` / `report mission gap`) — this dispatch cannot open it; file a Mission Completeness Report under `.sedea/operations/<operationsUserId>/docs/` |
+| Gap cannot be closed in-session | Start **mission completeness triage** as a **new** Mission Control dispatch on **sedea** (`mission completeness triage` / `report mission gap`) — this dispatch cannot open it; file a Mission Completeness Report under **`<bundleDirectory>/docs/`** on the active dispatch scope |
 
 Until the audit passes, treat **`plan-and-deliver`** §8 automation as **incomplete** for dispatch resolution purposes.
 

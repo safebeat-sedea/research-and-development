@@ -82,7 +82,7 @@ Dry-run reports, archive candidates, and follow-up triage use **AskQuestion** or
 
 | How it starts | Requirements | Auto-start? |
 |---------------|--------------|-------------|
-| Developer says **plan reconcile** / **reconcile plans** on active **`coding-session`** | Valid **`operationsUserId`**; follow **Flow** below | No — explicit start |
+| Developer says **plan reconcile** / **reconcile plans** on active **`coding-session`** | Active dispatch scope or anchored **`targetPlanPath`** / **`targetPlanSlug`**; follow **Flow** below | No — explicit start |
 | **`coding-session`** inline handoff | Developer chose reconcile on that turn; when plan-anchored from ship chain: `prState: merged`; `deployStatus: done`; `deployTodoStatus: done`; `targetPlanPath` or `targetPlanSlug` | Yes — on authorized pick only |
 | **`deploy-walk`** finishes (checklist + capstone todo **done**) | — | **No** — deploy done alone does not start reconcile |
 
@@ -96,20 +96,19 @@ Detail: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shippin
 
 ## Script CLI (hosting repo)
 
-All **`plan-state.mjs`** invocations run from **`HOSTING_ROOT`** (the hosting repo whose root contains **`.sedea/`**). Use a **direct `node` command** with the runtime in [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) § *Hosting repo cwd (scripts)* and this center’s **`.cursor/rules/`** on the hosting repo.
+All **`plan-state.mjs`** invocations run from **`HOSTING_ROOT`** (the hosting repo whose root contains **`.sedea/`**). Use a **direct `node` command** with the runtime in [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) § *Legacy CLI (`plan-state.mjs`) — hybrid only* and rule **20** § *Hosting repo cwd for scripts (canonical)*.
 
-**`--operations-user-id <id>`** is **required before the subcommand** for user-scoped plans (same value as Mission Control **`operationsUserId`**). Without it, only **`joint`** plans are visible. See [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) and rule **20** § *Hosting repo cwd for scripts (canonical)*.
+On Mission Control agent lanes, resolve plans via spawn **`inputs.targetPlanPath`** / **`targetPlanSlug`** or **`plan-state.mjs resolve --cwd "$WORKTREE_ROOT"`** — do **not** construct **`.sedea/operations/<user-id>/...`** or **`joint/plans`** paths. See rule **31** § *Dispatch scope (binding)* and § *Plans and docs paths*.
 
 ```bash
-# HOSTING_ROOT: walk up until .sedea/centers/sedea/.sedea/ exists
+# HOSTING_ROOT: walk up until .sedea/centers/sedea/ exists
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" <subcommand> …
+  <subcommand> …
 ```
 
-Plans and sidecars live only under the **`.sedea/operations/`** union — **`.sedea/operations/joint/plans/`** and **`.sedea/operations/<operationsUserId>/plans/`** (literal **`joint`**). Do **not** use **`~/.cursor/plans/`** for Sedea hosting repo plans.
+Plans and sidecars live under **`.sedea/operations/…/plans/`** on the dispatch-scoped operations tree. Use explicit absolute paths from spawn **`inputs`** or **`resolve --cwd`** output — do **not** use **`~/.cursor/plans/`** for Sedea hosting repo plans.
 
 ## Flow
 
@@ -117,10 +116,9 @@ Plans and sidecars live only under the **`.sedea/operations/`** union — **`.se
 
 ```bash
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" reconcile --dry-run
+  reconcile --dry-run
 ```
 
 This queries **`gh pr view`** for every sidecar **`prs[]`** entry without moving files or appending parent bullets. The printed report has three buckets:
@@ -147,7 +145,7 @@ Only **Approve PR-tracked reconcile mutations** authorizes:
 cd "$HOSTING_ROOT"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" reconcile
+  reconcile
 ```
 
 If the developer skips PR-tracked reconcile, do not run non-dry-run `reconcile`; continue only to read-only `list-candidates` and developer-selected archive work. If the developer aborts, stop with `continuationStatus: "active"` and no archive mutations.
@@ -158,7 +156,7 @@ If the developer skips PR-tracked reconcile, do not run non-dry-run `reconcile`;
 cd "$HOSTING_ROOT"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" list-candidates --json
+  list-candidates --json
 ```
 
 Emits a JSON array of plans reconcile could not auto-decide. Schema per entry:
@@ -241,9 +239,9 @@ For each slug the user picked that is **not** in the **`postponed:`** set from s
 cd "$HOSTING_ROOT"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" archive \
- --slug <slug> \
- --signal "<signal-text>"
+  archive \
+  --slug <slug> \
+  --signal "<signal-text>"
 ```
 
 Signal selection:
@@ -272,10 +270,9 @@ On non-zero exit, stop and surface the error.
 
 ```bash
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId from Mission Control warm-up or sedea_get_current_user>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" detect-stale-workspaces [--slug <slug>] --json
+  detect-stale-workspaces [--slug <slug>] --json
 ```
 
 Each candidate includes `worktreePath`, `repo`, `worktreeName`, `mergedPr` (when sidecar **`prs[]`** exists), `remoteHeadGone`, and `reason`.
@@ -284,7 +281,7 @@ Each candidate includes `worktreePath`, `repo`, `worktreeName`, `mergedPr` (when
 
 ```bash
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
- --operations-user-id "$OPS_ID" --dry-run [--slug <slug>]
+  --dry-run [--slug <slug>]
 ```
 
 Present the JSON **`actions`** list in the **same turn** as the required **AskQuestion** before **`--apply`** — put long reports in **`display.markdown`** (phased) when needed; do not end with a report-only turn.
@@ -307,7 +304,7 @@ Only **`cleanup-apply`** authorizes **`--apply`**.
 
 ```bash
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/post-reconcile-workspace-cleanup.mjs \
- --operations-user-id "$OPS_ID" --apply [--slug <slug>]
+  --apply [--slug <slug>]
 ```
 
 The script runs **`git worktree remove`**, drops local worktree name refs when PR merged **and** remote head is gone (not merge-base heuristics), **`git pull origin <defaultIntegrationLine>`** on **`HOSTING_ROOT`**, optional **post-merge host rebuild** when **`.cursor/rules/dot-sedea.mdc`** documents **`postMergeHostRebuildScript`** on the active hosting repo (so the developer can reload the Sedea workbench), and **`plan-state.mjs prune-sessions --all`**.
