@@ -2,15 +2,13 @@
 description: >-
   Dispatch scope and phase-tagged operations storage — Mission Control binding,
   bundle directory, hybrid DB vs filesystem fallback. Supersedes operationsUserId
-  / joint as agent path-construction contracts (filename retained until rename PR).
+  / joint as agent path-construction contracts.
 alwaysApply: false
 ---
 
 # Dispatch scope (supersedes operations user id)
 
 **On-demand rule.** Mission Control warm-up loads [`.sedea/centers/research-and-development/rules/bootstrap.mdc`](bootstrap.mdc) as the sole R&D `alwaysApply: true` bootstrap. Read **this file** when you need dispatch-scoped operations paths, phase-tagged storage contracts, or legacy CLI flags during hybrid migration — not on every dispatch warm-up.
-
-**Filename note:** This rule file retains the legacy **`31_operations-user-id`** path until a follow-on rename PR. Content here **supersedes** agent-facing **`operationsUserId`** and **`joint`** namespace instructions.
 
 Normative hosting layout: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § **Operations storage phases**, § **Dispatch bundles under `operations/`**, and § **Plans (dispatch-scoped discovery)**.
 

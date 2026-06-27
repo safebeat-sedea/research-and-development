@@ -96,7 +96,7 @@ Detail: **`.sedea/centers/research-and-development/rules/20_efficient-pr-shippin
 
 ## Script CLI (hosting repo)
 
-All **`plan-state.mjs`** invocations run from **`HOSTING_ROOT`** (the hosting repo whose root contains **`.sedea/`**). Use a **direct `node` command** with the runtime in [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) § *Legacy CLI (`plan-state.mjs`) — hybrid only* and rule **20** § *Hosting repo cwd for scripts (canonical)*.
+All **`plan-state.mjs`** invocations run from **`HOSTING_ROOT`** (the hosting repo whose root contains **`.sedea/`**). Use a **direct `node` command** with the runtime in [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](../../../../rules/31_dispatch-scope.mdc) § *Legacy CLI (`plan-state.mjs`) — hybrid only* and rule **20** § *Hosting repo cwd for scripts (canonical)*.
 
 On Mission Control agent lanes, resolve plans via spawn **`inputs.targetPlanPath`** / **`targetPlanSlug`** or **`plan-state.mjs resolve --cwd "$WORKTREE_ROOT"`** — do **not** construct **`.sedea/operations/<user-id>/...`** or **`joint/plans`** paths. See rule **31** § *Dispatch scope (binding)* and § *Plans and docs paths*.
 

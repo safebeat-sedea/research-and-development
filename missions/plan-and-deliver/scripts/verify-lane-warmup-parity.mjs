@@ -42,7 +42,7 @@ const ROLE_MANIFESTS = {
       '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
       '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md',
       '.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc',
-      '.sedea/centers/research-and-development/rules/31_operations-user-id.mdc',
+      '.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc',
     ],
     skillRelPath: 'missions/plan-and-deliver/skills/author-prd/SKILL.md',
   },

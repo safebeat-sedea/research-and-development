@@ -262,7 +262,7 @@ Labels reuse numbers and § symbols across documents. **Read the owning doc** be
 
 - **GitHub** — Pull requests, diffs, and PR description fields (e.g. “Notes for the reviewer”). **A PR-creating agent** fills the body from the prompt **a coding agent** supplies.
 - **Plan board** — Where **developers** open and review planning-mode `.plan.md` files in the plans folder `.sedea/operations/**/plans/**`).
-- **Path placeholders (`...`)** — In this document and R&D governance, `` `...` `` inside path examples (e.g. `.sedea/operations/.../plans/`) denotes **omitted segments**, not a folder named `...`. Substitute **`joint`**, **`operationsUserId`**, or a real **`slug`**. See **`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`** § *Path placeholders in documentation*.
+- **Path placeholders (`...`)** — In this document and R&D governance, `` `...` `` inside path examples (e.g. `.sedea/operations/.../plans/`) denotes **omitted segments**, not a folder named `...`. Substitute **`joint`**, **`operationsUserId`**, or a real **`slug`**. See **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Path placeholders in documentation*.
 - **`.plan.md` files** — Standalone plan files at each hierarchy level (Master Plan, phase plans, PR plans); canonical location is under `.sedea/operations/**/plans/**`.
 - **PRD** — Product (or feature) Requirements Document — the prime input for the one-shot **Master Plan** (mode #1). Every **`plan and deliver`** dispatch authors or validates PRD via **`author-prd`** (§§1–3) before **`master-planner`** — see § *PRD routing (canonical)*.
 - **Git worktree** — Isolated worktree used by the **`coding-session`** protocol branch when spinning up a coding agent.

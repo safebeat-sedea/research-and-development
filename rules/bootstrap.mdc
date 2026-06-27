@@ -64,7 +64,7 @@ Load these **explicitly** when **`laneRules`**, **`skillWarmUp`**, spawn handove
 | **10** Plan naming | [`.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc) | Plan/PR/worktree naming, forbidden-word policy |
 | **20** PR shipping | [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) | Worktrees, commit/push cadence, ship chain, PR creation gate |
 | **30** Planning targets | [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc) | Resolve `.plan.md` targets, snapshot tables, depth-first gates |
-| **31** Operations user id | [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](31_operations-user-id.mdc) | `operationsUserId`, plans union, `plan-state.mjs --operations-user-id` |
+| **31** Dispatch scope | [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](31_dispatch-scope.mdc) | `dispatchId`, bundle directory, explicit plan paths |
 | **40** Maintain rules | [`.sedea/centers/research-and-development/rules/40_maintain-rules.mdc`](40_maintain-rules.mdc) | Hosting-repo **`.cursor/rules/*.mdc`** routing vs center rules |
 | **50** Display metadata | [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](50_mission-control-display-metadata-discipline.mdc) | Child lane display refresh, Squad Leader dispatch scope |
 

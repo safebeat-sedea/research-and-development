@@ -65,7 +65,7 @@ Script: `.sedea/centers/sedea/scripts/pr-review.mjs` (reads PAT from `GH_TOKEN`,
 
 ### Hosting repo cwd (`pr-review.mjs` and `plan-state.mjs`)
 
-**`pr-review.mjs`** and **`plan-state.mjs`** run from **`HOSTING_ROOT`** (hosting repo whose root contains **`.sedea/`**), not from a worktree’s `git rev-parse --show-toplevel` alone. Canonical contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)* and [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](../../../../rules/31_operations-user-id.mdc) § *Legacy CLI (`plan-state.mjs`) — hybrid only*.
+**`pr-review.mjs`** and **`plan-state.mjs`** run from **`HOSTING_ROOT`** (hosting repo whose root contains **`.sedea/`**), not from a worktree’s `git rev-parse --show-toplevel` alone. Canonical contract: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../../../rules/20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)* and [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](../../../../rules/31_dispatch-scope.mdc) § *Legacy CLI (`plan-state.mjs`) — hybrid only*.
 
 - **`WORKTREE_ROOT`** — hosting repo worktree where you edit code (`git` / `gh` in Step 0).
 - **`HOSTING_ROOT`** — walk up until **`.sedea/centers/sedea/`** or **`.sedea/`** exists; **`cd "$HOSTING_ROOT"`** before **`node …/plan-state.mjs`** or **`node …/pr-review.mjs`**.

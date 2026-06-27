@@ -96,7 +96,7 @@ node "$ROOT/.sedea/centers/.../plan-state.mjs" ...
 
 Use **`HOSTING_ROOT`** plus a repo-relative script path from the hosting repo, or an absolute path to the script file under **`HOSTING_ROOT`**.
 
-Cross-refs: [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](31_operations-user-id.mdc) § *Worked example*; [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc).
+Cross-refs: [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](31_dispatch-scope.mdc) § *Worked example*; [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc).
 
 ## Plan for independence
 
@@ -304,7 +304,7 @@ How to run the full cadence:
 
 ### `plan-state.mjs` and `operationsUserId`
 
-Run all **`plan-state.mjs`** invocations per § *Hosting repo cwd for scripts (canonical)*. Pass **`--operations-user-id <id>` before the subcommand** — same value as Mission Control **`operationsUserId`** (see [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](31_operations-user-id.mdc)). Without the flag, only **`joint`** plans are visible.
+Run all **`plan-state.mjs`** invocations per § *Hosting repo cwd for scripts (canonical)*. Pass **`--operations-user-id <id>` before the subcommand** — same value as Mission Control **`operationsUserId`** (see [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](31_dispatch-scope.mdc)). Without the flag, only **`joint`** plans are visible.
 
 ### User input
 

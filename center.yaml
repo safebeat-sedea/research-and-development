@@ -22,7 +22,7 @@ rules:
   - path: rules/10_plan-naming-convention.mdc
   - path: rules/20_efficient-pr-shipping.mdc
   - path: rules/30_planning-target-resolution.mdc
-  - path: rules/31_operations-user-id.mdc
+  - path: rules/31_dispatch-scope.mdc
   - path: rules/40_maintain-rules.mdc
   - path: rules/50_mission-control-display-metadata-discipline.mdc
 

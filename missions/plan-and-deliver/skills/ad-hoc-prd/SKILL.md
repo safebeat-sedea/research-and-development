@@ -40,7 +40,7 @@ inputs:
 laneRules:
   - ".sedea/centers/sedea/rules/2_ask-question-instructions.mdc"
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md"
-  - ".sedea/centers/research-and-development/rules/31_operations-user-id.mdc"
+  - ".sedea/centers/research-and-development/rules/31_dispatch-scope.mdc"
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
 warmUpRules:
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md"
@@ -77,7 +77,7 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 |------|---------|
 | `.sedea/centers/sedea/rules/2_ask-question-instructions.mdc` | Structured choice for missing inputs |
 | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md` | This skill procedure |
-| `.sedea/centers/research-and-development/rules/31_operations-user-id.mdc` | Dispatch scope + explicit plan/docs paths |
+| `.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc` | Dispatch scope + explicit plan/docs paths |
 | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md` | Spawn preflight |
 
 **Intent:** **Ad-Hoc PRD creator agent** turns a short **change request** (bug or small improvement) into a **minimal Ad-Hoc PRD** — a **standalone root artifact**. **Master Plans** and all other plans are **downstream** of the PRD (see **development-process**); this skill does **not** require or resolve a parent `.plan.md`, and does **not** spawn **`master-planner`** from this lane.
