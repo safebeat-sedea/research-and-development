@@ -113,6 +113,26 @@ Invocation context examples (mission dispatch and structured choices):
 
 The **developer** selects continuation per **30_planning-target-resolution** § *Sedea input channel*.
 
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`new-plan`**; other planning skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one full **`new-plan`** spawn on a Checkpoint dispatch through Step **3** and collect a developer verdict before the parent phase advances the next **`new-plan`** step PR — per **Planning protocol skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **Indexed child validation** (1–4) | Auto-advance on spawned handoff with locked `inputs` | exception: depth-first block / row problems |
+| **Parent derivation** (standalone) | Auto-advance when parent locked | **Gate** when parent unresolved |
+| **Write stub + sidecar** | Auto-advance | — |
+| **After write 1–2** — parent `Plan:` link + child link | Auto-advance on happy path | open items per modal contract |
+| **Auto-authorize populator** | Auto-advance (skip step 3) when upstream `delivery-phases` / `pr-breakdown` | — |
+| **3** — Populator approval | **Gate** when auto-authorize does **not** apply — **first developer-pick gate in this calibration PR** | Populator approval (below) |
+| **4** — Populator handoff | Auto-advance after step 3 approval or auto-authorize | external-wait on spawned `phase-planner` / inline `pr-plan` |
+| **5 / 5b** — Aggregate child results | Auto-advance / external-wait | — |
+| **6** — Non-indexed spawns | **Gate** when protocol branch pick required | deferred to JIT step PR |
+
 ### Inline handoff — **new-plan** → **`pr-plan`** (step 4)
 
 When `requestedPopulatorSkill` is **`pr-plan`**, run that skill **inline on this lane** — **do not** emit **`AGENT_RUN_REQUEST_V1`** for **`pr-plan`**. Load `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md`, construct inline context from the table below, follow that skill’s steps, and merge its **`## Completion (inline)`** fields into this skill’s ledger (`spawnedPlans`, `activeLanes`, `openLedgerEntries`, `remainingTasks`, `readyForImplementation`, `implementationHandoffStatus`). Inline **`pr-plan`** may still spawn **`coding-session`** per **`pr-plan`** §5d; this lane aggregates that child result per step **5b**.
@@ -307,6 +327,8 @@ Always write the sidecar. `parent:` required; use YAML `null` unquoted for a **r
 
 2. **Link the child** using an absolute `file://` URL to the real path under `.sedea/operations/.../plans/...` so the developer can open it.
 
+- **Next-step resolution:** Auto-advance to [Auto-authorize populator](#auto-authorize-populator-upstream-decomposition-spawn) or Step **3** populator approval after steps **1–2** verify — no `USER_CHECKPOINT` on stub write or parent `Plan:` link when auto-authorize applies.
+
 ### Auto-authorize populator (upstream decomposition spawn)
 
 When **all** of the following are true, **skip** step 3 and go straight to step 4 after the child stub and parent `Plan:` link are written and verified:
@@ -327,16 +349,24 @@ Set `outputs.populatorApprovalStatus: "waived-upstream"` and one line: *Parent l
 - `requestedPopulatorSkill` is absent (stub-only create).
 - The developer explicitly chose **Revise child stub first** or **Defer population** on a prior turn (re-open step 3).
 
-3. **Populator approval gate (indexed spawn only — when not auto-authorized).** If this skill was spawned with `requestedPopulatorSkill` and [Auto-authorize populator](#auto-authorize-populator-upstream-decomposition-spawn) does **not** apply, present the created child stub and verified parent `Plan:` link to the developer before spawning the populator. Apply **Indexed child — Open-item modal contract** when stub review surfaces open items (thin overview, YAML quoting risk, parent link not yet verified). When open items exist, one scoped `questions[]` entry per item, then the terminal populator gate question last. Collect approval via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**, **`../README.md`** § *Planning open-item modal contract*, and **`../README.md`** § *Recap, structured choice, act* — **preferred:** stub link + modal in one message. Terminal populator options (final `questions[]` entry when no open items, or last entry after item resolutions):
- - **Approve child stub and populate now**
- - **Revise child stub first**
- - **Defer population**
- - **Abandon this child**
- - **More details for option _**
+3. **Populator approval gate (indexed spawn only — when not auto-authorized).** If this skill was spawned with `requestedPopulatorSkill` and [Auto-authorize populator](#auto-authorize-populator-upstream-decomposition-spawn) does **not** apply, present the created child stub and verified parent `Plan:` link to the developer before spawning the populator. Apply **Indexed child — Open-item modal contract** when stub review surfaces open items (thin overview, YAML quoting risk, parent link not yet verified). When open items exist, one scoped `questions[]` entry per item, then the terminal populator gate question last. Collect approval via **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**, **`../README.md`** § *Planning open-item modal contract*, and **`../README.md`** § *Recap, structured choice, act* — **preferred:** stub link + modal in one message.
 
- Only **Approve child stub and populate now** authorizes populator handoff (inline **`pr-plan`** or spawn **`phase-planner`**). If the developer defers, return `partial` or `success` with `continuationStatus: "active"` and a `remainingTasks` item naming the deferred populator.
+USER_CHECKPOINT — approve child stub and populator handoff before inline pr-plan or phase-planner spawn.
 
- **Do not** open this gate when auto-authorize applies — proceed to step 4 in the same turn after the stub and `Plan:` link verify.
+Required **`options`** (final `questions[]` entry when no open items, or last entry after item resolutions):
+
+| Option id | Label (brief) |
+| --- | --- |
+| `approve-populator` | Approve child stub and populate now |
+| `revise-stub` | Revise child stub first |
+| `defer-population` | Defer population |
+| `abandon-child` | Abandon this child |
+| `more-details` | More details for option _ |
+
+- When stub write and parent `Plan:` link verify and auto-authorize does **not** apply → open this gate via **`MC_PHASED_RESPONSE_V1`** (spawned lanes) or **AskQuestion** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**. Apply **Indexed child — Open-item modal contract** when open items exist — this approval question stays last in `questions[]`.
+- When auto-authorize applies → **do not** open this gate; proceed to step **4** in the same turn after the stub and `Plan:` link verify.
+- Only **`approve-populator`** authorizes populator handoff (inline **`pr-plan`** or spawn **`phase-planner`**). If the developer defers, return `partial` or `success` with `continuationStatus: "active"` and a `remainingTasks` item naming the deferred populator.
+- **`defaultOptionId: approve-populator`** when stub and parent link verify and no blocking open items remain.
 
 4. **Populator handoff (indexed spawn only).** When `requestedPopulatorSkill` is set and either auto-authorize applies **or** the developer approved step 3, hand off after the child stub and parent `Plan:` line are written and verified (do **not** stop for a stub-approval modal when auto-authorized).
 
