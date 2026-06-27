@@ -2,7 +2,7 @@
 name: master-planner
 description: >-
  Take a PRD and scaffold a Master Plan file under the dispatch-scoped plans union
- (explicit `targetPlanPath` / handover paths — do not construct `.sedea/operations/<user-id>/...`),
+ (explicit `targetPlanPath` / handover paths — do not construct `.sedea/operations/.../...`),
  pre-populated with sections 1 through 5 (Background, Benefits, Related
  features, Architectural design, Changes — including `### Decomposition
  assessment` and `### Complexity score (plan-scope signal)` under § 5) per

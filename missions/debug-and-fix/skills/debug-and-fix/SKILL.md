@@ -23,7 +23,7 @@ inputs:
     type: string
     description: Absolute hosting repo root; default resolved from workspace when omitted.
     required: false
-  operationsUserId:
+  dispatch scope:
     type: string
     description: Operations user id from Mission Control session context.
     required: true
@@ -50,7 +50,7 @@ warmUpRules:
 | `reproductionSteps` | No | Reproduction narrative |
 | `logHints` | No | Where to look first |
 | `repoPath` | No | **`HOSTING_ROOT`** — resolve from workspace when omitted |
-| `operationsUserId` | Yes | Session context |
+| Dispatch scope | Yes | Mission Control `dispatchId` + bundle directory |
 
 ## Execution diagram
 
@@ -96,7 +96,7 @@ Do **not** edit product code before **`outputs.bootstrapStatus: success`**.
 
 1. Read [`.cursor/rules/sedea-debug-logging-settings.mdc`](.cursor/rules/sedea-debug-logging-settings.mdc) when present on the hosting repo — follow its **cwd routing** table before tuning any channel.
 2. When the bug is under **`tapcart-push/`** or **`tapcart-merchant-dashboard/`**, read that submodule's logging rules first (for example [`tapcart-push/.cursor/rules/logging.mdc`](tapcart-push/.cursor/rules/logging.mdc) — `LOG_LEVEL`, pino).
-3. When the bug is **Mission Control**, **Sedea Hub**, or dispatch/agent lanes — tune `sedeaHub.logLevel`, `missionControl.logLevel`, and Output panel sinks per that router; inspect `.sedea/operations/<operationsUserId>/dispatch/` on the **primary** clone when lane evidence is needed.
+3. When the bug is **Mission Control**, **Sedea Hub**, or dispatch/agent lanes — tune `sedeaHub.logLevel`, `missionControl.logLevel`, and Output panel sinks per that router; inspect `.sedea/operations/.../dispatch/` on the **primary** clone when lane evidence is needed.
 4. Collect existing logs relevant to `issueSummary` / `logHints`.
 5. Add **liberal debug logging** to code under **`WORKTREE_ROOT`** when existing logs are insufficient — verbose debug output is acceptable for this stage.
 6. Reproduce using `reproductionSteps` when provided; capture log evidence before proposing fixes.

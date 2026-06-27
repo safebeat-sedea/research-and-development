@@ -45,7 +45,7 @@ Detached **`coding-session`** lanes execute canonical plan-and-deliver repo-rule
 
 ## Objectives
 
-1. **Ad-hoc PRD intake** — From a short change request, produce a developer-approved Ad-Hoc PRD under `.sedea/operations/<operationsUserId>/docs/` via **`ad-hoc-prd`** (not full **`author-prd`**).
+1. **Ad-hoc PRD intake** — From a short change request, produce a developer-approved Ad-Hoc PRD under `.sedea/operations/.../docs/` via **`ad-hoc-prd`** (not full **`author-prd`**).
 
 2. **Bounded Master Plan** — Scaffold and draft a Master Plan with **`master-planner`**, compute complexity score; **reject** dispatches when overall score **> 20** (≥ 21) and recommend **`plan and deliver`**.
 
@@ -117,7 +117,7 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
 
 - **Type:** Branching logic
 - **Intent:** Gather **`ad-hoc-prd`** inputs on the Squad Leader lane before §3 spawn.
-- **Inputs:** Opening remainder; `operationsUserId`.
+- **Inputs:** Opening remainder; Mission Control dispatch binding.
 - **Expected output:** `title` (optional), `details` (required), optional `sourceSummary`, optional `roadmapHints`.
 - **Next-step resolution:** `details` non-empty and user confirms summary → §3 (auto-advance). Defer → pause.
 
@@ -140,7 +140,7 @@ USER_CHECKPOINT — confirm ad-hoc scope intake before spawning Ad-Hoc PRD.
 - **Assigned skill:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md)
 - **Required rule context:** Sedea baseline, **this `plan.mdc` (§§1–3)**, **`development-process.md`**, target skill.
 - **Spawn `warmUpRules` (binding):** On **`AGENT_RUN_REQUEST_V1`**, merge skill frontmatter **`warmUpRules`** but **replace** `plan-and-deliver/plan.mdc` with **`single-phase/plan.mdc`** so the child loads this mission's protocol, not full plan-and-deliver.
-- **Inputs:** `createIntent: true`, `title`, `details`, `operationsUserId`, optional `sourceSummary`, optional `roadmapHints`.
+- **Inputs:** `createIntent: true`, `title`, `details` from Mission Control, optional `sourceSummary`, optional `roadmapHints`.
 - **Expected output:** Child terminal with `outputs.adHocPrdPath`, `outputs.developerApprovedPrd`, `outputs.continuationStatus: terminal` when PRD approved.
 - **Next-step resolution:** Terminal approved PRD → auto-chain §4 → §5 on leader (no re-approval gate). Failure/partial → USER_CHECKPOINT gate below.
 

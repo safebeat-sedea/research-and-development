@@ -3,7 +3,7 @@ name: ad-hoc-prd
 description: >-
  Scaffold a minimal Ad-Hoc PRD (bugs / small improvements) as
  `ad_hoc_<slug>_<hex>.ad-hoc-prd.md` under the active dispatch bundle
- `<bundleDirectory>/docs/` (never construct `.sedea/operations/<user-id>/...` paths).
+ `<bundleDirectory>/docs/` (never construct `.sedea/operations/.../...` paths).
  Ad-Hoc PRD is upstream root input for **`master-planner`**; no existing `.plan.md`
  link is required. For **Ad-Hoc PRD creator** agent sessions — explicit
  mission dispatch or upstream agent only. Does not edit
@@ -126,7 +126,7 @@ New Ad-Hoc PRDs are written **only** under:
 
 **`<bundleDirectory>/docs/`**
 
-Resolve **`bundleDirectory`** from spawn **`inputs.bundleDirectory`**, the lane identity block (absolute bundle directory), or Mission Control warm-up preamble. If it is missing, stop with `partial` and report `outputs.missingFields: ["bundleDirectory"]`. Do **not** construct **`.sedea/operations/<user-id>/docs/`** or write under **`joint/docs/`**.
+Resolve **`bundleDirectory`** from spawn **`inputs.bundleDirectory`**, the lane identity block (absolute bundle directory), or Mission Control warm-up preamble. If it is missing, stop with `partial` and report `outputs.missingFields: ["bundleDirectory"]`. Do **not** construct **`.sedea/operations/.../docs/`** or write under **`joint/docs/`**.
 
 Create **`docs/`** under that bundle directory if missing.
 

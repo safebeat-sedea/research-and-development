@@ -2,7 +2,7 @@
 // Plan Board sidecar writer for R&D plan-and-deliver (lifecycle + archive fields).
 // Normative contract: `.sedea/centers/sedea/rules/8_plan-board-contract.mdc`
 // Invoked by: coding-session skill, plan-reconcile, efficient-pr-shipping commit-and-push cadence, hosting repo automation.
-// Design contract: Sedea `.sedea/operations/` plan union (joint + optional per-user namespace).
+// Design contract: Sedea `.sedea/operations/` plan union across dispatch-scoped plan directories.
 
 /** Plan lifecycle dot values (American spelling `canceled`). See rule 8 § Lifecycle. */
 const PLAN_BOARD_STATUSES = new Set(['not_started', 'started', 'completed', 'canceled']);

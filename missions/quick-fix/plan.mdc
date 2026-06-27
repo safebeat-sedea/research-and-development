@@ -113,7 +113,7 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
 
 - **Type:** Branching logic
 - **Intent:** Gather confirmed quick-fix scope on the Squad Leader lane before §3 spawn — via bullet list or free-form fix description.
-- **Inputs:** Opening remainder; `operationsUserId`; `intakeMode` (`provide-list` | `description-of-fix`).
+- **Inputs:** Opening remainder; Mission Control dispatch binding; `intakeMode` (`provide-list` | `description-of-fix`).
 - **Expected output:** `intakeMode`, `changeList` (non-empty confirmed bullet list), optional `changeDescription` (when prose path used), `complexityConfirmed: true` (each item ≤6), `scopeConfirmed: true`, optional `title`.
 - **Next-step resolution:** List confirmed in scope and complexity → §3 (auto-advance). Out-of-scope or complexity **>6** → USER_CHECKPOINT gate below.
 
@@ -145,7 +145,7 @@ USER_CHECKPOINT — pick quick-fix intake mode and confirm scope before spawn.
 - **skillPath (binding):** [`.sedea/centers/research-and-development/missions/quick-fix/skills/quick-fix-plan/SKILL.md`](.sedea/centers/research-and-development/missions/quick-fix/skills/quick-fix-plan/SKILL.md) — host **`AGENT_RUN_REQUEST_V1`** uses this single path per [spawn contracts README](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md) § *Universal spawn preflight*.
 - **Inline on child lane (not separate spawns):** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md), [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md) — executed per §4 inside the **`quick-fix-plan`** child lane.
 - **Required rule context:** Sedea baseline, **this `plan.mdc`**, **`development-process.md`**, [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc), plan-and-deliver **`skills/README.md`**.
-- **Inputs:** `intakeMode` (`provide-list` | `description-of-fix`), `changeList`, optional `changeDescription` (required when `intakeMode` is `description-of-fix`), `title`, `operationsUserId`, `centerSlug: research-and-development`, `complexityConfirmed: true`.
+- **Inputs:** `intakeMode` (`provide-list` | `description-of-fix`), `changeList`, optional `changeDescription` (required when `intakeMode` is `description-of-fix`), `title` from Mission Control, `centerSlug: research-and-development`, `complexityConfirmed: true`.
 - **Expected output:** Child terminal with `outputs.parentPlanPath`, `outputs.targetPlanPath`, `outputs.readyForImplementation`, `outputs.prPlanHandoffReady` (or equivalent per **`pr-plan`** **`## Completion (spawned)`** when spawn path used), ledger fields.
 - **Next-step resolution:** Terminal success with PR plan path → §6 ack on leader (auto-advance). Failure/partial → USER_CHECKPOINT gate below.
 
@@ -172,7 +172,7 @@ USER_CHECKPOINT — pick next step when Quick Fix Plan child reports failure or 
 **Procedure (Quick Fix Plan agent)**
 
 1. **Resolve `HOSTING_ROOT`**; operations writes on main hosting clone only.
-2. **Minimal parent plan** — scaffold under `.sedea/operations/<operationsUserId>/plans/` with:
+2. **Minimal parent plan** — scaffold under `.sedea/operations/.../plans/` with:
    - Title from intake **`title`**
    - **`### PR list`** with **exactly one** row summarizing the bullet list as a single quick-fix concern
    - Sidecar **`parent: null`**, **`status: started`** per [`.sedea/centers/sedea/rules/8_plan-board-contract.mdc`](.sedea/centers/sedea/rules/8_plan-board-contract.mdc)

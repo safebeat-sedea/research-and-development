@@ -188,7 +188,7 @@ Snapshots should respect **coding-session** pre-worktree validation and the work
  ```bash
  cd "$HOSTING_ROOT"
  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id <operationsUserId> resolve --cwd "$WORKTREE_ROOT"
+  resolve --cwd "$WORKTREE_ROOT"
  ```
 
  When not in a worktree, use the PR plan path explicitly in play. Do **not** set script paths from `ROOT="$(git rev-parse --show-toplevel)"` in a hosting repo worktree alone.

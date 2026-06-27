@@ -23,7 +23,7 @@ inputs:
     type: string
     description: Plan tree title from intake.
     required: false
-  operationsUserId:
+  dispatch scope:
     type: string
     description: Operations user id from Mission Control session context.
     required: true
@@ -95,7 +95,7 @@ Run **`../plan-and-deliver/skills/README.md`** § *Universal spawn preflight* be
 
 ## Steps
 
-1. Validate spawn **`inputs`**: non-empty **`changeList`**, **`operationsUserId`**, **`complexityConfirmed: true`**, **`intakeMode`**; when **`description-of-fix`**, require **`changeDescription`**.
+1. Validate spawn **`inputs`**: non-empty **`changeList`**, **`complexityConfirmed: true`**, **`intakeMode`**; when **`description-of-fix`**, require **`changeDescription`**.
 2. Execute **`quick-fix/plan.mdc`** §4 procedure (minimal parent → inline **`new-plan`** → inline **`pr-plan`** → **`coding-session`** §5d spawn).
 3. Emit child terminal **`AGENT_RESULT_RESPONSE_V1`** per **`## Completion (spawned)`** below.
 

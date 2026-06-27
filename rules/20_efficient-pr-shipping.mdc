@@ -75,10 +75,9 @@ When linking a plan to a worktree, pass the **worktree** path to **`resolve --cw
 ```bash
 WORKTREE_ROOT="$(pwd)"   # after cd into the hosting repo worktree
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId from Mission Control or sedea_get_current_user>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-  --operations-user-id "$OPS_ID" resolve --cwd "$WORKTREE_ROOT"
+  resolve --cwd "$WORKTREE_ROOT"
 ```
 
 For **`upsert-pr --repo`**, use **`$(basename "$HOSTING_ROOT")`** — the **hosting repo git remote label** (for example `app`), **not** **`$(basename "$WORKTREE_ROOT")`**. Worktree directory names (for example `app-feat-02-…`) are ephemeral paths; sidecar **`prs[].repo`** must stay stable so **`plan-state.mjs`** reconcile and post-merge **`mergedPr`** detection still work after **`worktrees[]`** is pruned.
@@ -302,9 +301,9 @@ Hub activation must reference add-on packages under **`WORKTREE_ROOT`**, not the
 
 How to run the full cadence:
 
-### `plan-state.mjs` and `operationsUserId`
+### `plan-state.mjs`
 
-Run all **`plan-state.mjs`** invocations per § *Hosting repo cwd for scripts (canonical)*. Pass **`--operations-user-id <id>` before the subcommand** — same value as Mission Control **`operationsUserId`** (see [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](31_dispatch-scope.mdc)). Without the flag, only **`joint`** plans are visible.
+Run all **`plan-state.mjs`** invocations per § *Hosting repo cwd for scripts (canonical)*. On Mission Control lanes, prefer explicit plan paths from spawn **`inputs`** or **`--file`** / **`--slug`** flags — see [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](31_dispatch-scope.mdc) § *Plans and docs paths*.
 
 ### User input
 
@@ -315,7 +314,7 @@ Per **[`30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc)**
 
 ### Steps
 
-Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation in this cadence (`HOSTING_ROOT`, `WORKTREE_ROOT`, `OPS_ID`).
+Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation in this cadence (`HOSTING_ROOT`, `WORKTREE_ROOT`).
 
 1. **Commit** (step 1). **Skip this step if `git status --short` is empty** — typical when the worktree is already committed after **`pre-pr-review`** **go**. Do not amend the previous commit and do not pass `--allow-empty`; just proceed to step 2.
 2. Push to remote.
@@ -331,16 +330,15 @@ Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation 
 
    **Forbidden:** ending the assistant turn at push when Step 4 ran in-session; opening post-create-pr or pre-merge modals before **`outputs.githubReconciliationStatus: complete`** when Step 5 was required.
 
-4. **Link the PR to its plan sidecar.** After push (and after step 3 when applicable), attempt to upsert the PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. Run with **`cd "$HOSTING_ROOT"`** and **`--operations-user-id` before the subcommand** (`WORKTREE_ROOT` = hosting repo worktree where commit/push ran):
+4. **Link the PR to its plan sidecar.** After push (and after step 3 when applicable), attempt to upsert the PR number into the Plan Board sidecar so `plan-reconcile` can later archive the plan when all linked PRs merge. Run with **`cd "$HOSTING_ROOT"`** (`WORKTREE_ROOT` = hosting repo worktree where commit/push ran):
 
    ```bash
    WORKTREE_ROOT="$(pwd)"   # hosting repo worktree (before cd to HOSTING_ROOT)
    cd "$HOSTING_ROOT"
-   OPS_ID="<operationsUserId from Mission Control or sedea_get_current_user>"
-
+   
    # Which plan owns this worktree? (exit 2 = none; skip silently)
    node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-     --operations-user-id "$OPS_ID" resolve --cwd "$WORKTREE_ROOT"
+  resolve --cwd "$WORKTREE_ROOT"
    # → prints "<slug>\t<planPath>" on exit 0.
 
    # Does an open PR already exist for this worktree? (--head = worktree name from worktree-setup.sh --worktree-name)
@@ -350,7 +348,7 @@ Apply § *Hosting repo cwd for scripts (canonical)* for every script invocation 
 
    # If both resolved: upsert into sidecar prs[] (idempotent).
    node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
-     --operations-user-id "$OPS_ID" upsert-pr \
+  upsert-pr \
      --slug <slug-from-resolve> \
      --repo "$(basename "$HOSTING_ROOT")" \
      --number <number-from-gh>

@@ -83,7 +83,7 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
 - `operation`: `create` or `manage`
 - `targetPath` when supplied
 - `sourceMaterials` (optional seed materials)
-- **Dispatch scope** — `create` writes under `<bundleDirectory>/docs/` (absolute bundle path from lane identity / spawn preamble); do not construct `.sedea/operations/<user-id>/...` paths
+- **Dispatch scope** — `create` writes under `<bundleDirectory>/docs/` (absolute bundle path from lane identity / spawn preamble); do not construct `.sedea/operations/.../...` paths
 - `sectionPolicy`
 - `existingPrdBody` for updates
 

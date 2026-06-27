@@ -79,7 +79,7 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
 
 - `type`: Branching logic.
 - `intent`: Gather symptom, scope, and reproduction hints before spawning the debug agent.
-- `inputs`: Opening user message remainder after `debug and fix`, current Sedea user context (`operationsUserId`).
+- `inputs`: Opening user message remainder after `debug and fix`, Mission Control dispatch binding.
 - `expected output`: Structured handover: `issueSummary`, optional `reproductionSteps`, optional `logHints`, optional `repoPath`.
 - `next-step resolution`: Continue to step 3 when `issueSummary` is non-empty (auto-advance).
 - `ordered actions`:
@@ -100,7 +100,7 @@ USER_CHECKPOINT — provide issue summary before spawning the debug agent.
 - `target agent role`: Debug and Fix agent.
 - `assigned skill`: [`skills/debug-and-fix/SKILL.md`](skills/debug-and-fix/SKILL.md).
 - `required rule context`: Sedea center always-apply rules, [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](../../rules/20_efficient-pr-shipping.mdc), [`.sedea/centers/sedea/skills/worktree-setup/SKILL.md`](../../../sedea/skills/worktree-setup/SKILL.md), [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](../../../sedea/rules/0_hosting-repo.mdc) § *Attach worktree to VS Code workspace*, [`.cursor/rules/dot-sedea.mdc`](.cursor/rules/dot-sedea.mdc), [`.cursor/rules/sedea-debug-logging-settings.mdc`](.cursor/rules/sedea-debug-logging-settings.mdc) — **hosting-repo authored** when present (like dot-sedea); create via cursor-center alignment when missing. Deprecated [`worktree-bootstrap/SKILL.md`](../plan-and-deliver/skills/worktree-bootstrap/SKILL.md) is **exception-only inline retry** when center setup fails — not normative warm-up. Submodule Node toolchain (`fnm use`) is per dot-sedea appendix, not a separate hosting warmUp file.
-- `inputs`: `issueSummary`, `reproductionSteps`, `logHints`, `repoPath`, `operationsUserId` from step 2.
+- `inputs`: `issueSummary`, `reproductionSteps`, `logHints`, `repoPath` from Mission Control from step 2.
 - `spawn run-request fields`:
   - `inputs` — validated fields above.
   - `warmUpRules` — skill frontmatter defaults plus mission context paths when needed.
@@ -137,7 +137,7 @@ USER_CHECKPOINT — pick exactly one post-fix exit path after a verified fix.
 - `intent`: Create the PR plan anchor required before code promotion, so `coding-session` receives `targetPlanPath` and can update deploy-test and written-test sections during ship.
 - `target agent role`: Debug promotion planning agent (plan-and-deliver).
 - `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`](../plan-and-deliver/skills/new-plan/SKILL.md), followed by **`pr-plan`** population per [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md`](../plan-and-deliver/skills/pr-plan/SKILL.md).
-- `inputs`: `mode: "standalone"`, `requestedPlanKind: "pr-plan"`, `upstreamSkill: "debug-and-fix"`, `operationsUserId`, and a debug handover seed containing child `outputs.fixSummary`, `outputs.testEvidence`, `outputs.worktreePath`, `outputs.worktreeName`, and `outputs.hostingRoot`. Root plan parent is resolved inside **`new-plan`** (sidecar **`parent: null`**) — **`new-plan`** frontmatter has no `parent` spawn key. When this step spawns a skill whose frontmatter declares **`parent`** as **`type: string`** (for example **`master-planner`** on other paths), emit **`"parent": "null"`** in spawn JSON for standalone root plans — **never** JSON `null`. See **`plan-and-deliver/skills/README.md`** § *Universal spawn preflight* row **1b**.
+- `inputs`: `mode: "standalone"`, `requestedPlanKind: "pr-plan"`, `upstreamSkill: "debug-and-fix"` from Mission Control, and a debug handover seed containing child `outputs.fixSummary`, `outputs.testEvidence`, `outputs.worktreePath`, `outputs.worktreeName`, and `outputs.hostingRoot`. Root plan parent is resolved inside **`new-plan`** (sidecar **`parent: null`**) — **`new-plan`** frontmatter has no `parent` spawn key. When this step spawns a skill whose frontmatter declares **`parent`** as **`type: string`** (for example **`master-planner`** on other paths), emit **`"parent": "null"`** in spawn JSON for standalone root plans — **never** JSON `null`. See **`plan-and-deliver/skills/README.md`** § *Universal spawn preflight* row **1b**.
 - `spawn run-request fields`: `inputs`, `warmUpRules` per target skill frontmatter, `laneRules` when required by the planning skill manifest, and `initiatingPrompt` with debug handover plus the approved post-fix exit.
 - `pr-plan standalone exception`: Debug fixes do not necessarily originate from an approved parent **`### PR list`**. This mission explicitly permits a standalone **`pr-plan`** population handoff after **`new-plan`** creates the target plan; the handoff must pass `targetPlanPath`, `targetPlanSlug`, and the debug handover seed. If **`pr-plan`** cannot populate without parent topology, stop and use structured choice to revise the plan anchor, create the missing parent planning context, or switch exits — do not spawn **`coding-session`** without a PR plan.
 - `expected output`: Child terminal or aggregate output with `outputs.targetPlanPath`, `outputs.targetPlanSlug`, `outputs.readyForImplementation: true`, and any `outputs.remainingTasks` from **`new-plan`** / **`pr-plan`**.
@@ -166,7 +166,7 @@ USER_CHECKPOINT — revise planning anchor, retry, or switch exits when PR plan 
 - `intent`: Capture fix context as an Ad-Hoc PRD when the developer wants product-context documentation instead of immediate code promotion.
 - `target agent role`: Ad-Hoc PRD creator (plan-and-deliver).
 - `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md`](../plan-and-deliver/skills/ad-hoc-prd/SKILL.md).
-- `inputs`: `createIntent: true`, `title` from fix summary, `details` from child `outputs.fixSummary`, `operationsUserId`, optional `sourceSummary` referencing debug dispatch and test evidence.
+- `inputs`: `createIntent: true`, `title` from fix summary, `details` from child `outputs.fixSummary` from Mission Control, optional `sourceSummary` referencing debug dispatch and test evidence.
 - `spawn run-request fields`: `inputs`, `warmUpRules` per target skill frontmatter, `initiatingPrompt` with debug handover and the selected Ad-Hoc PRD-only exit.
 - `expected output`: Child terminal with `outputs.adHocPrdPath`, `outputs.developerApprovedPrd` after PRD approval flow inside skill.
 - `next-step resolution`: Continue to step 7 after child terminal; do not spawn **`coding-session`** from this branch unless the developer later selects code promotion and step 5 creates a PR plan anchor.

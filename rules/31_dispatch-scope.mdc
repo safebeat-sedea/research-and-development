@@ -1,14 +1,14 @@
 ---
 description: >-
   Dispatch scope and phase-tagged operations storage — Mission Control binding,
-  bundle directory, hybrid DB vs filesystem fallback. Supersedes operationsUserId
+  bundle directory, hybrid DB vs filesystem fallback. Supersedes legacy user-id
   / joint as agent path-construction contracts.
 alwaysApply: false
 ---
 
 # Dispatch scope (supersedes operations user id)
 
-**On-demand rule.** Mission Control warm-up loads [`.sedea/centers/research-and-development/rules/bootstrap.mdc`](bootstrap.mdc) as the sole R&D `alwaysApply: true` bootstrap. Read **this file** when you need dispatch-scoped operations paths, phase-tagged storage contracts, or legacy CLI flags during hybrid migration — not on every dispatch warm-up.
+**On-demand rule.** Mission Control warm-up loads [`.sedea/centers/research-and-development/rules/bootstrap.mdc`](bootstrap.mdc) as the sole R&D `alwaysApply: true` bootstrap. Read **this file** when you need dispatch-scoped operations paths or phase-tagged storage contracts — not on every dispatch warm-up.
 
 Normative hosting layout: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § **Operations storage phases**, § **Dispatch bundles under `operations/`**, and § **Plans (dispatch-scoped discovery)**.
 
@@ -26,7 +26,7 @@ Every Mission Control agent lane on a dispatch is bound to **one dispatch scope*
 
 **Forbidden:**
 
-- Constructing `.sedea/operations/<user-id>/...` or `.sedea/operations/joint/...` paths for lane work
+- Constructing `.sedea/operations/.../` or `.sedea/operations/joint/...` paths for lane work
 - Cross-reading **`parent-child-registry.v1.json`**, **`dispatch-tab.v1.json`**, or ship-ledger from **other** dispatch bundle folders
 - **`ls -lt`** (or any mtime sort) across all dispatch folders under `.sedea/operations/`
 - Inferring dispatch scope from “newest” folder, parallel tabs, or PR index alone without **`targetPlanSlug`** + active **`dispatchId`**
@@ -45,7 +45,7 @@ Operations persistence is migrating from filesystem bundles to workspace-bound R
 | **Hybrid** | DB-first for covered dispatch entities; filesystem fallback when entity not in workspace DB (host logs fallback — agents do not open raw DB URLs) |
 | **DB-only** | Dispatch CRUD via workspace DB; no epoch-folder discovery |
 
-During **Phase 0** and **hybrid**, the host may still resolve internal filesystem paths. That resolution is **host-internal** — agents must not document or rely on **`operationsUserId`** path segments.
+During **Phase 0** and **hybrid**, the host may still resolve internal filesystem paths. That resolution is **host-internal** — agents must not document or rely on **user-id** path segments.
 
 ---
 
@@ -61,9 +61,7 @@ During **Phase 0** and **hybrid**, the host may still resolve internal filesyste
 
 ---
 
-## Legacy CLI (`plan-state.mjs`) — hybrid only
-
-Until Hub/CLI governance PR lands, **`plan-state.mjs`** may still accept **`--operations-user-id <id>`** for CLI-only flows without Mission Control context. On **Mission Control agent lanes**, prefer explicit plan paths from spawn **`inputs`**; do not treat the CLI flag as the primary scope contract.
+## `plan-state.mjs` (canonical)
 
 **Hosting repo cwd:** **`plan-state.mjs`**, **`plan-ws-completeness.mjs`**, and **`pr-review.mjs`** run from **`HOSTING_ROOT`** — see [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Hosting repo cwd for scripts (canonical)*.
 
@@ -76,7 +74,7 @@ node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/p
   resolve --cwd "$WORKTREE_ROOT"
 ```
 
-When Mission Control supplies a plan anchor, pass that plan's absolute path to completeness and sidecar scripts via **`--file`** / spawn **`inputs`** rather than reconstructing scope from legacy user-id flags.
+When Mission Control supplies a plan anchor, pass that plan's absolute path to completeness and sidecar scripts via **`--file`** / **`--slug`** / spawn **`inputs`** rather than reconstructing scope from directory segments.
 
 ---
 

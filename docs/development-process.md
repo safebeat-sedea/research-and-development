@@ -142,7 +142,7 @@ flowchart TD
 | --- | --- | --- | --- |
 | **§1 Open** | Every **`plan and deliver`** dispatch | Optional opening seeds (title, `@path`, URL) | §2 intake |
 | **§2 Intake** | Leader lane before spawn | `prdTitle`, `prdDescription`, `operation` (`create` \| `manage`), `sourceMaterials` | §3 spawn **`author-prd`** |
-| **§3 Author PRD** | Child lane | Full or updated PRD under **`.sedea/operations/<operationsUserId>/docs/`** (or managed existing path) via **`author-prd`** | Developer approves on **Author PRD** lane → Squad Leader **auto-chains** §4 seed + §5 **`master-planner`** same turn |
+| **§3 Author PRD** | Child lane | Full or updated PRD under **`.sedea/operations/.../docs/`** (or managed existing path) via **`author-prd`** | Developer approves on **Author PRD** lane → Squad Leader **auto-chains** §4 seed + §5 **`master-planner`** same turn |
 | **§4–§5 Planning** | After terminal approved PRD | Master Plan via **`master-planner`** | Decomposition / ship per mission protocol |
 
 **Intake boundaries**
@@ -155,7 +155,7 @@ flowchart TD
 **Do not use**
 
 - Skipping **`author-prd`** because a PRD `@path` was pasted in the opening message — §2 may set **`operation: manage`**, but §3 still runs for approval and gap closure.
-- **`joint/docs/`** for new PRD writes — **`author-prd`** **`create`** mode is **`operationsUserId`**-scoped only.
+- Legacy **`joint/docs/`** for new PRD writes — **forbidden**; use **`author-prd`** **`create`** mode writes under **`.sedea/operations/.../docs/`** using Mission Control handover paths.
 
 **Handoff phrase examples**
 
@@ -262,7 +262,7 @@ Labels reuse numbers and § symbols across documents. **Read the owning doc** be
 
 - **GitHub** — Pull requests, diffs, and PR description fields (e.g. “Notes for the reviewer”). **A PR-creating agent** fills the body from the prompt **a coding agent** supplies.
 - **Plan board** — Where **developers** open and review planning-mode `.plan.md` files in the plans folder `.sedea/operations/**/plans/**`).
-- **Path placeholders (`...`)** — In this document and R&D governance, `` `...` `` inside path examples (e.g. `.sedea/operations/.../plans/`) denotes **omitted segments**, not a folder named `...`. Substitute **`joint`**, **`operationsUserId`**, or a real **`slug`**. See **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Path placeholders in documentation*.
+- **Path placeholders (`...`)** — In this document and R&D governance, `` `...` `` inside path examples (e.g. `.sedea/operations/.../plans/`) denotes **omitted segments**, not a folder named `...`. Substitute the **bundle-relative** segment or a handover-supplied absolute path — never literal **`joint`**. See **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Path placeholders in documentation*.
 - **`.plan.md` files** — Standalone plan files at each hierarchy level (Master Plan, phase plans, PR plans); canonical location is under `.sedea/operations/**/plans/**`.
 - **PRD** — Product (or feature) Requirements Document — the prime input for the one-shot **Master Plan** (mode #1). Every **`plan and deliver`** dispatch authors or validates PRD via **`author-prd`** (§§1–3) before **`master-planner`** — see § *PRD routing (canonical)*.
 - **Git worktree** — Isolated worktree used by the **`coding-session`** protocol branch when spinning up a coding agent.
@@ -272,7 +272,7 @@ Labels reuse numbers and § symbols across documents. **Read the owning doc** be
 
 | Branch | Path | Role in this process |
 | --- | --- | --- |
-| `author-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md` | Squad Leader §3 child lane: gather evidence, draft or update a flexible PRD, developer approval — mandatory before **`master-planner`** on every **`plan and deliver`** dispatch. **`create`** writes under **`.sedea/operations/<operationsUserId>/docs/`** only. |
+| `author-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md` | Squad Leader §3 child lane: gather evidence, draft or update a flexible PRD, developer approval — mandatory before **`master-planner`** on every **`plan and deliver`** dispatch. **`create`** writes under **`.sedea/operations/.../docs/`** only. |
 | `ad-hoc-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md` | Minimal fix-scope PRD for **`single-phase`** (§3) and **`debug-and-fix`** (post-fix §5c) — **not** **`plan and deliver`** (which uses **`author-prd`** §3). Does **not** spawn **`master-planner`**; **`single-phase`** Squad Leader auto-chains §4 seed → §5 **`master-planner`** after terminal PRD approval. |
 | `quick-fix-plan` | `.sedea/centers/research-and-development/missions/quick-fix/skills/quick-fix-plan/SKILL.md` | **`quick-fix`** §3 spawn target — minimal parent scaffold plus inline **`new-plan`** + **`pr-plan`** on one child lane (single PR, complexity **≤ 6**). |
 | `master-planner` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/master-planner/SKILL.md` | PRD → **Master Plan** (mode #1). Drafts §§ 1–5 in the initial turn, including **`### Decomposition assessment`** and **`### Complexity score (plan-scope signal)`** under § 5. **High** complexity (overall score > 20) recommends **Route §6 → Delivery phases** — not withholding §6 — to split into lower-complexity phase plans via **`phase-planner`**. Follow-up moves use **AskQuestion** per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Sedea input channel* — run **`delivery-phases`** or **`pr-breakdown`** **inline** on the master-master-planner lane, draft §7 Caveats inline, or revise sections. **Operations git** (`.sedea/operations/` plan files) is **user-managed** — agents never solicit commit/push/PR via modal **`options`** (rule **6** § Operations repository). |
@@ -703,11 +703,11 @@ After **`pr-plan`** handoff (or an approved per-PR plan), implementation runs on
 
 | How to start | Typical lane | Minimum inputs |
 |--------------|--------------|----------------|
-| **New Mission Control session** — natural language | Detached | Name **`coding-session`** or “implement this PR”; `@path` to `.sedea/operations/<operationsUserId>/plans/<slug>.plan.md` or `targetPlanSlug`; hosting repo **`repoPath`** or **`repoPaths`** |
+| **New Mission Control session** — natural language | Detached | Name **`coding-session`** or “implement this PR”; `@path` to `.sedea/operations/.../plans/<slug>.plan.md` or `targetPlanSlug`; hosting repo **`repoPath`** or **`repoPaths`** |
 | **After `pr-plan` spawn** (§5d **`AGENT_RUN_REQUEST_V1`**) | Child lane opened by host | **Same lane implements** the PR plan in the worktree after layer 2 — not paste-prompt-elsewhere. Spawn `inputs` carry `targetPlanPath`, `repoPath`, `readyForImplementation`, `planningHandoffMode: sections-1-4-complete`; §§5–8 may stay `_TBD_` until the child fills them. Worktree-open gate uses **Continue — fill §§5–8 while implementing** (expected `INCOMPLETE` from `plan-ws-completeness.mjs`) |
 | **After `pr-plan` without spawn** (defer / revise only) | Detached session when developer starts later | Same as natural-language row; `readyForImplementation` is a hint only |
 | **Re-use a prior session prompt** | Detached / coding-agent | Two-phase prompt from an earlier **`coding-session`** run; worktree name and sidecar `worktrees` must still match |
-| **Planning snapshot** | Detached | Snapshot with `targetPlanPath`, `operationsUserId`, repo paths per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** |
+| **Planning snapshot** | Detached | Snapshot with `targetPlanPath` from Mission Control, repo paths per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** |
 
 **Do not** — see rule **30** § *Agent checklist (planning vs ship — do not conflate)*.
 
@@ -868,12 +868,11 @@ The subcommand **only** backfills **`shippedPrs`** — it does not archive, repa
 
 ```bash
 cd "$HOSTING_ROOT"
-OPS_ID="<operationsUserId>"
 
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" backfill-prs-from-body --slug <slug> --dry-run
+  backfill-prs-from-body --slug <slug> --dry-run
 node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id "$OPS_ID" backfill-prs-from-body --all --dry-run
+  backfill-prs-from-body --all --dry-run
 ```
 
 ## Out of scope

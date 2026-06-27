@@ -39,7 +39,7 @@ If you spend time reading multiple files or running searches to learn how someth
 
 If your change introduces or alters architecture, conventions, call patterns, or module boundaries, update the relevant rule (or create one) before finishing the task.
 
-Per-PR plans under the **`.sedea/operations/`** union (**`.sedea/operations/<operationsUserId>/plans/`** or **`.sedea/operations/joint/plans/`**) carry **`## 5. Repo rules impact`** — list which **`.cursor/rules/*.mdc`** files in the **hosting repo** need a delta for that PR; keep it in sync when you touch rules outside that flow.
+Per-PR plans under the **`.sedea/operations/`** union (**`.sedea/operations/.../plans/`** or **`.sedea/operations/joint/plans/`**) carry **`## 5. Repo rules impact`** — list which **`.cursor/rules/*.mdc`** files in the **hosting repo** need a delta for that PR; keep it in sync when you touch rules outside that flow.
 
 ### Plan-anchored PRs (before commit and push)
 
