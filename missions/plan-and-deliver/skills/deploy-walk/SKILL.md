@@ -191,11 +191,42 @@ Every **AskQuestion** / **`MC_PHASED_RESPONSE_V1`** gate while a deploy step awa
 
 | Option id | Label (brief) |
 |-----------|---------------|
-| *(gate-specific)* | Step done / skip / block / closure / present-next — per gate table |
+| *(gate-specific)* | Step done / skip / block / closure / present-next — per [Manual step await gate](#manual-step-await-gate-binding) |
+| `all-manual-steps-done` | All remaining manual steps passed — one take |
 | `return-to-implementation-new-worktree` | Return to implementation — new worktree |
 | `more-details` | More details for option _ |
 
+**Dual verification modes (binding):** Deploy verification must support **both** paths on every manual-step gate in the active sub-section (`### Before deploy`, `### After deploy`, or any §7 deploy checklist the walk covers):
+
+1. **Step-by-step** — present one manual step with full **Testing steps**; developer picks **`deploy-step-n-done`**, **`present-next-manual-step`**, skip, or block before advancing.
+2. **One take** — when the developer verified **all remaining manual** steps outside chat (local, staging, production, or other §7 environments), offer **`all-manual-steps-done`** to flip every remaining manual `[ ]` in the active sub-section in one action.
+
+**When to include `all-manual-steps-done`:** Include on every [Manual step await gate](#manual-step-await-gate-binding) when **at least two** manual `[ ]` steps remain in the active sub-section, **or** when the developer states they verified multiple/all manual steps in one take. Omit only when exactly one manual step remains (step-by-step **`deploy-step-n-done`** is sufficient).
+
+**`all-manual-steps-done` — Act (binding):**
+
+1. **Same turn first:** finish any pending **agent-executable** `[ ]` steps in the active sub-section via [Autonomous agent-executable pass](#autonomous-agent-executable-pass) — **forbidden** to batch-flip manual steps while agent-executable steps remain unchecked without running them.
+2. **Recap** remaining manual step numbers and verbatim plan lines in **`display.markdown`** before the modal closes.
+3. On pick: apply [§ `deploy-walk all-manual-done`](#deploy-walk-all-manual-done--batch-flip-remaining-manual-steps) semantics — flip each remaining manual `[ ]` with `*(YYYY-MM-DD: all manual steps passed in one take.)*` (or the developer's note when using `deploy-walk all-manual-done: <note>`).
+4. Run the same sub-section completion branches as [§ `deploy-walk <N> done`](#deploy-walk-n-done--deploy-walk-n-done-note--flip-box-advance-hint) when the batch completes the active sub-section.
+
+**Forbidden:** **`all-manual-steps-done`** when the developer has not attested verification — do not infer from silence. **Forbidden:** removing step-by-step presentation when the developer picks **`present-next-manual-step`** or has not attested batch completion.
+
 **`return-to-implementation-new-worktree`** — developer found a product defect during deploy verification (including after the PR merged). Set **`outputs.returnToImplementation: true`** in **`## Completion (inline)`** and stop the walk. Parent **`coding-session`** runs [Return to implementation from deploy walk](../coding-session/SKILL.md#return-to-implementation-from-deploy-walk-new-worktree) on the **next** turn — **do not** edit product code from this skill.
+
+### Manual step await gate (binding)
+
+Every gate after presenting a **manual** step (or when inline bootstrap stops on the first manual step) **must** use **`MC_PHASED_RESPONSE_V1`** or **AskQuestion** with **all** rows below unless a gate table elsewhere explicitly omits one. Put the current step presentation and a numbered list of **remaining manual** steps (when ≥2) in **`display.markdown`**.
+
+| Option id | Label (brief) | Act |
+|-----------|---------------|-----|
+| `deploy-step-n-done` | Step N done — I verified this step | Equivalent to **`deploy-walk <N> done`**; optional note via follow-up chat → **`deploy-walk <N> done: <note>`** |
+| `deploy-step-n-skip` | Skip step N — with reason | **`deploy-walk <N> skip: <reason>`** |
+| `deploy-step-n-block` | Block step N — with reason | **`deploy-walk <N> block: <reason>`** |
+| `present-next-manual-step` | Present next manual step — one by one | **`deploy-walk present <N+1>`** when N+1 is manual; if N+1 is agent-executable, run [Autonomous agent-executable pass](#autonomous-agent-executable-pass) first |
+| `all-manual-steps-done` | All remaining manual steps passed — one take | [§ `deploy-walk all-manual-done`](#deploy-walk-all-manual-done--batch-flip-remaining-manual-steps) |
+| `return-to-implementation-new-worktree` | Return to implementation — new worktree | Set **`outputs.returnToImplementation: true`**; hand back to **`coding-session`** |
+| `more-details` | More details for option _ | Elaborate; re-open gate |
 
 On inline start, run [Inline walk bootstrap](#inline-walk-bootstrap) — do not wait for `deploy-walk present 1`.
 
@@ -203,7 +234,7 @@ The skill is **loose mode by design** on **manual** steps. Between `deploy-walk 
 
 **State lives in the plan file, not in chat memory.** The skill re-reads the plan on every command. A walk that started yesterday, was interrupted by 30 other turns, and resumed today still works — the agent finds the same `[ ]` boxes and the same `**Status:**` line.
 
-The procedure below is a hard contract — do **not** skip steps, infer state from chat memory, or mark a step `[x]` without a passing run (agent-executable) or developer resolution (manual). Do **not** skip **manual** steps without developer `done` / `skip` / `block`.
+The procedure below is a hard contract — do **not** skip steps, infer state from chat memory, or mark a step `[x]` without a passing run (agent-executable) or developer resolution (manual). Do **not** skip **manual** steps without developer `done` / `skip` / `block` / **`all-manual-done`** attestation.
 
 ## Agent-executable vs manual steps
 
@@ -311,7 +342,7 @@ Repeat until stop condition:
 2. If none remain, run sub-section / lifecycle completion branches (Before complete → `deploy-walk deployed` hint or terminal; After complete → closure gate).
 3. Classify the step ([Agent-executable vs manual steps](#agent-executable-vs-manual-steps)).
 4. **Agent-executable:** run it → on pass, `StrReplace` flip + note → continue loop in the **same turn**.
-5. **Manual:** present step N with numbered **Testing steps** per [Step presentation contract](#step-4--step-presentation-contract) and **stop** — wait for developer message.
+5. **Manual:** present step N with numbered **Testing steps** per [Step presentation contract](#step-4--step-presentation-contract), list remaining manual step numbers when ≥2, and **stop** — close with [Manual step await gate](#manual-step-await-gate-binding) (step-by-step **or** **`all-manual-steps-done`**).
 
 **Forbidden:** **AskQuestion** “may I run this test?” before an agent-executable step. **Forbidden:** mark manual steps done without developer resolution.
 
@@ -326,6 +357,8 @@ Repeat until stop condition:
 | `deploy-walk <N> done: <note>` | Flip + append `*(YYYY-MM-DD: <note>)*` (period at end of note is the agent's responsibility). |
 | `deploy-walk <N> skip: <reason>` | Flip + strike-through step text + append `*(YYYY-MM-DD: Skipped — <reason>)*`. The strike is GFM `~~text~~`. |
 | `deploy-walk <N> block: <reason>` | **No flip** — box stays `[ ]`. Append `*(YYYY-MM-DD: Blocked — <reason>)*` after the step text. |
+| `deploy-walk all-manual-done` | Batch-flip every remaining **manual** `[ ]` in the active sub-section — see [§ `deploy-walk all-manual-done`](#deploy-walk-all-manual-done--batch-flip-remaining-manual-steps). |
+| `deploy-walk all-manual-done: <note>` | Same batch flip; append `*(YYYY-MM-DD: <note>)*` on each flipped line instead of the default one-take phrase. |
 | `deploy-walk deployed` | Flip `**Status:**` from `drafted` → `deployed`, append `*(YYYY-MM-DD HH:MM: deployed.)*` to the history. |
 | `deploy-walk deployed: <note>` | Same + append the note. |
 | `deploy-walk status` | Read-only one-line summary: status, Before X/Y, After X/Y, last transition date. No edits. |
@@ -389,7 +422,7 @@ Find the Nth numbered item in the active sub-section (regex `^N\. \[[ x]\] `). T
 - If the box is `[ ]` and has a prior `*(YYYY-MM-DD: Blocked — {reason})*` annotation, surface it: *"Previously blocked: {reason} (YYYY-MM-DD). Has the blocker cleared?"* Then classify — re-run if agent-executable and developer cleared the blocker; else present as manual.
 - If the box is `[ ]` and clean, **classify**:
  - **Agent-executable** — run per [Agent-executable vs manual steps](#agent-executable-vs-manual-steps); on pass flip and auto-advance; on fail block or assist.
- - **Manual** — present with numbered **Testing steps** per § *Step 4 — Step presentation contract*, then close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per [Deploy developer-await modal options](#deploy-developer-await-modal-options-binding) (step done / blocked / skip / return-to-implementation / more-details) — do not prose-only stop.
+ - **Manual** — present with numbered **Testing steps** per § *Step 4 — Step presentation contract*, then close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per [Manual step await gate](#manual-step-await-gate-binding) — do not prose-only stop.
 
 ### `deploy-walk <N> done` / `deploy-walk <N> done: <note>` — flip box, advance hint
 
@@ -415,7 +448,7 @@ After the edit, **check whether step N was the last `[ ]` in the active sub-sect
 
 Only **`approve-deploy-closure`** authorizes the Status `deployed → done` flip and the **Frontmatter capstone** `deploy-test-plan-verified` `pending → done` mutation. Do not treat the final step's `done` command as approval for the larger deploy lifecycle closeout. **`return-to-implementation-new-worktree`** sets **`outputs.returnToImplementation: true`** — hand back to **`coding-session`**; do **not** flip to `done`.
 - Otherwise, if step N+1 is **agent-executable**, continue [Autonomous agent-executable pass](#autonomous-agent-executable-pass) in the same turn (no `deploy-walk present` wait).
-- If step N+1 is **manual**, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`**: *Present step N+1* (equivalent to **`deploy-walk present <N+1>`**), report agent-assisted results, or **More details for option _** — put the verbatim next unchecked step line in **`display.markdown`**.
+- If step N+1 is **manual**, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per [Manual step await gate](#manual-step-await-gate-binding) — **`present-next-manual-step`**, **`all-manual-steps-done`**, or **More details for option _** — put the verbatim next unchecked step line in **`display.markdown`**.
 
 ### `deploy-walk <N> skip: <reason>` — strike + flip
 
@@ -438,6 +471,29 @@ Confirmation: *"Marked {Before or After}-deploy step N skipped: \"{reason}\". Ne
 The box stays `[ ]`. The skill stops the loop — no next-step hint, no auto-advance. The **developer** re-invokes `deploy-walk present <N>` later when the blocker clears, at which point the prior block note is surfaced (per § *Step 3 — `deploy-walk present <N>`* above).
 
 Confirmation: *"Marked {Before or After}-deploy step N blocked: \"{reason}\". Box left `[ ]`. Re-invoke `deploy-walk present <N>` once the blocker clears."*
+
+### `deploy-walk all-manual-done` — batch-flip remaining manual steps
+
+Use when the developer verified **all remaining manual** checklist items in one take (Before deploy, After deploy, or any active §7 sub-section). Free-form equivalents: *"all manual deploy steps passed"*, *"I verified the whole Before deploy checklist"*, *"steps 2–5 done in staging"* (interpret → batch flip for listed manual indexes only).
+
+**Preconditions:**
+
+1. Re-read the plan; identify the **active sub-section** (same routing as [Step 2](#step-2--read--n-deploy-test-plan-and-parse-the-lifecycle)).
+2. Run [Autonomous agent-executable pass](#autonomous-agent-executable-pass) through any pending **agent-executable** `[ ]` steps in that sub-section **in the same turn** before batch-flipping manual steps.
+3. Collect every **manual** `[ ]` numbered line remaining in that sub-section. If none remain, report one line and run sub-section completion branches — **no** batch edit.
+
+**Edit mechanics:**
+
+For each remaining manual step line, apply the same `StrReplace` flip as [§ `deploy-walk <N> done`](#deploy-walk-n-done--deploy-walk-n-done-note--flip-box-advance-hint):
+
+- Default note: `*(YYYY-MM-DD: all manual steps passed in one take.)*`
+- With command note: `*(YYYY-MM-DD: <note>)*` from `deploy-walk all-manual-done: <note>`
+
+**Forbidden:** batch-flip **agent-executable** steps the agent has not run. **Forbidden:** batch-flip across sub-sections (Before vs After) in one command — run **`deploy-walk deployed`** / lifecycle gates between sub-sections as usual.
+
+**After batch flip:** run the same branches as the last step's **`done`** in that sub-section (Before complete → **`deploy-walk deployed`** hint; After complete → [closure gate](#deploy-walk-n-done--deploy-walk-n-done-note--flip-box-advance-hint) with **`approve-deploy-closure`** options).
+
+Confirmation: *"Marked {count} {Before or After}-deploy manual steps done in one take: {comma-separated step numbers}."*
 
 ### `deploy-walk deployed` / `deploy-walk deployed: <note>` — status transition `drafted → deployed`
 
@@ -511,7 +567,7 @@ Use a **blockquote** or plain lines for the presentation shell — **do not** pu
 >
 > ---
 >
-> **Manual step** — follow **Testing steps** in order. Close this turn with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per [Deploy developer-await modal options](#deploy-developer-await-modal-options-binding) — step done, step skip (with reason), step blocked (with reason), **return-to-implementation-new-worktree**, or **More details for option _** — put equivalent **`deploy-walk <N> done` / `skip` / `block`** command text in **`display.markdown`** or option labels when helpful.
+> **Manual step** — follow **Testing steps** in order **or** verify all remaining manual steps in your environment and pick **All remaining manual steps passed — one take** on the modal. Close this turn with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per [Manual step await gate](#manual-step-await-gate-binding) — step-by-step (**`deploy-step-n-done`**, **`present-next-manual-step`**, skip, block), batch (**`all-manual-steps-done`**), **return-to-implementation-new-worktree**, or **More details for option _** — put equivalent **`deploy-walk <N> done` / `skip` / `block` / `all-manual-done`** command text in **`display.markdown`** when helpful.
 
 ### Testing steps authoring rules
 
@@ -627,6 +683,7 @@ No blocking — the **developer** is in control.
 8. **Deploy walk on a non-PR plan (Master Plan, Phase plan, etc.).** Master Plans and Phase plans don't have `## N. Deploy test plan` sections — they have dual-title decomposition sections. If the user runs **deploy-walk** against one, stop with: *"Plan `{slug}` is a Master Plan, Phase plan, or Roadmap topic (pick which), which doesn't have a `## N. Deploy test plan` section. **deploy-walk** only walks PR plans (per-PR template § 7 / § 6). Did you mean a child PR plan?"*
 9. **Roll-back.** Out of scope for v1. If a deploy fails and the user wants to flip status back to `drafted`, they edit the Status line manually.
 10. **Long agent-executable chains.** If more than ~5 agent-executable steps remain, you may stop after a batch with a one-line recap in **`display.markdown`** (*"Steps 1–5 auto-passed; step 6 is manual — presenting now."*) and either continue presenting step 6 in the same turn or close with structured choice per **Turn completion (binding)** above — do not silently skip steps or end the turn without a modal.
+11. **Developer verified all manual steps outside chat.** Interpret as **`deploy-walk all-manual-done`** (or modal **`all-manual-steps-done`**) after agent-executable steps in the active sub-section are satisfied — do not force step-by-step modals when the developer attests one-take verification.
 
 ## Scope guard
 
