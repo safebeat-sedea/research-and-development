@@ -181,6 +181,18 @@ Finishing **`deploy-walk`** (checklist complete, capstone todo **`deploy-test-pl
 
 Start **`plan-reconcile`** separately: developer phrase on active **`coding-session`**, or **`coding-session`** [Plan-reconcile handoff (inline)](../missions/plan-and-deliver/skills/coding-session/SKILL.md#plan-reconcile-handoff-inline) after deploy when the developer **explicitly** chooses reconcile — see **`plan-reconcile/SKILL.md`** § *When this skill runs* and **development-process.md** § *Ship chain*.
 
+## Pre-PR review — spawn-only from **`coding-session`**
+
+**Rule (read first).** The **only** path that may execute [`pre-pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pre-pr-review/SKILL.md) is a **fresh spawned child lane** opened by active **`coding-session`** via **`AGENT_RUN_REQUEST_V1`** after ship cut-point + Before deploy (or documented skip). **Auto-spawn** on **`coding-session`** means **emit spawn + wait** for **`AGENT_RESULT_RESPONSE_V1`** — **not** load and run review steps inline on the coding-session lane.
+
+| Lane | May run **`pre-pr-review`**? | Handoff |
+|------|------------------------------|---------|
+| **`coding-session`** | **Spawn only** — **forbidden** inline | Emit **`AGENT_RUN_REQUEST_V1`** per [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md) § *Pre-PR review handoff* |
+| **`pre-pr-review`** child lane | **Yes** — sole execution surface | Fresh reviewer lane; terminal **`AGENT_RESULT_RESPONSE_V1`** |
+| **Other lanes** (Squad Leader, planning, **`pr-review`**, …) | **No** | Direct developer to **`coding-session`** ship chain |
+
+When the user says *run pre-PR review* or *pre-pr-review* on **`coding-session`**, interpret it as **spawn the reviewer child lane** — **not** permission to execute the skill body inline on this lane.
+
 ## PR creation — inline **`create-pr`** on **`coding-session`**
 
 **Rule (read first).** The **only** path that may call `gh pr create` (or any equivalent GitHub API/MCP call that creates, drafts, or reopens a PR) is the active **`coding-session`** agent **executing [`create-pr/SKILL.md`](../missions/plan-and-deliver/skills/create-pr/SKILL.md) inline** after **`pre-pr-review`** returns `go` and that skill's gates pass. Clean **`go`** runs inline **`create-pr`** **automatically** on the next turn ([Inline create-pr (auto on clean go)](../missions/plan-and-deliver/skills/coding-session/SKILL.md#inline-create-pr-auto-on-clean-go)); exceptional follow-up append uses [Create-PR handoff after go](../missions/plan-and-deliver/skills/coding-session/SKILL.md#create-pr-handoff-after-go).
@@ -188,7 +200,7 @@ Start **`plan-reconcile`** separately: developer phrase on active **`coding-sess
 | Lane | May call `gh pr create`? | Handoff |
 |------|--------------------------|---------|
 | **`coding-session`** running **`create-pr` inline** | **Yes** — sole supported opener | Load **`create-pr/SKILL.md`** on this lane after clean **`go`** auto path or exceptional Create-PR gate |
-| **`coding-session`** (other steps) | **No** | Complete ship order through cut-point → Before deploy → **`pre-pr-review`** → inline **`create-pr`** |
+| **`coding-session`** (other steps) | **No** | Complete ship order through cut-point → Before deploy → **spawn** **`pre-pr-review`** (forbidden inline) → inline **`create-pr`** |
 | **Other lanes** (Squad Leader, planning, `pre-pr-review`, `pr-review`, `master-planner`, …) | **No** | Prepare worktree/context; direct developer to **`coding-session`** ship chain or emit copy-paste prompt — never open from the current lane |
 
 **Developer accountability:** the developer decides **when** to open a PR and approves creation in the ship chain; **`coding-session`** runs inline **`create-pr`** (including `gh pr create` when authorized). Other lanes prepare context and hand off — they do not open GitHub themselves.

@@ -66,6 +66,16 @@ warmUpRules:
 
 # Pre-PR Review
 
+**Spawn-only (binding).** Run on a **fresh spawned child lane** opened by **`AGENT_RUN_REQUEST_V1`** from **`coding-session`**. Mission Control validates frontmatter **`inputs`** at spawn time. **Forbidden:** execute this skill **inline** on the **`coding-session`** lane — mirror [`create-pr/SKILL.md`](../create-pr/SKILL.md) (inline-only on **`coding-session`**; **`pre-pr-review`** is the inverse: spawn-only from that lane).
+
+### Standalone dispatch (stop immediately)
+
+If Mission Control opened a session whose only intent is **`pre-pr-review`** / pre-PR review with **no** spawn handover from active **`coding-session`** (`worktreePath`, `worktreeName`, `baseRef`, committed diff):
+
+1. **Stop** — do not run review steps.
+2. Tell the developer **`pre-pr-review`** is **spawn-only** — a fresh child lane from **`coding-session`** after ship cut-point + Before deploy.
+3. Direct them to open or return to **`coding-session`** and complete the ship chain through [Auto-spawn pre-pr-review](../coding-session/SKILL.md#auto-spawn-pre-pr-review).
+
 ## Warm-up manifest (spawned)
 
 Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea/docs/lane-manifest-contract.md) and **`../README.md`** § *Default warm-up* / *Warm-up cap exceptions*. Host merge: `effectiveWarmUp = dedupe(bootstrapRules → laneRules → skillWarmUp)`. Frontmatter matches this table. **384 KiB cap:** frontmatter omits **`plan.mdc`** and **`development-process.md`** — Step 3 reads **`development-process.md`**; Step 4 loads **`inputs.targetPlanPath`** (PR plan, not Squad Leader **`plan.mdc`**). **No `alwaysApply` frontmatter flip.**
@@ -334,4 +344,6 @@ Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` or run 
 
 Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
 
-Normally spawned from **`coding-session`** on a fresh reviewer lane. If run inline on the same lane, use the same `outputs` semantics as **Step 8 — Report and result** and **`## Completion (spawned)`** in prose only.
+**Forbidden when `upstreamSkill` is `coding-session`:** do **not** run inline on the **`coding-session`** lane — spawn only per **Spawn-only (binding)** above.
+
+When a mission protocol **explicitly** assigns this skill inline on a **non–`coding-session`** lane (rare), use the same `outputs` semantics as **Step 8 — Report and result** and **`## Completion (spawned)`** in prose only — **no** spawn or terminal sentinels.
