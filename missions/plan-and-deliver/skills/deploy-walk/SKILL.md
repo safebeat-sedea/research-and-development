@@ -107,6 +107,24 @@ Target picks, deploy-with-gaps, and closure gates use **AskQuestion** or **`MC_P
 
 When run **inline** on **`coding-session`** (pre-merge **Before deploy** or post-merge **After deploy**), this procedure owns deploy verification status and reports it via **`## Completion (inline)`** to the coding-session agent; it does not run implementation, PR review, or plan reconciliation.
 
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`deploy-walk`**; other ship-chain skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one full inline **`deploy-walk`** on a **`coding-session`** Checkpoint dispatch through [Manual step await gate](#manual-step-await-gate-binding) / [Step 4 — Step presentation contract](#step-4--step-presentation-contract) and collect a developer verdict before the parent phase advances **`create-pr`** PR 4 — per **Ship-chain skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **1** — Resolve target plan | Auto-advance when slug/path is unambiguous | exception: multiple candidates → structured pick |
+| **2** — Read § N deploy test plan | Auto-advance | exception: missing section / wrong checklist shape → stop |
+| **Inline walk bootstrap** | Auto-advance through [Autonomous agent-executable pass](#autonomous-agent-executable-pass) | exception: blocked step |
+| **Autonomous agent-executable pass** | Auto-advance while next steps are agent-executable | exception: run failure → block or manual handback |
+| **Manual step await** / **Step 4** presentation | **Gate** — first developer-pick gate in this calibration PR | Manual step await (below) |
+| **`deploy-walk deployed`** / sub-section closure | **Gate** when lifecycle transition needs developer pick | deferred to JIT step PR |
+| **`approve-deploy-closure`** | **Gate** before Status `deployed → done` | deferred to JIT step PR |
+
 ## Not chained to `plan-reconcile`
 
 **This skill never invokes `plan-reconcile`.** Capstone todo **`deploy-test-plan-verified`** → `done` closes the **deploy checklist only** — not archive, not parent-plan reconcile.
@@ -218,6 +236,8 @@ Every **AskQuestion** / **`MC_PHASED_RESPONSE_V1`** gate while a deploy step awa
 
 Every gate after presenting a **manual** step (or when inline bootstrap stops on the first manual step) **must** use **`MC_PHASED_RESPONSE_V1`** or **AskQuestion** with **all** rows below unless a gate table elsewhere explicitly omits one. Put the current step presentation and a numbered list of **remaining manual** steps (when ≥2) in **`display.markdown`**.
 
+USER_CHECKPOINT — confirm manual deploy step verification or pick next walk action.
+
 | Option id | Label (brief) | Act |
 |-----------|---------------|-----|
 | `deploy-step-n-done` | Step N done — I verified this step | Equivalent to **`deploy-walk <N> done`**; optional note via follow-up chat → **`deploy-walk <N> done: <note>`** |
@@ -227,6 +247,9 @@ Every gate after presenting a **manual** step (or when inline bootstrap stops on
 | `all-manual-steps-done` | All remaining manual steps passed — one take | [§ `deploy-walk all-manual-done`](#deploy-walk-all-manual-done--batch-flip-remaining-manual-steps) |
 | `return-to-implementation-new-worktree` | Return to implementation — new worktree | Set **`outputs.returnToImplementation: true`**; hand back to **`coding-session`** |
 | `more-details` | More details for option _ | Elaborate; re-open gate |
+
+- **`defaultOptionId: deploy-step-n-done`** when the developer is reviewing the currently presented manual step with no blockers surfaced.
+- **Next-step resolution:** Auto-advance through [Inline walk bootstrap](#inline-walk-bootstrap) and [Autonomous agent-executable pass](#autonomous-agent-executable-pass) on the happy path — no `USER_CHECKPOINT` until a **manual** step is presented per [Step 4 — Step presentation contract](#step-4--step-presentation-contract).
 
 On inline start, run [Inline walk bootstrap](#inline-walk-bootstrap) — do not wait for `deploy-walk present 1`.
 
@@ -527,6 +550,8 @@ No edits. Reply with one line summarising the plan's current state (plain text o
 Where `{X}` is the count of `[x]` boxes (including skipped) in `### Before deploy`, `{Y}` is the total numbered items, `{A}` / `{B}` the same for `### After deploy`, `{state}` from the `**Status:**` line, and `{YYYY-MM-DD}` from the latest `*(…)*` history entry when present. If no `**Status:**` line is found, surface: *"No `**Status:**` lifecycle marker — pre-skill plan format. Counts: Before {X}/{Y}, After {A}/{B}."*
 
 ## Step 4 — Step presentation contract
+
+**Checkpoint gate (binding):** Under Checkpoint trust, manual step presentation closes with [Manual step await gate](#manual-step-await-gate-binding) — the first developer-pick gate on inline **`deploy-walk`**. Do **not** auto-advance past presentation without developer selection.
 
 Use this structure for **manual** steps only (or when an agent-executable run **failed** and you are handing back to the developer). Do **not** present first and wait when the step is agent-executable and runnable — run it per [Agent-executable vs manual steps](#agent-executable-vs-manual-steps).
 

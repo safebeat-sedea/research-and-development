@@ -117,7 +117,7 @@ This skill does not own approval modals — **`coding-session`** collects develo
 
 Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`pre-pr-review`**; other ship-chain skills document their own markers.
 
-**Real-dispatch test loop (binding):** After merge, run one full **`pre-pr-review`** spawn on a Checkpoint dispatch through Step **8** and collect a developer verdict before the parent phase advances **`deploy-walk`** PR 3 — per **Ship-chain skills UX** § *Single-concern strategy*.
+**Real-dispatch test loop (binding):** After merge, run one full **`pre-pr-review`** spawn on a Checkpoint dispatch through Step **8** on a clean **`go`** — verify Steps **1–7** auto-advance, Step **8** auto-emits terminal + parent refocus without a modal, and the coding-session parent receives the bubble-up before the parent phase advances **`deploy-walk`** PR 3 — per **Ship-chain skills UX** § *Single-concern strategy*.
 
 Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
 
@@ -131,7 +131,7 @@ Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.s
 | **5** — Read committed diff | Auto-advance against committed cut point | exception: zero commits / empty diff → `failure` |
 | **6** — Score categories | Auto-advance through category table | — |
 | **7** — Proposed follow-ups | Auto-advance (handoff only; no plan mutation) | — |
-| **8** — Report and result | **Gate** — report/result before terminal handback | Confirm review result (Step **8** below) |
+| **8** — Report and result | Auto-advance on clean **`go`** — report, parent refocus, terminal same turn | **Gate** when `no-go`, blockers, flags, or actionable **Must** / **Should** handback (Step **8** below) |
 
 ## Session orientation table (binding)
 
@@ -153,7 +153,7 @@ Give developers a **consistent state snapshot** during pre-PR review so they can
 
 **Population rules:** Same contract as [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`](../coding-session/SKILL.md) § *Session orientation table (binding)* — use spawn `inputs` and review outputs; never invent paths.
 
-**Mandatory gates (this skill):** Step **8** report/result gate before terminal handback (see [Step 8 — Report and result](#step-8--report-and-result)).
+**Mandatory gates (this skill):** Step **8** report/result gate on exception paths only — clean **`go`** auto-advances (see [Step 8 — Report and result](#step-8--report-and-result)).
 
 ## Step 1 — Validate spawned inputs
 
@@ -325,13 +325,33 @@ Set `continuationStatus`:
 - `active` when blockers require a coding-session fix loop and developer approval is pending.
 - `partial` status with `continuationStatus: "active"` when the review ran but missing rules, non-submodule dirty uncommitted edits, or incomplete anchors make the result degraded.
 
-After the report, close **this turn** with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per **Squad Leader bubble-up** below — the report is not a valid turn end alone. Do not run `git`, `gh`, source edits, commits, pushes, or PR creation.
+After the report, branch on review outcome per **Squad Leader bubble-up** below. Do not run `git`, `gh`, source edits, commits, pushes, or PR creation.
 
-- **Next-step resolution:** Auto-advance through Steps **1–7** on the happy path — no `USER_CHECKPOINT` on those steps. Step **8** opens the report/result gate before terminal handback.
+- **Next-step resolution:** Auto-advance through Steps **1–7** on the happy path — no `USER_CHECKPOINT` on those steps. Step **8** auto-advances on clean **`go`**; opens the report/result gate only on exception paths.
 
 ## Squad Leader bubble-up (detached lanes)
 
-Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result. When the review finishes, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** on **this lane** — the report/result gate before terminal handback.
+Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result until terminal **`AGENT_RESULT_RESPONSE_V1`** host sync.
+
+### Clean `go` — auto terminal + parent refocus (binding)
+
+When **all** of the following hold after Step **8** report:
+
+- `recommendation: go`
+- `blockers` empty
+- `flags` empty
+- **Must** and **Should** groups in `codingAgentHandback` empty (no actionable pre-PR findings)
+
+**Same turn** (report prose may precede sentinels):
+
+1. Emit **`MC_REFOCUS_PARENT_V1`** on its own line (`{"version":1,"reason":"pre-pr-review-clean-go"}` optional).
+2. Emit terminal **`AGENT_RESULT_RESPONSE_V1`** as the **last line** per [Completion (spawned)](#completion-spawned).
+
+**Forbidden on clean `go`:** **`MC_PHASED_RESPONSE_V1`** / AskQuestion Step **8** modal; waiting for **`review-lane-done`**; prose-only handback without terminal sentinel.
+
+### Exception path — report/result gate
+
+When **`no-go`**, non-empty **`blockers`**, non-empty **`flags`**, or non-empty **Must** / **Should** handback:
 
 USER_CHECKPOINT — confirm pre-PR review result and close this review lane before terminal handback.
 
@@ -344,10 +364,10 @@ USER_CHECKPOINT — confirm pre-PR review result and close this review lane befo
 
 - Include [Session orientation table (binding)](#session-orientation-table-binding) as the **first block** in `display.markdown`.
 - Recap `recommendation`, blockers, and flags (summary — not full report reprint).
-- **`review-lane-done`** → emit terminal **`AGENT_RESULT_RESPONSE_V1`** on the **next** turn after the developer selects (gate turn first; terminal follows selection).
-- **`defaultOptionId: review-lane-done`** when `recommendation: go` with no blockers.
+- **`review-lane-done`** → emit **`MC_REFOCUS_PARENT_V1`**, then terminal **`AGENT_RESULT_RESPONSE_V1`** on the **next** turn after the developer selects (gate turn first; terminal follows selection).
+- **`defaultOptionId: review-lane-done`** when `recommendation: go` but exception path opened for flags or handback only.
 
-§8 progress reaches the Squad Leader via **`AGENT_RESULT_RESPONSE_V1`** terminal **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`) and Mission Control host sync — **not** developer paste on the leader dispatch (**`../../plan.mdc`** §8 *Policy — no manual recap*). Do not prose-only handoff without structured choice.
+§8 progress reaches the Squad Leader via **`AGENT_RESULT_RESPONSE_V1`** terminal **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`) and Mission Control host sync — **not** developer paste on the leader dispatch (**`../../plan.mdc`** §8 *Policy — no manual recap*). On exception paths, do not prose-only handback without structured choice.
 
 | Outcome | `shipPhase` | `rowStatus` | Key `outputs` |
 |---------|-------------|-------------|---------------|
@@ -372,9 +392,23 @@ Mission Control writes `ship-ledger.v1.json` from child terminal **`outputs`** a
 
 Required `outputs` per **Step 8 — Report and result**, **Mission Control section 8 sync**, and the bubble-up table. Re-emit an **updated** terminal result after user-requested follow-up on this lane (same `correlationId`).
 
+### Parent refocus (opt-in — binding on clean `go`)
+
+On **clean `go`** auto-advance and after **`review-lane-done`** on exception paths, emit **`MC_REFOCUS_PARENT_V1`** **immediately before** the terminal line so Mission Control focuses the **immediate parent** lane (typically **`coding-session`**) in the same dispatch. See **`.sedea/centers/sedea/skills/README.md`** § *Optional parent refocus sentinel*.
+
+| Path | Refocus |
+|------|---------|
+| Clean **`go`** auto-advance | **`MC_REFOCUS_PARENT_V1`** same turn, before terminal |
+| Exception gate → **`review-lane-done`** | **`MC_REFOCUS_PARENT_V1`** on terminal turn, before terminal |
+| **`failure`** / **`aborted`** terminal without bubble-up | Omit refocus unless skill text requires parent attention |
+
+**Forbidden:** structured-choice options whose primary purpose is parent-switch — use **`MC_REFOCUS_PARENT_V1`** instead.
+
 ### Host protocol line (required)
 
 Emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status` (`success` | `partial` | `failure` | `aborted` | `abandoned`), `summary` (1–3 sentences), `outputs`, `errors` (use `[]` when none). Populate `outputs` from Step 8 **and** include `targetPlanPath`, `shipPhase`, and `rowStatus` on every terminal line. The emitted line must be **valid JSON** (no `{...}` placeholders in the actual output). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
+
+**Message order on terminal turns:** report recap (optional prose) → **`MC_REFOCUS_PARENT_V1`** (when required above) → **`AGENT_RESULT_RESPONSE_V1`** (**last line**).
 
 Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*).
 
