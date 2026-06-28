@@ -78,6 +78,26 @@ Script-backed flow: **`plan-state.mjs`** owns YAML and file moves; the agent dec
 
 Dry-run reports, archive candidates, and follow-up triage use **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* — recap + modal in **one turn** when practical. **Act** (`plan-state.mjs archive`, file moves) is after the developer selects.
 
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`plan-reconcile`**; other ship-chain skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one full inline **`plan-reconcile`** on a **`coding-session`** Checkpoint dispatch through [Inline closure gate](#inline-closure-gate-binding) and collect a developer verdict before the parent phase advances **`hosting-repo-rules`** PR 7 — per **Ship-chain skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **1** — Preview reconcile (dry-run) | Auto-advance | exception: script failure → stop with recap |
+| **1b** — Approve PR-tracked reconcile mutations | **Gate** when mutations required | deferred to JIT step PR |
+| **2** — Run list-candidates | Auto-advance (read-only JSON) | exception: script failure |
+| **3** — Present candidates + flagged | **Gate** — multi-select archive pick | deferred to JIT step PR |
+| **3.5** — Follow-ups triage | **Gate** per plan with non-empty **`## Follow-ups`** | deferred to JIT step PR |
+| **4** — Archive selected plans | Auto-advance after developer selection | exception: non-zero **`archive`** exit |
+| **5** — Post-ship workspace cleanup | **Gate** when stale candidates exist | deferred to JIT step PR |
+| **6** — End state summary | Auto-advance recap prose only | — |
+| **Inline closure** (inline on **`coding-session`**) | **Gate** — mandatory developer pick before **`## Completion (inline)`** handback | [Inline closure gate](#inline-closure-gate-binding) |
+
 ## When this skill runs
 
 | How it starts | Requirements | Auto-start? |
@@ -372,6 +392,29 @@ Stop when the target plan is archived or explicitly not archive-eligible with no
 ## Mission Control section 8 sync (via coding-session)
 
 **`plan-reconcile`** is **not** a separate child terminal. §8 ship ledger fields reach the Squad Leader via **`coding-session`** terminal **`outputs`** on re-emit — include `targetPlanPath`, `shipPhase`, `rowStatus`, `archivedSlugs`, `remainingTasks`, and `blockedReason` when applicable per **`../coding-session/SKILL.md`** § *Mission Control section 8 sync*. **Forbidden:** manual **Ship recap** on the leader dispatch.
+
+### Inline closure gate (binding)
+
+When **`upstreamSkill`** is **`coding-session`**, close every inline pass with structured choice **before** emitting **`## Completion (inline)`** prose to the parent — even when archive mutations, follow-ups triage, and §5 cleanup are complete or skipped.
+
+**When required:** After Flow steps **1–6** finish (or pause with a terminal outcome ready for handback). **Forbidden:** prose-only reconcile summary without this gate under Checkpoint trust. **Forbidden:** emitting **`AGENT_RESULT_RESPONSE_V1`** from this skill — the parent **`coding-session`** lane owns terminal sentinels.
+
+Put reconcile counts, archived slugs, flagged/postponed leftovers, and §5 cleanup summary in **`display.markdown`**.
+
+USER_CHECKPOINT — confirm plan-reconcile inline closure and hand results back to coding-session.
+
+| Option id | Label (brief) | Act |
+|-----------|---------------|-----|
+| `confirm-inline-closure` | Confirm — hand reconcile results back to coding-session | Emit **`## Completion (inline)`** on the **next** turn with fields from [Inline result contract](#inline-result-contract); parent merges into **`coding-session`** `outputs` |
+| `review-reconcile-summary` | Review reconcile summary first | Re-present summary; re-open this gate |
+| `continue-reconcile` | Continue reconcile work on this pass | Resume Flow from the next incomplete step; do **not** emit **`## Completion (inline)`** yet |
+| `defer-closure` | Defer closure — keep coding-session active | One-line defer recap; parent keeps `continuationStatus: "active"` |
+| `more-details` | More details for option _ | Elaborate; re-open this gate |
+
+- **`defaultOptionId: confirm-inline-closure`** when the pass reached a clean handback (target archived, no hard script failures, or explicit skip/defer documented in recap).
+- **Next-step resolution:** Auto-advance through steps **1**, **2**, **4**, and **6** recap on the happy path — no `USER_CHECKPOINT` until [Inline closure gate](#inline-closure-gate-binding).
+
+**Standalone dispatch:** When [Standalone dispatch (stop immediately)](#standalone-dispatch-stop-immediately) applies, **skip** this gate — stop before mutations instead.
 
 ## Completion (inline)
 
