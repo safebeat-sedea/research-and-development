@@ -113,6 +113,26 @@ This pass complements, and does not replace, the later GitHub-surface **reviewer
 
 This skill does not own approval modals — **`coding-session`** collects developer consent before spawns. When this lane must surface a pick, use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act*.
 
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`pre-pr-review`**; other ship-chain skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one full **`pre-pr-review`** spawn on a Checkpoint dispatch through Step **8** and collect a developer verdict before the parent phase advances **`deploy-walk`** PR 3 — per **Ship-chain skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **1** — Validate spawned inputs | Auto-advance on valid spawn `inputs` | exception: missing required inputs → `failure` terminal |
+| **Refresh lane display** | Auto-advance when labels match; act when stale | — |
+| **2** — Fresh reviewer lane | Auto-advance on clean detached lane | exception: reused coding-agent context → `aborted` |
+| **3** — Load standards and rules | Auto-advance | exception: missing required rule → `partial` |
+| **4** — Load anchor | Auto-advance | exception: wrong plan template → `failure` |
+| **5** — Read committed diff | Auto-advance against committed cut point | exception: zero commits / empty diff → `failure` |
+| **6** — Score categories | Auto-advance through category table | — |
+| **7** — Proposed follow-ups | Auto-advance (handoff only; no plan mutation) | — |
+| **8** — Report and result | **Gate** — report/result before terminal handback | Confirm review result (Step **8** below) |
+
 ## Session orientation table (binding)
 
 Give developers a **consistent state snapshot** during pre-PR review so they can re-orient after reload or parallel work.
@@ -133,7 +153,7 @@ Give developers a **consistent state snapshot** during pre-PR review so they can
 
 **Population rules:** Same contract as [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`](../coding-session/SKILL.md) § *Session orientation table (binding)* — use spawn `inputs` and review outputs; never invent paths.
 
-**Mandatory gates (this skill):** any spawned turn that closes with **`MC_PHASED_RESPONSE_V1`** before terminal (for example lane closure after review).
+**Mandatory gates (this skill):** Step **8** report/result gate before terminal handback (see [Step 8 — Report and result](#step-8--report-and-result)).
 
 ## Step 1 — Validate spawned inputs
 
@@ -307,9 +327,27 @@ Set `continuationStatus`:
 
 After the report, close **this turn** with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per **Squad Leader bubble-up** below — the report is not a valid turn end alone. Do not run `git`, `gh`, source edits, commits, pushes, or PR creation.
 
+- **Next-step resolution:** Auto-advance through Steps **1–7** on the happy path — no `USER_CHECKPOINT` on those steps. Step **8** opens the report/result gate before terminal handback.
+
 ## Squad Leader bubble-up (detached lanes)
 
-Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result. When the review finishes, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** on **this lane**: recap recommendation + options **I'm done on this review lane** and **More details for option _**. §8 progress reaches the Squad Leader via **`AGENT_RESULT_RESPONSE_V1`** terminal **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`) and Mission Control host sync — **not** developer paste on the leader dispatch (**`../../plan.mdc`** §8 *Policy — no manual recap*). Do not prose-only handoff without structured choice.
+Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result. When the review finishes, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** on **this lane** — the report/result gate before terminal handback.
+
+USER_CHECKPOINT — confirm pre-PR review result and close this review lane before terminal handback.
+
+**Required options** (`modalTitle`: *Pre-PR review — report and result*; list in this order):
+
+| Option id | Label |
+|-----------|--------|
+| `review-lane-done` | I'm done on this review lane |
+| `more-details` | More details for option _ |
+
+- Include [Session orientation table (binding)](#session-orientation-table-binding) as the **first block** in `display.markdown`.
+- Recap `recommendation`, blockers, and flags (summary — not full report reprint).
+- **`review-lane-done`** → emit terminal **`AGENT_RESULT_RESPONSE_V1`** on the **next** turn after the developer selects (gate turn first; terminal follows selection).
+- **`defaultOptionId: review-lane-done`** when `recommendation: go` with no blockers.
+
+§8 progress reaches the Squad Leader via **`AGENT_RESULT_RESPONSE_V1`** terminal **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`) and Mission Control host sync — **not** developer paste on the leader dispatch (**`../../plan.mdc`** §8 *Policy — no manual recap*). Do not prose-only handoff without structured choice.
 
 | Outcome | `shipPhase` | `rowStatus` | Key `outputs` |
 |---------|-------------|-------------|---------------|
