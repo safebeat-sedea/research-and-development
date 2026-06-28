@@ -178,6 +178,29 @@ Parent **`master-planner`** Step **7c** / **`phase-planner`** Step **5e** evalua
 
 **Parent ledger (OQ5):** extend the **product PR row** with **`rulesUpdatesStatus`** — do **not** add a separate **`shipRows`** entry or block **`pendingByParent`** on the rules child.
 
+## Structured choice (Mission Control)
+
+Layer 2 approval and ship gates on this lane use **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act*. On spawned lanes, put recap in **`display.markdown`**; **`MC_PHASED_RESPONSE_V1`** must be the last sentinel when a gate is open.
+
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`hosting-repo-rules`**; other ship-chain skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one full **`hosting-repo-rules`** spawn on a Checkpoint dispatch through [Worktree-open gate](#worktree-open-gate-binding) and collect a developer verdict before the parent phase advances **`worktree-bootstrap`** PR 8 — per **Ship-chain skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **1** — Pre-worktree validation | Auto-advance when `targetPlanPath` / §5 scope is valid | exception: missing plan path or scope escapes `.cursor/rules/` |
+| **Worktree-open gate** | **Gate** — first developer-pick gate on spawned rules lane | [Worktree-open gate](#worktree-open-gate-binding) |
+| **2** — Worktree-setup | Auto-advance on happy path | exception: setup / attach failure |
+| **3** — Implement | Auto-advance through `.mdc` edits until review-ready | — |
+| **4** — Pre-PR review (spawned) | Auto-advance spawn; await reviewer terminal | implicit external-wait on child lane |
+| **5** — Ship cut-point | **Gate** before commit + push | deferred to JIT step PR |
+| **6** — PR review (inline) | implicit external-wait | GitHub review cycles |
+| **7** — Merge and cleanup | Auto-advance cleanup after merge confirm | exception: cleanup script failure |
+
 ## Session orientation table (binding)
 
 Render as the **first block** in `display.markdown` at every mandatory gate.
@@ -192,7 +215,28 @@ Render as the **first block** in `display.markdown` at every mandatory gate.
 | Deploy scope | — (no deploy-walk on rules-only lane) |
 | Review | `prReviewStatus` · GitHub `reviewState` when in PR cycles |
 
-**Mandatory gates:** worktree-open; ship cut-point; post-**`create-pr`** recap; each **`pr-review`** cycle.
+**Mandatory gates:** [Worktree-open gate](#worktree-open-gate-binding); ship cut-point; post-**`create-pr`** recap; each **`pr-review`** cycle. Under Checkpoint trust, only steps with **USER_CHECKPOINT** markers (or implicit external-wait) open modals — see [Checkpoint turn UX (skill-local)](#checkpoint-turn-ux-skill-local).
+
+## Worktree-open gate (binding)
+
+**Layer 2 — single AskQuestion** before any inline **`worktree-setup`**, sidecar session write, Mission Control worktree attach, or `.mdc` edits.
+
+**Recap and structured choice:** Summarize plan path, §5 scope, and `pendingRepoRulesPaths` in **`display.markdown`** when using **`MC_PHASED_RESPONSE_V1`**. Include [Session orientation table (binding)](#session-orientation-table-binding) as the first block. On spawned lanes, end the gate turn with **`MC_PHASED_RESPONSE_V1`** — see **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**.
+
+USER_CHECKPOINT — authorize rules-only worktree and implementation on this lane.
+
+**Required options** (`modalTitle`: *Hosting-repo rules — start implementation*; list in this order):
+
+| Option id | Label | Agent action |
+|-----------|-------|--------------|
+| `start-rules-implementation` | Start rules-only implementation now | Set `outputs.developerApprovedImplementation: true`; proceed to [Step 2 — Worktree-setup](#2-worktree-setup-inline) |
+| `revise-plan` | Revise PR plan first | Keep `developerApprovedImplementation: false`; stop without worktree |
+| `change-repo` | Change repo or worktree settings | Re-collect `worktreeName` / `baseRef`; re-open gate |
+| `defer` | Defer implementation | Keep `continuationStatus: active`; no worktree |
+| `more-details` | More details for option _ | Elaborate; re-open gate |
+
+- **`defaultOptionId: start-rules-implementation`** when §5 scope is valid and spawn inputs are complete.
+- **Next-step resolution:** Auto-advance through [Step 1 — Pre-worktree validation](#1-pre-worktree-validation) on the happy path — no `USER_CHECKPOINT` until this gate.
 
 ## Steps
 
@@ -202,7 +246,7 @@ Render as the **first block** in `display.markdown` at every mandatory gate.
 - **Read** `.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc` §§ relevant to ship ledger / row status before populating plan §§5–8 or emitting terminal outputs (384 KiB cap — not in frontmatter `warmUpRules`).
 - **Read** `.sedea/centers/research-and-development/docs/development-process.md` § *Ship chain* before cut-point, **`pre-pr-review`**, or merge steps (384 KiB cap — runtime `Read`).
 - **Read** `.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc` when validating plan anchor or resolving target-path picks (384 KiB cap — runtime `Read`).
-- Worktree-open gate before **`worktree-setup`**.
+- **Next-step resolution:** Auto-advance to [Worktree-open gate](#worktree-open-gate-binding) when validation passes — no `USER_CHECKPOINT` on this step.
 
 ### 2. Worktree-setup (inline)
 

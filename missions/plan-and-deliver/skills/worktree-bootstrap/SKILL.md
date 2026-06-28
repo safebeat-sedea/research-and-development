@@ -117,7 +117,45 @@ Then invoke **`worktree-bootstrap`** **inline** only when center setup failed an
 
 ## Structured choice (Mission Control)
 
-This skill does not own approval modals. When the script fails and a retry path needs a developer pick, use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act*.
+When inline on **`coding-session`**, structured choice at [Step 1 validate gate](#step-1-validate-gate-binding) uses **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act*. Bootstrap script failure after Step **2** hands back to the parent lane — do **not** open a second modal on this skill unless Step **1** must be re-run.
+
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`worktree-bootstrap`**; other ship-chain skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one inline **`worktree-bootstrap`** pass on a **`coding-session`** Checkpoint dispatch through [Step 1 validate gate](#step-1-validate-gate-binding) (exception-only inline retry after attested setup failure) and collect a developer verdict to close **Ship-chain skills UX** PR 8 — per parent § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **Prerequisites** (parent **`coding-session`**) | Auto-advance when parent completed center setup + MCP attach | exception: missing **`worktreePath`** or attach failure — stop without substituting setup |
+| **1** — Validate inputs and resolve mode | **Gate** on exception-only inline retry after validation succeeds | [Step 1 validate gate](#step-1-validate-gate-binding) |
+| **2** — Run bootstrap | Auto-advance on happy path after gate approval | exception: script exit non-zero → `partial` + parent retry attestation |
+| **3** — Report outcome | Auto-advance recap on **`## Completion (inline)`** handback | exception: `failed` with **`continuationStatus: active`** |
+
+## Session orientation table (binding)
+
+Give developers a **consistent state snapshot** during inline bootstrap retry so they can re-orient after reload or parallel work.
+
+**When required:** At [Step 1 validate gate](#step-1-validate-gate-binding) only — render as the **first block** in `display.markdown`. **Forbidden:** omitting the table and substituting scattered one-liners on modal gates.
+
+**Table shape (markdown):**
+
+| Field | Value |
+|-------|-------|
+| Plan | `<targetPlanSlug>` @ `<targetPlanPath>` or — |
+| Worktree | `<worktreePath>` from inline context |
+| Branch | `<worktreeName>` from inline context or — |
+| PR | — (pre-implementation — bootstrap retry) |
+| Ship phase | `worktree` (parent **`coding-session`**) |
+| Deploy scope | — |
+| Review | — |
+| Bootstrap | `<outputs.bootstrapMode>` · pending · success · failed |
+
+**Population rules:** Same contract as [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`](../coding-session/SKILL.md) § *Session orientation table (binding)* — use inline context from the parent lane; never invent paths.
+
+**Mandatory gates (this skill):** [Step 1 validate gate](#step-1-validate-gate-binding) only under Checkpoint — Steps **2–3** auto-advance on the happy path; bootstrap script failure surfaces via exception path on the parent **`coding-session`** lane per [Worktree bootstrap (inline mandatory)](../coding-session/SKILL.md#worktree-bootstrap-inline-mandatory--retry--exception-only).
 
 ## Step 1 — Validate inputs and resolve mode
 
@@ -133,6 +171,31 @@ Required:
 5. When the mode is **`submodule-init`** and no script exists, proceed to step 2 — do not fail solely for a missing script.
 
 **Note:** **`WORKTREE_ROOT`** may not contain the bootstrap script on disk; **`HOSTING_ROOT`** is the primary clone cwd for script invocation.
+
+- **Next-step resolution:** Auto-advance through validation substeps **1–5** on the happy path — no `USER_CHECKPOINT` until [Step 1 validate gate](#step-1-validate-gate-binding) when inline on **`coding-session`** under Checkpoint trust. When validation fails (missing script, invalid paths), stop with `failure` / `partial` per step **4** — do **not** open the gate.
+
+### Step 1 validate gate (binding)
+
+When **`upstreamSkill`** is **`coding-session`** and inline validation succeeded (paths exist, **`outputs.bootstrapMode`** resolved, required script present when applicable), close Step **1** with structured choice **before** [Step 2 — Run bootstrap](#step-2--run-bootstrap).
+
+**When required:** Exception-only inline retry path only — after center **`worktree-setup.sh`** failed on the parent lane and the developer attested retry. **Forbidden:** opening this gate on the default path when center setup already reported success-class **`bootstrapStatus`**. **Forbidden:** prose-only bootstrap recap without this gate under Checkpoint trust. **Forbidden:** emitting **`AGENT_RESULT_RESPONSE_V1`** from this skill on inline runs — the parent **`coding-session`** lane owns terminal sentinels.
+
+Put resolved **`worktreePath`**, **`hostingRoot`**, **`outputs.bootstrapMode`**, and any attested **`bootstrapSkipFlags`** in **`display.markdown`**. Include [Session orientation table (binding)](#session-orientation-table-binding) as the first block.
+
+USER_CHECKPOINT — confirm validated inline bootstrap retry inputs and proceed to Step 2.
+
+| Option id | Label (brief) | Act |
+|-----------|---------------|-----|
+| `confirm-run-bootstrap` | Confirm — run Step 2 bootstrap with resolved mode | Proceed to [Step 2 — Run bootstrap](#step-2--run-bootstrap) |
+| `retry-with-skip-flags` | Retry with attested `--skip-*` flags | Re-validate with updated **`bootstrapSkipFlags`**; re-open this gate when applicable |
+| `change-bootstrap-inputs` | Change worktree path or hosting root | Re-collect inline context from parent; re-run validation substeps **1–5** |
+| `defer-inline-bootstrap` | Defer — hand back to coding-session without running bootstrap | Report to parent with **`continuationStatus: active`**; do **not** run Step **2** |
+| `more-details` | More details for option _ | Elaborate; re-open this gate |
+
+- **`defaultOptionId: confirm-run-bootstrap`** when validation passed, paths are absolute, and **`outputs.bootstrapMode`** matches dot-sedea / hosting overlay.
+- **Next-step resolution:** Auto-advance through validation substeps **1–5** on the happy path — no `USER_CHECKPOINT` until this gate on the exception-only inline retry path.
+
+**Spawned lane (deprecated drain):** When this skill is still spawned for in-flight dispatch drain, Step **1** auto-advances without this gate — spawned terminal contract unchanged.
 
 ## Step 2 — Run bootstrap
 
