@@ -121,15 +121,32 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
 - **Expected output:** `title` (optional), `details` (required), optional `sourceSummary`, optional `roadmapHints`.
 - **Next-step resolution:** `details` non-empty and user confirms summary → §3 (auto-advance). Defer → pause.
 
-USER_CHECKPOINT — confirm ad-hoc scope intake before spawning Ad-Hoc PRD.
+USER_CHECKPOINT — pick intake mode or confirm ad-hoc scope intake before spawning Ad-Hoc PRD.
 
 **Procedure**
 
+0. **Intake mode (required first):** Open structured choice:
+   - **`direct-intake`** — collect change-request details on the leader lane (steps 1–4)
+   - **`brainstorm-first`** — optional research session → report → auto-chain §3 **`ad-hoc-prd`** (§2.5)
+   - **`pause`**
+   - **More details for option _**
 1. Collect **change-request description** (`details`) — required; do not infer from title alone.
 2. Collect optional **title**, **supporting paths/URLs**, or explicit **no sources yet**.
 3. Present intake summary; open structured choice to proceed to Ad-Hoc PRD, revise, or pause.
 4. When intake confirms a **title** that improves the dispatch title, re-run **Dispatch display refresh** (§ above) — **skip** when current dispatch chrome already matches.
 5. **Forbidden:** spawn before `details` confirmed.
+
+### 2.5 Brainstorm research (optional — `brainstorm-first`)
+
+- **Type:** Agent engagement and handover
+- **execution:** spawned
+- **Intent:** Optional research before ad-hoc scope intake; approved report pre-seeds §3 **`ad-hoc-prd`**.
+- **Trigger:** Developer selects **`brainstorm-first`** at §2 step 0.
+- **Assigned skill:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](../plan-and-deliver/skills/brainstorm-research/SKILL.md)
+- **Inputs:** `invokerMissionSlug: single-phase`, `bundleDirectory`, optional seeds from §1.
+- **Next-step resolution:** Terminal **`developerApprovedReport: true`** → set `details` from `outputs.downstreamHandoffSummary`, optional `title` from `outputs.reportTitle`, `sourceSummary` referencing report path → **auto-chain §3**. **`abandonMission: true`** → **`MC_DISPATCH_RESOLVED_V1`** **`abandoned`**.
+
+**Procedure:** Emit spawn, **#external-wait**, on approve compile §3 **`ad-hoc-prd`** **`inputs`** and spawn without repeat §2 USER_CHECKPOINT.
 
 ### 3. Ad-Hoc PRD via agent
 

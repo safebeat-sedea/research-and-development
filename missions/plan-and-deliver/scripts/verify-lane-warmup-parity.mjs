@@ -46,6 +46,15 @@ const ROLE_MANIFESTS = {
     ],
     skillRelPath: 'missions/plan-and-deliver/skills/author-prd/SKILL.md',
   },
+  'brainstorm-research': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md',
+      '.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc',
+      '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md',
+    ],
+    skillRelPath: 'missions/plan-and-deliver/skills/brainstorm-research/SKILL.md',
+  },
   'master-planner': {
     laneRules: [
       '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',

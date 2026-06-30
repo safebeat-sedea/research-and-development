@@ -83,6 +83,11 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
 - `expected output`: Structured handover: `issueSummary`, optional `reproductionSteps`, optional `logHints`, optional `repoPath`.
 - `next-step resolution`: Continue to step 3 when `issueSummary` is non-empty (auto-advance).
 - `ordered actions`:
+  0. **Intake mode (required first):** Open structured choice:
+     - **`direct-intake`** — collect issue summary on the leader lane (steps 1–4)
+     - **`brainstorm-first`** — optional research session → report enriches handover (§2.5) before §3
+     - **`pause`**
+     - **More details for option _**
   1. Remove the matched command prefix from the opening message.
   2. Treat remaining text as initial `issueSummary` when present.
   3. Collect missing **`issueSummary`** via structured choice when empty.
@@ -90,7 +95,19 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
   5. When **`issueSummary`** improves the dispatch title, re-run **Dispatch display refresh** (§ above) — **skip** when current dispatch chrome already matches.
 - `valid early-exit conditions`: Stop without spawn if the user declines to provide an issue summary.
 
-USER_CHECKPOINT — provide issue summary before spawning the debug agent.
+USER_CHECKPOINT — pick intake mode or provide issue summary before spawning the debug agent.
+
+### 2.5 Brainstorm research (optional — `brainstorm-first`)
+
+- `type`: Agent engagement and handover.
+- `execution`: spawned.
+- `intent`: Optional research before debug spawn; approved report enriches §3 handover.
+- `trigger`: Developer selects **`brainstorm-first`** at §2 step 0.
+- `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](../plan-and-deliver/skills/brainstorm-research/SKILL.md).
+- `inputs`: `invokerMissionSlug: debug-and-fix`, `bundleDirectory`, optional seeds from §1.
+- `next-step resolution`: Terminal **`developerApprovedReport: true`** → merge `outputs.downstreamHandoffSummary` into `issueSummary` (append or replace per developer choice in **`initiatingPrompt`**), add report path to handover → **auto-chain §3**. **`abandonMission: true`** → **`MC_DISPATCH_RESOLVED_V1`** **`abandoned`**.
+
+**Procedure:** Emit spawn with **`warmUpRules`** including **`debug-and-fix/plan.mdc`**; **#external-wait**; on approve continue §3 without repeat §2 USER_CHECKPOINT.
 
 ### 3. Debug and fix (spawned skill)
 

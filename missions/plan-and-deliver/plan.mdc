@@ -331,10 +331,16 @@ Child spawns must satisfy the same README table for the target skill role (skill
   - User defers → pause.
   - User revises a field → re-ask that field only.
 
-USER_CHECKPOINT — confirm PRD intake summary before spawning Author PRD.
+USER_CHECKPOINT — pick intake mode or confirm PRD intake summary before spawning Author PRD.
 
 **Procedure**
 
+0. **Intake mode (required first):** Open structured choice on the Squad Leader lane:
+   - **`direct-intake`** — collect title, description, and sources on the leader lane (steps 1–4 below)
+   - **`brainstorm-first`** — optional research session → report → auto-chain §3 **`author-prd`** (§2.5)
+   - **`pause`**
+   - **More details for option _**
+   When the developer selects **`brainstorm-first`**, run §2.5 and **skip** steps 1–4 until brainstorm completes or abandons.
 1. Determine **`operation`**: **`manage`** when opening message or user supplies a readable existing PRD `@path` or URL; otherwise **`create`** (default).
 2. Use **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** to collect **at minimum**:
    - **Title** (required) — may pre-fill from §1
@@ -366,7 +372,31 @@ When fetch fails (auth, VPN, paywall, empty body), use **AskQuestion** once:
 
 Do **not** invent PRD content from a URL alone.
 
-**Referenced assets:** `development-process.md`; `skills/author-prd/SKILL.md`.
+**Referenced assets:** `development-process.md`; `skills/author-prd/SKILL.md`; `skills/brainstorm-research/SKILL.md`.
+
+### 2.5 Brainstorm research (optional — `brainstorm-first`)
+
+- **Type:** Agent engagement and handover
+- **execution:** spawned
+- **Intent:** Run optional free-form research; approved report pre-seeds §3 **`author-prd`** intake.
+- **Trigger:** Developer selects **`brainstorm-first`** at §2 step 0.
+- **Target agent role:** Brainstorm research agent
+- **Assigned skill:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](skills/brainstorm-research/SKILL.md)
+- **Inputs:** `invokerMissionSlug: plan-and-deliver`, `bundleDirectory` from lane identity, optional `researchTopic`, `researchPrompt`, `openingSeeds` from §1.
+- **Expected output:** Child terminal with `outputs.brainstormReportPath`, `outputs.developerApprovedReport`, `outputs.downstreamHandoffSummary`, or `outputs.abandonMission: true`.
+- **Next-step resolution:**
+  - `developerApprovedReport: true` + `continuationStatus: terminal` → set `operation: create`, `prdTitle` from `outputs.reportTitle`, `prdDescription` from `outputs.downstreamHandoffSummary`, `sourceMaterials: [{ path: outputs.brainstormReportRef }]`, then **auto-chain §3** on the same leader turn (no repeat §2 USER_CHECKPOINT).
+  - `abandonMission: true` → propose **`MC_DISPATCH_RESOLVED_V1`** with status **`abandoned`**.
+  - Otherwise → USER_CHECKPOINT gate below.
+
+USER_CHECKPOINT — pick next step when brainstorm child reports failure or partial.
+
+**Procedure**
+
+1. Emit **`AGENT_RUN_REQUEST_V1`** for **`brainstorm-research`** with **`warmUpRules`** including **`plan-and-deliver/plan.mdc`** (§§1–2.5).
+2. Open **next-step resume** structured choice (**#external-wait**) before ending the turn.
+3. On terminal **`developerApprovedReport: true`**, compile §3 **`author-prd`** **`inputs`** from report outputs and emit §3 spawn without re-collecting §2 fields on the leader lane.
+4. On **`abandonMission: true`**, propose dispatch resolution — do not spawn §3.
 
 ### 3. Author PRD via agent
 

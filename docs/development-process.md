@@ -165,7 +165,35 @@ flowchart TD
 | “Plan and deliver — small auth tweak for SSO” | **`plan and deliver`** → §2 intake (description + sources) → §3 **`author-prd`** |
 | “This Confluence link won’t load” | **`plan and deliver`** §2 **AskQuestion** (paste, different path, or switch **`create`**) |
 
-**Referenced skills:** **`author-prd`** (plan-and-deliver §3); **`ad-hoc-prd`** (**`debug-and-fix`**, **`single-phase`**).
+**Referenced skills:** **`author-prd`** (plan-and-deliver §3); **`ad-hoc-prd`** (**`debug-and-fix`**, **`single-phase`**); **`brainstorm-research`** (optional pre-intake on all four R&D delivery missions).
+
+### Brainstorm research (optional pre-intake)
+
+Every R&D delivery mission (**`plan-and-deliver`**, **`single-phase`**, **`quick-fix`**, **`debug-and-fix`**) offers **`brainstorm-first`** alongside direct intake at §2 step 0 (or §2 step 1 for **`quick-fix`**). Canonical skill: **`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`**.
+
+| Intake option | Behavior |
+| --- | --- |
+| **`direct-intake`** | Existing leader-lane collection (unchanged) |
+| **`brainstorm-first`** | Spawn **`brainstorm-research`** child → free-form session → report under **`<bundleDirectory>/docs/*.brainstorm-report.md`** |
+| **`pause`** | Stop until developer continues |
+
+**Close on brainstorm lane**
+
+| Developer choice | Squad Leader action |
+| --- | --- |
+| **Approve report** | Map `outputs.downstreamHandoffSummary` (+ report `@path`) into downstream spawn **`inputs`**; **auto-chain** next agent without repeat intake USER_CHECKPOINT |
+| **Abandon dispatch** | Propose **`MC_DISPATCH_RESOLVED_V1`** **`abandoned`** — direction not viable |
+
+**Downstream auto-chain by invoker**
+
+| Mission | After approved report |
+| --- | --- |
+| **`plan-and-deliver`** | §3 **`author-prd`** (`prdDescription` + `sourceMaterials`) |
+| **`single-phase`** | §3 **`ad-hoc-prd`** (`details` from handoff summary) |
+| **`quick-fix`** | §3 **`quick-fix-plan`** (synthesized bullet list from report) |
+| **`debug-and-fix`** | §3 **`debug-and-fix`** (enriched `issueSummary` + report in handover) |
+
+**Binding:** **`brainstorm-research`** does **not** spawn downstream agents — invoker mission **`plan.mdc`** §2.5 owns auto-chain. See each mission plan for spawn **`warmUpRules`** (invoker **`plan.mdc`**, not full plan-and-deliver unless that is the invoker).
 
 ### Mission routing (expedited paths)
 

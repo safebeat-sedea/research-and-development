@@ -34,6 +34,7 @@ missions:
       - plan and deliver
     skillEntries:
       - missions/plan-and-deliver/skills/author-prd/SKILL.md
+      - missions/plan-and-deliver/skills/brainstorm-research/SKILL.md
       - missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md
       - missions/plan-and-deliver/skills/coding-session/SKILL.md
       - missions/plan-and-deliver/skills/create-pr/SKILL.md
@@ -56,6 +57,7 @@ missions:
       - debug and fix
     skillEntries:
       - missions/debug-and-fix/skills/debug-and-fix/SKILL.md
+      - missions/plan-and-deliver/skills/brainstorm-research/SKILL.md
   # Reuses plan-and-deliver SKILL.md paths (no mission-local copies except spawn targets).
   - slug: single-phase
     plan: missions/single-phase/plan.mdc
@@ -64,6 +66,7 @@ missions:
       - plan and deliver a single phase
     skillEntries:
       - missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md
+      - missions/plan-and-deliver/skills/brainstorm-research/SKILL.md
       - missions/plan-and-deliver/skills/coding-session/SKILL.md
       - missions/plan-and-deliver/skills/new-plan/SKILL.md
       - missions/plan-and-deliver/skills/master-planner/SKILL.md
@@ -77,6 +80,7 @@ missions:
       - quick fix
     skillEntries:
       - missions/quick-fix/skills/quick-fix-plan/SKILL.md
+      - missions/plan-and-deliver/skills/brainstorm-research/SKILL.md
       - missions/plan-and-deliver/skills/coding-session/SKILL.md
       - missions/plan-and-deliver/skills/new-plan/SKILL.md
       - missions/plan-and-deliver/skills/pr-plan/SKILL.md

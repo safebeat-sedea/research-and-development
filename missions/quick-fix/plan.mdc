@@ -124,9 +124,11 @@ USER_CHECKPOINT — pick quick-fix intake mode and confirm scope before spawn.
 1. **Intake mode (required first):** Open structured choice on the Squad Leader lane:
    - **`provide-list`** — I'll paste my bullet list next — proceed to collect it
    - **`description-of-fix`** — free-form prose with all details of what to change and do (collect on follow-up turn, or same turn when opening remainder already contains the description)
+   - **`brainstorm-first`** — optional research session → report → auto-chain §3 **`quick-fix-plan`** (§2.5)
    - **`redirect-scope`** — out of scope or complexity **>6** → **`plan and deliver a single phase`** or **`plan and deliver`** (detached)
    - **`pause`**
    - **More details for option _**
+   When the developer selects **`brainstorm-first`**, run §2.5 and **skip** steps 2–9 until brainstorm completes or abandons.
 2. **`provide-list` path:** Collect **bullet list** of changes — required; may pre-fill from opening remainder when bullets are already present.
 3. **`description-of-fix` path:** Collect **free-form prose** (`changeDescription`) — required; do not infer missing details from title alone. Propose a **synthesized bullet list** derived from the prose; present for developer review with structured choice before scope/complexity gates. When the developer chooses **revise intake** at that confirmation, return to step 1 — they may re-enter prose for re-synthesis, switch to **`provide-list`**, or edit the synthesized bullets inline before re-running steps 4–9.
 4. **Scope gate:** Confirm each item is a small fix — cosmetic UI/styling/copy **or** a **simple functional change** within this mission's line-count expectations. Reject items that need Master Plan decomposition, multiple PRs, or broad refactors.
@@ -135,6 +137,18 @@ USER_CHECKPOINT — pick quick-fix intake mode and confirm scope before spawn.
 7. Present summary (title, final bullet list, complexity attestation, intake mode used); open structured choice to proceed to Quick Fix Plan agent, **revise intake** (return to step 1 per step 3), redirect scope, or pause.
 8. When intake confirms a **title** that improves the dispatch title, re-run **Dispatch display refresh** (§ above) — **skip** when current dispatch chrome already matches.
 9. **Forbidden:** spawn before list is confirmed in scope and complexity (both paths).
+
+### 2.5 Brainstorm research (optional — `brainstorm-first`)
+
+- **Type:** Agent engagement and handover
+- **execution:** spawned
+- **Intent:** Optional research before quick-fix intake; approved report synthesizes §3 **`quick-fix-plan`** bullets.
+- **Trigger:** Developer selects **`brainstorm-first`** at §2 step 1.
+- **Assigned skill:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](../plan-and-deliver/skills/brainstorm-research/SKILL.md)
+- **Inputs:** `invokerMissionSlug: quick-fix`, `bundleDirectory`, optional seeds from §1.
+- **Next-step resolution:** Terminal **`developerApprovedReport: true`** → derive `changeList` bullets from report §5 Handoff summary, set `intakeMode: provide-list`, `complexityConfirmed` / `scopeConfirmed` after developer attestation in §3 spawn **`initiatingPrompt`** → **auto-chain §3**. **`abandonMission: true`** → **`MC_DISPATCH_RESOLVED_V1`** **`abandoned`**.
+
+**Procedure:** Emit spawn with **`warmUpRules`** including **`quick-fix/plan.mdc`**; **#external-wait**; on approve spawn §3 without repeat §2 gates.
 
 ### 3. Spawn Quick Fix Plan agent
 

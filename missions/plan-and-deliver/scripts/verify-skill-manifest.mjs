@@ -39,6 +39,12 @@ const DEFINITIVE_LANE_RULES_BY_SKILL = {
     '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md',
     '.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc',
   ],
+  'brainstorm-research': [
+    '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+    '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md',
+    '.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc',
+    '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md',
+  ],
   'master-planner': [
     '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
     '.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc',
