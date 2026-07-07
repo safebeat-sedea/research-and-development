@@ -267,7 +267,7 @@ Cross-refs: **20_efficient-pr-shipping.mdc** § *Hosting repo cwd for scripts* a
 After **`targetPlanPath`** / PR concern is clear (before worktree attach or immediately after bootstrap succeeds):
 
 1. Compare the visible tab **title** / **hover** to this lane's work (`targetPlanSlug`, §1 single concern).
-2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with non-empty **`title`** and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)).
+2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with **`title`** = `PR{parentIndex}-{semantic title}` when **`parentIndex`** is known (§1 single concern or **`targetPlanSlug`**); otherwise `PR-{semantic title}` — and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)). See [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*.
 3. **Skip** when spawn labels already match scope.
 4. **Forbidden:** **`mission_control_update_dispatch_display`** from a child lane.
 

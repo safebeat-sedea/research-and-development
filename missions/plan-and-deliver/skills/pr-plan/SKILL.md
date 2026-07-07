@@ -533,7 +533,7 @@ Run only when the developer chose **`start-coding-session`** and §5a readiness 
 
  - Cross-check **`../README.md`** § *Universal spawn preflight* (including display-metadata rows **8–10**).
  - `skillPath`: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`
- - `name`: topic-specific label from §1 single concern or **`targetPlanSlug`** — **not** generic "Coding session" alone when a sharper label fits (≤64 chars)
+ - `name`: `PR{parentIndex}-{semantic title}` when **`parentIndex`** is known — semantic title from §1 single concern or **`targetPlanSlug`**; otherwise `PR-{semantic title}` — **not** generic "Coding session" alone (≤64 chars; truncate semantic title if needed). Prefix per [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*
  - `slug`: `coding-session-<targetPlanSlug>` (unique per dispatch)
  - `description`: one-line implementation scope (for example *Worktree and implementation for PR N …*)
  - `inputs`: `targetPlanPath`, `targetPlanSlug`, `readyForImplementation`, `planningHandoffApproved: true` (only when `readyForImplementation: true`), `planningHandoffMode: "sections-1-4-complete"` (required when `readyForImplementation: true`), `repoPath`, `ledgerParent`, `upstreamSkill: "pr-plan"`; include `parentPlanPath`, `parentPlanSlug`, `parentIndex` when known

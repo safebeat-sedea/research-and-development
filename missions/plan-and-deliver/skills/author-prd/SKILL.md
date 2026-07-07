@@ -143,7 +143,7 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
  - important gaps are reported but do not always block planning.
  - optional gaps do not block planning.
 8. Write the document when an output path is resolved, then re-read it and verify the required sections.
-9. **Refresh lane display** when spawn labels are generic — MCP **`mission_control_update_lane_display`** on this lane only (rule **50**).
+9. **Refresh lane display** when spawn labels are generic — MCP **`mission_control_update_lane_display`** on this lane only (rule **50**). **`title`:** `PRD-{semantic title}` where semantic title is **`prdTitle`** or approved PRD heading — see [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*.
 10. **Present for approval** — Recap path, `planningReadiness`, and gap summary. Use **`MC_PHASED_RESPONSE_V1`** (spawned lanes) or **AskQuestion** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**.
 
  **Detect open items** before building the modal: `outputs.openQuestions`, missing mandatory or important sections, unresolved `TBD` markers, contradictions, and `planningReadiness: partial` or `blocked`.

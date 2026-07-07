@@ -283,7 +283,7 @@ This subsection is the **Squad Leader** contract for §§3, 5, 6, and 7. Sedea h
 
 | Field | Rule |
 |-------|------|
-| **`name`** | Topic-specific label (feature title, plan slug, PR concern) — **not** generic placeholders such as "Child agent" alone |
+| **`name`** | **`{prefix}-{semantic title}`** per [rule **50**](../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions* (`PRD-`, `MP-`, `PH{N}-`, `PR{N}-`, `Pre-PR Review-` by skill role) — **not** generic placeholders such as "Child agent" alone |
 | **`description`** | One-line summary of the child lane's work |
 | **`slug`** | Dispatch-unique; stable enough for reload |
 | **Leader scope** | Squad Leader updates **dispatch** chrome only — **not** child slot titles (rule **9** § *Authority table*) |
@@ -413,7 +413,7 @@ USER_CHECKPOINT — pick next step when brainstorm child reports failure or part
 
 1. Compile child **`inputs`** from §2: `prdTitle`, `prdDescription`, `operation`, `targetPath` when set, `sourceMaterials`, optional `sectionPolicy`, `existingPrdBody` when **`manage`**, and dispatch **`bundleDirectory`** when the spawn preamble supplies it.
 2. Set **`initiatingPrompt`** with the user's description and numbered source list; instruct the child to extend the source ledger and **not** invent scope from title alone.
-3. Run **`skills/README.md`** § *Universal spawn preflight* (including display metadata). Set **`name`** / **`description`** from **`prdTitle`** — not generic child placeholders.
+3. Run **`skills/README.md`** § *Universal spawn preflight* (including display metadata). Set **`name`** to `PRD-{prdTitle}` and **`description`** from PRD scope — not generic child placeholders (rule **50** § *Lane title prefix conventions*).
 4. Emit exactly one **`AGENT_RUN_REQUEST_V1`** for **`author-prd`** with a new `correlationId`, dispatch-unique `slug`, and preflight **`inputs`**.
 5. Announce that the **Squad Leader** is waiting for the child lane; open a **next-step resume** structured choice (**#external-wait**) before ending the turn.
 6. Stop until Mission Control delivers **`AGENT_RESULT_RESPONSE_V1`** for the same `correlationId`.
@@ -499,7 +499,7 @@ When an explicit developer override applies, replace the **`Parent:`** line with
 
    **Stop** and surface a one-line fix list when any required key is missing, renamed, or nested under the wrong parent key. Do **not** emit `AGENT_RUN_REQUEST_V1` until preflight passes.
 
-   Set **`name`** from **`featurePlanningTitle`** (or PRD title) and **`description`** to a one-line Master Plan drafting summary — not generic "Planner" / "Child agent" placeholders alone (README § *Universal spawn preflight* display-metadata rows).
+   Set **`name`** to `MP-{featurePlanningTitle}` (or PRD title) and **`description`** to a one-line Master Plan drafting summary — not generic "Planner" / "Child agent" placeholders alone (README § *Universal spawn preflight*; rule **50** § *Lane title prefix conventions*).
 
 3. Emit exactly one `AGENT_RUN_REQUEST_V1` request for the **Master Plan agent** using the `master-planner` skill path, a **new** `correlationId`, dispatch-unique `slug`, topic-specific **`name`** / **`description`**, and the preflight **`inputs`** from step 2. See **`planner/SKILL.md`** § *Spawn contract* for a valid example line and failure modes.
 4. Emit **`AGENT_RUN_REQUEST_V1`**, announce that the **Squad Leader** is waiting because later protocol steps need the produced plan path and complexity result, and open a **next-step resume** structured choice (**#external-wait**) before ending the turn.

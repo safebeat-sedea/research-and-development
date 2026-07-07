@@ -111,7 +111,7 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 After **`featurePlanningTitle`** / Master Plan scope is clear (before or right after Step 1 warm-up):
 
 1. Compare the visible tab **title** / **hover** to this lane's work (feature title, **`masterPlanSlug`** when known).
-2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with non-empty **`title`** and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)).
+2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with **`title`** = `MP-{semantic title}` (**`featurePlanningTitle`** or **`masterPlanSlug`** when known) and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)). See [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*.
 3. **Skip** when spawn labels already match scope.
 4. **Forbidden:** **`mission_control_update_dispatch_display`** from a child lane.
 
@@ -142,6 +142,8 @@ The **Squad Leader** must pass **`inputs`** keys that match this skill’s front
 | Sidecar `.state.yaml` | YAML `parent: null` (unquoted) | `parent: <slug>` |
 
 **Forbidden in spawn JSON:** `"parent": null` (JSON null) — Mission Control validates against frontmatter **`type: string`** and rejects the spawn.
+
+**Spawn `name` (binding):** `MP-{semantic title}` — semantic title from **`featurePlanningTitle`** or PRD heading. Squad Leader sets at spawn; this lane refreshes via § *Refresh lane display* when stale. See [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*.
 
 **Valid example (normative wire shape — replace UUID, paths, and seed text):**
 

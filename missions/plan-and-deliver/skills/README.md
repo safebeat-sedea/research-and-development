@@ -357,9 +357,23 @@ Full table: rule **4** § *Host-resolved identity*.
 | M5 | Optional only when needed: **`warmUpRules`**, **`initiatingPrompt`** (≤ 32 KiB) |
 | M6 | **`skillPath`** resolves under the correct center (R&D skills under **`.sedea/centers/research-and-development/`**) |
 | M7 | On tool validation failure: stop, fix the failing row, retry spawn — new successful spawn mints a **new** host **`correlationId`** |
-| M8 | **`name`** / **`description`** — same display discipline as legacy rows 8–9; refresh stale child tab via **`mission_control_update_lane_display`** |
+| M8 | **`name`** / **`description`** — **lane title prefix** + semantic title per [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions* and § *Lane title prefix (spawn `name`)* below; refresh stale child tab via **`mission_control_update_lane_display`** |
 
 Child terminal: use § *MCP result preflight* in the spawned skill’s **`## Completion (spawned)`** — call **`mission_control_send_agent_result`** at terminal (host resolves **`correlationId`**; omit host-resolved identity keys from MCP args).
+
+### Lane title prefix (spawn `name`)
+
+Before MCP row **M8**, set spawn **`name`** (and child lane **`title`** on refresh) to **`{prefix}-{semantic title}`** per [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*:
+
+| Target skill | Prefix | `[N]` |
+|--------------|--------|-------|
+| **`author-prd`**, **`ad-hoc-prd`** | `PRD` | — |
+| **`master-planner`** | `MP` | — |
+| **`phase-planner`** | `PH{N}` | `parentIndex` (Delivery phases row) |
+| **`coding-session`** | `PR{N}` | `parentIndex` (**`### PR list`** row) — **`pr-plan`** §5d and equivalent spawns |
+| **`pre-pr-review`** | `Pre-PR Review` | — |
+
+Truncate semantic title only when the full string exceeds rule **9** max **`title`** length (64).
 
 ### Terminal stop (normative for every spawned skill)
 

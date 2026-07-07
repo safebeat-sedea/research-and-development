@@ -135,7 +135,7 @@ Acknowledge in one line: *"Target plan: `<slug>`."*
 After the target phase slug is confirmed (end of Step 1):
 
 1. Compare the visible tab **title** / **hover** to this lane's work (phase slug, parent index, delivery concern).
-2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with non-empty **`title`** and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)).
+2. When spawn labels are **generic or wrong**, call MCP **`mission_control_update_lane_display`** on **this lane only** with **`title`** = `PH{parentIndex}-{semantic title}` (phase scope or **`targetPlanSlug`**; omit `{N}` only when **`parentIndex`** is unknown) and optional **`description`** / **`hoverDescription`** (max lengths in [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)). See [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*.
 3. **Skip** when spawn labels already match scope.
 4. **Forbidden:** **`mission_control_update_dispatch_display`** from a child lane.
 
@@ -603,7 +603,7 @@ When the developer picks **`start-coding-session`** (or explicit implement autho
 2. Set **`planningHandoffApproved: true`** when **`readyForImplementation: true`**; pass **`planningHandoffMode: sections-1-4-complete`**.
 3. Set **`upstreamSkill: "phase-planner"`** (not **`pr-plan`**) in spawn **`inputs`**.
 4. Cross-check **`../README.md`** § *Universal spawn preflight* and § *MCP spawn preflight* (rows M1–M8) when flag is on; **`skillPath`**: **`coding-session/SKILL.md`** under this mission.
-5. Call MCP **`mission_control_spawn_agent`** with **`skillPath`**, dispatch-unique **`slug`**, **`name`**, **`description`**, **`inputs`**, optional **`warmUpRules`** / **`initiatingPrompt`** — **no** host-resolved identity keys. Record host-minted **`correlationId`** from tool result in **`outputs.spawnCorrelationId`** when returned.
+5. Call MCP **`mission_control_spawn_agent`** with **`skillPath`**, dispatch-unique **`slug`**, **`name`** (`PH{parentIndex}-{semantic title}` per rule **50** § *Lane title prefix conventions*), **`description`**, **`inputs`**, optional **`warmUpRules`** / **`initiatingPrompt`** — **no** host-resolved identity keys. Record host-minted **`correlationId`** from tool result in **`outputs.spawnCorrelationId`** when returned.
 7. Announce spawn; keep **`continuationStatus: active`**; aggregate child results per Step **5e**.
 
 **Do not** re-run inline **`pr-plan`** §5c on the same turn unless the developer picked **`reenter-pr-plan-5c`**.

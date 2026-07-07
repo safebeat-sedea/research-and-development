@@ -40,6 +40,34 @@ Spawn-heavy **`SKILL.md`** files and **`plan.mdc`** § *Spawn run-request displa
 
 ---
 
+## Lane title prefix conventions (binding)
+
+Every **`mission_control_spawn_agent`** **`name`** and child **`mission_control_update_lane_display`** **`title`** on R&D delivery lanes uses:
+
+```text
+{prefix}-{semantic title}
+```
+
+**Semantic title** — the topic-specific label spawners already derive (PRD title, feature planning title, phase scope, §1 single concern, PR slug). **Only** prepend the role prefix and a single hyphen — do not change how semantic titles are chosen.
+
+| Skill role | Prefix | `[N]` when indexed | Typical spawner |
+|------------|--------|--------------------|-----------------|
+| **`author-prd`**, **`ad-hoc-prd`** | `PRD` | — | Squad Leader |
+| **`master-planner`** | `MP` | — | Squad Leader |
+| **`phase-planner`** | `PH{N}` | One-based **Delivery phases** list index (`parentIndex`) | **`new-plan`**, decomposition tree |
+| **`coding-session`** | `PR{N}` | One-based **`### PR list`** index (`parentIndex`) | **`pr-plan`** §5d, planning child lanes |
+| **`pre-pr-review`** | `Pre-PR Review` | — | **`coding-session`** |
+
+**Examples:** `PRD-Checkout auth`, `MP-Notifications`, `PH2-Payments phase`, `PR1-Add webhook`, `Pre-PR Review-Order API`
+
+**Max length:** Rule **9** caps **`title`** at **64** characters — truncate the semantic title if needed; **never** shorten the role prefix.
+
+**Child refresh:** When spawn labels are stale, children refresh **own** slot via **`mission_control_update_lane_display`** using the same `{prefix}-{semantic title}` shape.
+
+Operator checklist: **`missions/plan-and-deliver/skills/README.md`** § *Lane title prefix (spawn `name`)*.
+
+---
+
 ## Child lane — refresh own slot when labels are stale
 
 On a **spawned child** lane after the skill topic is clear:
