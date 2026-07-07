@@ -3,7 +3,7 @@
  * Opt-in skill MCP migration acceptance — Phase 2 PR 2.
  *
  * Validates that documented MCP-primary skills declare MCP spawn/result tools,
- * dual-stack fallback to sentinels, and Completion (spawned) MCP result preflight.
+ * MCP-only spawn/result docs and Completion (spawned) MCP result preflight.
  *
  * Run from hosting repo root:
  *
@@ -25,7 +25,7 @@ const OPT_IN_MCP_PRIMARY_SKILLS = [
     skillDir: 'phase-planner',
     relPath:
       'missions/plan-and-deliver/skills/phase-planner/SKILL.md',
-    requiredSection: '## Agent messaging (MCP-primary, dual-stack)',
+    requiredSection: '## Agent messaging (MCP)',
   },
 ];
 
@@ -58,8 +58,6 @@ function lintOptInSkillBody(body, rel) {
   const mustInclude = [
     'mission_control_spawn_agent',
     'mission_control_send_agent_result',
-    'AGENT_RUN_REQUEST_V1',
-    'AGENT_RESULT_RESPONSE_V1',
     'MCP spawn preflight',
     'MCP result',
   ];
@@ -68,8 +66,8 @@ function lintOptInSkillBody(body, rel) {
       errors.push(`${rel}: missing required MCP migration marker "${needle}"`);
     }
   }
-  if (!/fallback|flag off|sentinel fallback/i.test(body)) {
-    errors.push(`${rel}: must document sentinel fallback when flag is off or MCP fails`);
+  if (/AGENT_RUN_REQUEST_V1|AGENT_RESULT_RESPONSE_V1/.test(body)) {
+    errors.push(`${rel}: must not document sentinel spawn/result protocol`);
   }
   if (!body.includes('### MCP result preflight')) {
     errors.push(`${rel}: Completion (spawned) must include ### MCP result preflight`);

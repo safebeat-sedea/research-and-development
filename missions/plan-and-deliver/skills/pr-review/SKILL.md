@@ -398,7 +398,7 @@ Until all four pass, keep **`githubReconciliationStatus: pending`** and **`merge
 
 ## §8 host sync (via coding-session)
 
-Runs **inline** on the **`coding-session`** lane. When triage reaches a stable milestone, the **`coding-session`** agent **must** re-emit **`AGENT_RESULT_RESPONSE_V1`** with §8 **`outputs`** so Mission Control host sync updates the Squad Leader ledger (**`../../plan.mdc`** §8).
+Runs **inline** on the **`coding-session`** lane. When triage reaches a stable milestone, the **`coding-session`** agent **must** re-emit **`mission_control_send_agent_result`** with §8 **`outputs`** so Mission Control host sync updates the Squad Leader ledger (**`../../plan.mdc`** §8).
 
 | Milestone | `shipPhase` | Required `outputs` |
 |-----------|-------------|-------------------|
@@ -409,7 +409,7 @@ Runs **inline** on the **`coding-session`** lane. When triage reaches a stable m
 
 ## Inline result for coding-session
 
-**Inline-only** — no **`## Completion (spawned)`**, no **Host protocol line**, no **`AGENT_RESULT_RESPONSE_V1`** on this lane (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **[`../README.md`](../README.md)** § *Inline-only*).
+**Inline-only** — no **`## Completion (spawned)`**, no **MCP result**, no **`mission_control_send_agent_result`** on this lane (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **[`../README.md`](../README.md)** § *Inline-only*).
 
 Return results through the active **`coding-session`** lane, not as a child-agent result. **`coding-session`** must include these fields in its spawned handoff or inline completion:
 
@@ -438,4 +438,4 @@ Otherwise set **`mergeDelegationReady: false`** — **`coding-session`** must no
 
 Keep `continuationStatus: "active"` until every PR review comment is fixed, skipped with rationale, converted to follow-up, or explicitly deferred by the developer, and GitHub reconciliation has run when required.
 
-This skill is **inline-only** on the **`plan and deliver`** mission — no **`AGENT_RUN_REQUEST_V1`**, no **`AGENT_RESULT_RESPONSE_V1`** on this lane. See **[`../README.md`](../README.md)** § Inline-only.
+This skill is **inline-only** on the **`plan and deliver`** mission — no **`mission_control_spawn_agent`**, no **`mission_control_send_agent_result`** on this lane. See **[`../README.md`](../README.md)** § Inline-only.

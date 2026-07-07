@@ -66,7 +66,7 @@ warmUpRules:
 
 # Pre-PR Review
 
-**Spawn-only (binding).** Run on a **fresh spawned child lane** opened by **`AGENT_RUN_REQUEST_V1`** from **`coding-session`**. Mission Control validates frontmatter **`inputs`** at spawn time. **Forbidden:** execute this skill **inline** on the **`coding-session`** lane — mirror [`create-pr/SKILL.md`](../create-pr/SKILL.md) (inline-only on **`coding-session`**; **`pre-pr-review`** is the inverse: spawn-only from that lane).
+**Spawn-only (binding).** Run on a **fresh spawned child lane** opened by **`mission_control_spawn_agent`** from **`coding-session`**. Mission Control validates frontmatter **`inputs`** at spawn time. **Forbidden:** execute this skill **inline** on the **`coding-session`** lane — mirror [`create-pr/SKILL.md`](../create-pr/SKILL.md) (inline-only on **`coding-session`**; **`pre-pr-review`** is the inverse: spawn-only from that lane).
 
 ### Standalone dispatch (stop immediately)
 
@@ -137,7 +137,7 @@ Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.s
 
 Give developers a **consistent state snapshot** during pre-PR review so they can re-orient after reload or parallel work.
 
-**When required:** At spawn bootstrap gates only — **not** at Step **8** under Checkpoint (Step **8** auto-advances). Render as the **first block** in `display.markdown` when a gate applies. **Forbidden:** omitting the table and substituting scattered one-liners on modal gates. The terminal **`AGENT_RESULT_RESPONSE_V1`** line uses the 1–3 sentence `summary` only — do **not** embed the markdown table in the terminal JSON.
+**When required:** At spawn bootstrap gates only — **not** at Step **8** under Checkpoint (Step **8** auto-advances). Render as the **first block** in `display.markdown` when a gate applies. **Forbidden:** omitting the table and substituting scattered one-liners on modal gates. The terminal **`mission_control_send_agent_result`** line uses the 1–3 sentence `summary` only — do **not** embed the markdown table in the terminal JSON.
 
 **Table shape (markdown):**
 
@@ -330,7 +330,7 @@ After the report, hand back per **Squad Leader bubble-up** below. Do not run `gi
 
 ## Squad Leader bubble-up (detached lanes)
 
-Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result until terminal **`AGENT_RESULT_RESPONSE_V1`** host sync.
+Runs on a **detached** reviewer lane; the **plan and deliver** Squad Leader may not see this result until terminal **`mission_control_send_agent_result`** host sync.
 
 ### Auto terminal + parent refocus (binding — all outcomes)
 
@@ -339,13 +339,13 @@ After Step **8** report completes ( **`go`** or **`no-go`** ):
 **Same turn** (report prose may precede sentinels):
 
 1. Emit **`MC_REFOCUS_PARENT_V1`** on its own line (`{"version":1,"reason":"pre-pr-review-complete"}` optional).
-2. Emit terminal **`AGENT_RESULT_RESPONSE_V1`** as the **last line** per [Completion (spawned)](#completion-spawned).
+2. Emit terminal **`mission_control_send_agent_result`** as the **last line** per [Completion (spawned)](#completion-spawned).
 
 Populate terminal **`outputs`** with full review result — including **`recommendation: no-go`**, **`blockers`**, **`flags`**, and **`codingAgentHandback`** when present. The **parent** (**`coding-session`**) opens **Review feedback approval gate** or blocks Create-PR per its skill; this reviewer lane does **not** pause for developer confirmation.
 
-**Forbidden at Step 8:** **`MC_PHASED_RESPONSE_V1`** / AskQuestion report/result modal; **`USER_CHECKPOINT`** at Step **8**; waiting for **`review-lane-done`**; prose-only handback without terminal sentinel.
+**Forbidden at Step 8:** **`MC_PHASED_RESPONSE_V1`** / AskQuestion report/result modal; **`USER_CHECKPOINT`** at Step **8**; waiting for **`review-lane-done`**; prose-only handback without MCP result.
 
-§8 progress reaches the Squad Leader via **`AGENT_RESULT_RESPONSE_V1`** terminal **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`) and Mission Control host sync — **not** developer paste on the leader dispatch (**`../../plan.mdc`** §8 *Policy — no manual recap*).
+§8 progress reaches the Squad Leader via **`mission_control_send_agent_result`** terminal **`outputs`** (`targetPlanPath`, `shipPhase`, `rowStatus`) and Mission Control host sync — **not** developer paste on the leader dispatch (**`../../plan.mdc`** §8 *Policy — no manual recap*).
 
 | Outcome | `shipPhase` | `rowStatus` | Key `outputs` |
 |---------|-------------|-------------|---------------|
@@ -354,7 +354,7 @@ Populate terminal **`outputs`** with full review result — including **`recomme
 
 ## Mission Control section 8 sync (required terminal `outputs`)
 
-On **every** terminal `AGENT_RESULT_RESPONSE_V1` (including follow-up re-emits), `outputs` **must** include:
+On **every** terminal `mission_control_send_agent_result` (including follow-up re-emits), `outputs` **must** include:
 
 | Field | Rule |
 |-------|------|
@@ -372,7 +372,7 @@ Required `outputs` per **Step 8 — Report and result**, **Mission Control secti
 
 ### Parent refocus (binding)
 
-On every successful Step **8** auto-handback, emit **`MC_REFOCUS_PARENT_V1`** **immediately before** the terminal line so Mission Control focuses the **immediate parent** lane (typically **`coding-session`**) in the same dispatch. See **`.sedea/centers/sedea/skills/README.md`** § *Optional parent refocus sentinel*.
+On every successful Step **8** auto-handback, emit **`MC_REFOCUS_PARENT_V1`** **immediately before** the MCP result call so Mission Control focuses the **immediate parent** lane (typically **`coding-session`**) in the same dispatch. See **`.sedea/centers/sedea/skills/README.md`** § *Optional parent refocus sentinel*.
 
 | Path | Refocus |
 |------|---------|
@@ -381,18 +381,23 @@ On every successful Step **8** auto-handback, emit **`MC_REFOCUS_PARENT_V1`** **
 
 **Forbidden:** structured-choice options whose primary purpose is parent-switch — use **`MC_REFOCUS_PARENT_V1`** instead.
 
-### Host protocol line (required)
+### MCP result preflight (`mission_control_send_agent_result`)
 
-Emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status` (`success` | `partial` | `failure` | `aborted` | `abandoned`), `summary` (1–3 sentences), `outputs`, `errors` (use `[]` when none). Populate `outputs` from Step 8 **and** include `targetPlanPath`, `shipPhase`, and `rowStatus` on every terminal line. The emitted line must be **valid JSON** (no `{...}` placeholders in the actual output). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
+| Step | Check |
+|------|--------|
+| R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
+| R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
+| R3 | Populate **`outputs`** from the required field list below |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
 
-**Message order on terminal turns:** report recap (optional prose) → **`MC_REFOCUS_PARENT_V1`** (when required above) → **`AGENT_RESULT_RESPONSE_V1`** (**last line**).
+**Message order on terminal turns:** report recap (optional prose) → **`MC_REFOCUS_PARENT_V1`** (when required above) → **`mission_control_send_agent_result`** (**last line**).
 
-Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*).
+Stop after the MCP result call. Do not emit another `mission_control_spawn_agent` or run the next protocol step in the same turn (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Completion (inline)
 
-Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
+Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `mission_control_spawn_agent`, `mission_control_send_agent_result`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **MCP result** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
 
 **Forbidden when `upstreamSkill` is `coding-session`:** do **not** run inline on the **`coding-session`** lane — spawn only per **Spawn-only (binding)** above.
 
-When a mission protocol **explicitly** assigns this skill inline on a **non–`coding-session`** lane (rare), use the same `outputs` semantics as **Step 8 — Report and result** and **`## Completion (spawned)`** in prose only — **no** spawn or terminal sentinels.
+When a mission protocol **explicitly** assigns this skill inline on a **non–`coding-session`** lane (rare), use the same `outputs` semantics as **Step 8 — Report and result** and **`## Completion (spawned)`** in prose only — **no** spawn or MCP results.

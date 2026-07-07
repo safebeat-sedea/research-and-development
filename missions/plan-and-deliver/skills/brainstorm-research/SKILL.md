@@ -74,7 +74,7 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 
 **Intent:** **Brainstorm research agent** runs a free-form exploration with the developer, writes a structured report, and closes with **approve report** (hand off to Squad Leader for auto-chained downstream spawn) or **abandon dispatch** (direction not viable).
 
-**This skill never** emits **`AGENT_RUN_REQUEST_V1`** for **`author-prd`**, **`ad-hoc-prd`**, **`quick-fix-plan`**, or **`debug-and-fix`** — the **invoking Squad Leader** auto-spawns the downstream agent after terminal approval per the invoker mission **`plan.mdc`** §2.5.
+**This skill never** emits **`mission_control_spawn_agent`** for **`author-prd`**, **`ad-hoc-prd`**, **`quick-fix-plan`**, or **`debug-and-fix`** — the **invoking Squad Leader** auto-spawns the downstream agent after terminal approval per the invoker mission **`plan.mdc`** §2.5.
 
 ## When this skill applies
 
@@ -94,8 +94,8 @@ If **`bundleDirectory`** or **`invokerMissionSlug`** is missing, stop with `stat
    - **Revise research** — continue session on this lane
    - **Abandon dispatch** — direction not viable; Squad Leader resolves dispatch **`abandoned`**
    - **More details for option _**
-5. **On Approve report** — Set `developerApprovedReport: true`, `abandonMission: false`, `continuationStatus: "terminal"`, `continuationOwner: "squad-leader"`. Emit **`MC_REFOCUS_PARENT_V1`** on its own line immediately before the terminal line (see **`../README.md`** § *Optional parent refocus sentinel*). Populate **`downstreamHandoffSummary`** (concise prose for next spawn **`initiatingPrompt`**) and **`downstreamSpawnTarget`** per invoker (see **Downstream mapping**).
-6. **On Abandon dispatch** — Set `developerApprovedReport: false`, `abandonMission: true`, `continuationStatus: "terminal"`, `continuationOwner: "squad-leader"`. Emit **`MC_REFOCUS_PARENT_V1`** then terminal line with `outputs.abandonReason` when the developer stated one.
+5. **On Approve report** — Set `developerApprovedReport: true`, `abandonMission: false`, `continuationStatus: "terminal"`, `continuationOwner: "squad-leader"`. Emit **`MC_REFOCUS_PARENT_V1`** on its own line immediately before the MCP result call (see **`../README.md`** § *Optional parent refocus sentinel*). Populate **`downstreamHandoffSummary`** (concise prose for next spawn **`initiatingPrompt`**) and **`downstreamSpawnTarget`** per invoker (see **Downstream mapping**).
+6. **On Abandon dispatch** — Set `developerApprovedReport: false`, `abandonMission: true`, `continuationStatus: "terminal"`, `continuationOwner: "squad-leader"`. Emit **`MC_REFOCUS_PARENT_V1`** then MCP result call with `outputs.abandonReason` when the developer stated one.
 
 ## Downstream mapping (binding)
 
@@ -108,9 +108,16 @@ If **`bundleDirectory`** or **`invokerMissionSlug`** is missing, stop with `stat
 
 ## Completion (spawned)
 
-### Host protocol line (required)
+### MCP result preflight (`mission_control_send_agent_result`)
 
-Emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId`, `status`, `summary`, `outputs`, `errors` (use `[]` when none).
+| Step | Check |
+|------|--------|
+| R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
+| R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
+| R3 | Populate **`outputs`** from the required field list below |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
+
+Emit **exactly one** line on its own: `mission_control_send_agent_result` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId`, `status`, `summary`, `outputs`, `errors` (use `[]` when none).
 
 Required `outputs` fields:
 
@@ -136,7 +143,7 @@ Required `outputs` fields:
 
 **Forbidden:** `developerApprovedReport: true` with empty `downstreamHandoffSummary`. **Forbidden:** spawning downstream agents from this lane.
 
-Stop after the terminal line (see **`../README.md`** § *Terminal stop (normative)*).
+Stop after the MCP result call (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Report file shape (template)
 

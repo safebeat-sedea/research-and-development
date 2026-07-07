@@ -95,21 +95,19 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/phase-planner/SKILL.md` | This skill procedure |
 | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md` | Spawn preflight, definitive `laneRules` |
 
-## Agent messaging (MCP-primary, dual-stack)
+## Agent messaging (MCP)
 
-**Phase 2 opt-in skill.** This **`phase-planner`** skill documents **MCP-first** parent→child spawn and child→parent terminal result when **`agent-messaging-mcp`** is **on** (`sedea.features.agent-messaging-mcp: true` or packaged override). Normative host contract: **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Agent-to-agent spawn protocol*; operator checklists: **`../README.md`** § *MCP vs sentinel* and § *MCP spawn preflight*.
+**MCP spawn/result skill.** Parent→child spawn and child terminal result use MCP tools per **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Agent-to-agent spawn protocol*; operator checklists: **`../README.md`** § *MCP spawn preflight*.
 
-| Action | **Primary (flag on)** | **Fallback (flag off or MCP validation failure)** |
-|--------|----------------------|-----------------------------------------------------|
-| Spawn **`coding-session`**, nested **`phase-planner`**, or fire-and-forget **`hosting-repo-rules`** | MCP tool **`mission_control_spawn_agent`** | One line: **`AGENT_RUN_REQUEST_V1`** + JSON |
-| **This** spawned lane terminal (and terminal re-emits) | MCP tool **`mission_control_send_agent_result`** | One line: **`AGENT_RESULT_RESPONSE_V1`** + JSON |
+| Action | MCP tool |
+|--------|----------|
+| Spawn **`coding-session`**, nested **`phase-planner`**, or fire-and-forget **`hosting-repo-rules`** | **`mission_control_spawn_agent`** |
+| **This** spawned lane terminal (and terminal re-emits) | **`mission_control_send_agent_result`** |
 
 **Binding:**
 
 - Run **`../README.md`** § *MCP spawn preflight* (rows M1–M8) before every MCP spawn; **forbidden** host-resolved identity keys in MCP args (`correlationId`, `dispatchId`, `slotId`, … — see README § *Host-resolved identity*).
-- **Do not** emit MCP spawn **and** **`AGENT_RUN_REQUEST_V1`** for the same child when MCP spawn already succeeded in that turn.
-- **Do not** emit **`mission_control_send_agent_result`** **and** **`AGENT_RESULT_RESPONSE_V1`** for the same terminal completion when MCP result routing succeeded.
-- **`laneRules`** on spawn: MCP wire omits **`laneRules`** (Phase 1 stub) — rely on this skill's frontmatter **`laneRules`**; when target child needs extra **`laneRules`** beyond its frontmatter, use **sentinel fallback** for that spawn only.
+- **`laneRules`:** rely on this skill's frontmatter **`laneRules`**; MCP spawn schema omits **`laneRules`** on the wire (Phase 1 stub).
 - Inline skills (**`delivery-phases`**, **`pr-breakdown`**, inline **`pr-plan`**, inline **`new-plan`**) stay **inline-only** — no spawn wire change.
 
 ## Trigger
@@ -376,7 +374,7 @@ Leave the dual-title **numbered list** under § 5 as `_TBD_` until inline **`del
 
 ### Inline handoff — **phase-planner** → **`delivery-phases`** / **`pr-breakdown`** (Step 5b)
 
-When the developer approves route in Step **5**, run the chosen skill **inline on this lane** — **do not** emit **`AGENT_RUN_REQUEST_V1`** for **`delivery-phases`** or **`pr-breakdown`**. Load the target **`SKILL.md`**, construct inline context from the tables below, follow that skill’s steps, and merge **`## Completion (inline)`** into this skill’s ledger (`spawnedPlans`, `activeLanes`, `openLedgerEntries`, `remainingTasks`). Those skills run **`new-plan`** inline and may still spawn **`phase-planner`** or **`coding-session`** per their contracts.
+When the developer approves route in Step **5**, run the chosen skill **inline on this lane** — **do not** emit **`mission_control_spawn_agent`** for **`delivery-phases`** or **`pr-breakdown`**. Load the target **`SKILL.md`**, construct inline context from the tables below, follow that skill’s steps, and merge **`## Completion (inline)`** into this skill’s ledger (`spawnedPlans`, `activeLanes`, `openLedgerEntries`, `remainingTasks`). Those skills run **`new-plan`** inline and may still spawn **`phase-planner`** or **`coding-session`** per their contracts.
 
 **`delivery-phases`** on **this phase plan**:
 
@@ -518,7 +516,7 @@ Recap content:
 
 When the developer asks to revise § N, re-read that section and apply edits via `StrReplace`; echo the result; re-offer structured choice (prefer phased or AskQuestion in one message) when a pick is required.
 
-When they choose **`delivery-phases`** or **`pr-breakdown`** via **AskQuestion**, run the chosen skill **inline** on this lane per **§ 5b** and [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b). Do **not** emit **`AGENT_RUN_REQUEST_V1`** for those skills. When the handoff ends the assistant turn while waiting for **`phase-planner`** or **`coding-session`** child results per step **5e**, close with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — do not prose-only stop after handoff.
+When they choose **`delivery-phases`** or **`pr-breakdown`** via **AskQuestion**, run the chosen skill **inline** on this lane per **§ 5b** and [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b). Do **not** emit **`mission_control_spawn_agent`** for those skills. When the handoff ends the assistant turn while waiting for **`phase-planner`** or **`coding-session`** child results per step **5e**, close with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — do not prose-only stop after handoff.
 
 ## Step 5e — Aggregate downstream result
 
@@ -539,7 +537,7 @@ Silence or missing downstream metadata is not completion; return `partial` and k
 
 #### Parallel **`hosting-repo-rules`** fork after **`coding-session`** terminal (fire-and-forget)
 
-When Step **5e** aggregates a **`coding-session`** child terminal (MCP **`mission_control_send_agent_result`** or sentinel **`AGENT_RESULT_RESPONSE_V1`** — spawned from inline **`pr-plan`** §5d or §5f on this phase subtree), evaluate the parallel rules fork **in the same aggregation pass** as **`prShipComplete`** merge — mirror **`master-planner`** Step **7c** *Parallel **`hosting-repo-rules`** fork* semantics on the **phase subtree product PR row**.
+When Step **5e** aggregates a **`coding-session`** child terminal (MCP **`mission_control_send_agent_result`** or sentinel **`mission_control_send_agent_result`** — spawned from inline **`pr-plan`** §5d or §5f on this phase subtree), evaluate the parallel rules fork **in the same aggregation pass** as **`prShipComplete`** merge — mirror **`master-planner`** Step **7c** *Parallel **`hosting-repo-rules`** fork* semantics on the **phase subtree product PR row**.
 
 **Spawn trigger (all required):**
 
@@ -553,7 +551,7 @@ When Step **5e** aggregates a **`coding-session`** child terminal (MCP **`missio
 
 **When all triggers match:**
 
-1. Emit fire-and-forget child spawn for **`hosting-repo-rules/SKILL.md`** — **same turn** as Step **5e** terminal merge when possible. **Primary:** MCP **`mission_control_spawn_agent`** per [Agent messaging (MCP-primary, dual-stack)](#agent-messaging-mcp-primary-dual-stack) and **`hosting-repo-rules/SKILL.md`** spawn contract. **Fallback:** **`AGENT_RUN_REQUEST_V1`** when flag off or MCP validation fails. **Forbidden:** add the rules child to **`pendingByParent`**, **`activeLanes`** wait sets, or a separate **`shipRows`** entry.
+1. Emit fire-and-forget child spawn for **`hosting-repo-rules/SKILL.md`** — **same turn** as Step **5e** terminal merge when possible. Call MCP **`mission_control_spawn_agent`** per [Agent messaging (MCP)](#agent-messaging-mcp) and **`hosting-repo-rules/SKILL.md`** spawn contract. **Forbidden:** add the rules child to **`pendingByParent`**, **`activeLanes`** wait sets, or a separate **`shipRows`** entry.
 2. Spawn **`inputs`** (from **`coding-session`** terminal + product PR plan):
 
 | Input | Source |
@@ -568,7 +566,7 @@ When Step **5e** aggregates a **`coding-session`** child terminal (MCP **`missio
 3. On the **existing product PR row** under this phase subtree, set **`rulesUpdatesStatus: spawned`** and record **`hostingRepoRulesCorrelationId`**. Let the async child update **`rulesUpdatesStatus`** / **`rulesPrUrl`** on return.
 4. **Continue phase delivery** — per-PR / phase expand and **`phaseShipComplete`** aggregation proceed **without** waiting on rules PR merge.
 
-**Async rules child terminal merge:** When Mission Control later delivers **`hosting-repo-rules`** child terminal (MCP or sentinel), match by **`hostingRepoRulesCorrelationId`**. Update product row **`rulesUpdatesStatus`** (`complete` | `failed` | `abandoned`) and optional **`rulesPrUrl`**. **Re-emit updated** terminal (standalone spawned) or **`## Completion (inline)`** (when invoker runs this skill inline) with merged ledger fields.
+**Async rules child terminal merge:** When Mission Control later delivers **`hosting-repo-rules`** child terminal (MCP), match by **`hostingRepoRulesCorrelationId`**. Update product row **`rulesUpdatesStatus`** (`complete` | `failed` | `abandoned`) and optional **`rulesPrUrl`**. **Re-emit updated** terminal (standalone spawned) or **`## Completion (inline)`** (when invoker runs this skill inline) with merged ledger fields.
 
 **Forbidden:** blocking next PR index or phase expand until rules PR merges; separate **`shipRows`** sub-row; adding rules lane to **`pendingByParent`**.
 
@@ -605,8 +603,7 @@ When the developer picks **`start-coding-session`** (or explicit implement autho
 2. Set **`planningHandoffApproved: true`** when **`readyForImplementation: true`**; pass **`planningHandoffMode: sections-1-4-complete`**.
 3. Set **`upstreamSkill: "phase-planner"`** (not **`pr-plan`**) in spawn **`inputs`**.
 4. Cross-check **`../README.md`** § *Universal spawn preflight* and § *MCP spawn preflight* (rows M1–M8) when flag is on; **`skillPath`**: **`coding-session/SKILL.md`** under this mission.
-5. **Primary (flag on):** call MCP **`mission_control_spawn_agent`** with **`skillPath`**, dispatch-unique **`slug`**, **`name`**, **`description`**, **`inputs`**, optional **`warmUpRules`** / **`initiatingPrompt`** — **no** host-resolved identity keys. Record host-minted **`correlationId`** from tool result in **`outputs.spawnCorrelationId`** when returned.
-6. **Fallback (flag off or MCP spawn validation failure):** emit one physical line **`AGENT_RUN_REQUEST_V1`** + JSON (new UUID **`correlationId`**, **`version`: 1**, same semantic fields as step 5).
+5. Call MCP **`mission_control_spawn_agent`** with **`skillPath`**, dispatch-unique **`slug`**, **`name`**, **`description`**, **`inputs`**, optional **`warmUpRules`** / **`initiatingPrompt`** — **no** host-resolved identity keys. Record host-minted **`correlationId`** from tool result in **`outputs.spawnCorrelationId`** when returned.
 7. Announce spawn; keep **`continuationStatus: active`**; aggregate child results per Step **5e**.
 
 **Do not** re-run inline **`pr-plan`** §5c on the same turn unless the developer picked **`reenter-pr-plan-5c`**.
@@ -633,8 +630,9 @@ In recaps, **link the target phase `.plan.md` first** — § 5 **`PR breakdown`*
 **Forbidden while phase delivery is in progress:**
 
 - Returning **`continuationStatus: terminal`** immediately after §§ 1–4 draft or route approval when inline decomposition or child lanes remain — use **`active`** and keep **`continuationOwner: "phase-planner-agent"`**
-- Emitting a terminal line that causes **`master-planner`** Step **7b** to offer **`route-6`**, **`pr-breakdown`**, or phase-scoped **`expand-eligible`** / **`expand-next-eligible`** for work this lane still owns
+- Emitting a MCP result call that causes **`master-planner`** Step **7b** to offer **`route-6`**, **`pr-breakdown`**, or phase-scoped **`expand-eligible`** / **`expand-next-eligible`** for work this lane still owns
 - Telling the developer to continue phase decomposition on the **Master Plan** lane when this **phase-planner** child lane is open — including *"run **`pr-breakdown`** on the **`master-planner`** lane"* or *"return to Master Plan agent / Step 7"* when **§ 5b-decompose** applies
+- Emitting **`MC_REFOCUS_PARENT_V1`** before **`mission_control_send_agent_result`** — refocus steers the developer to the parent lane and is equivalent to forbidden Master Plan handoff while this child owns active phase delivery (see **§ MCP parent refocus** under **`## Completion (spawned)`**)
 
 When child terminal results bubble to inline **`new-plan`** / **`delivery-phases`** / **`master-planner`**, parents **acknowledge only** until **`phaseShipComplete`** or explicit defer/abandon — see **`new-plan`** step **5**, **`delivery-phases`** step **6b**, and **`master-planner`** Step **7b** *Phase-planner child active*.
 
@@ -652,29 +650,30 @@ This skill writes the **body** of the target phase plan — replacing the **`new
 
 Wrong template stops live in step 1a — use **`master-planner`** or **`pr-plan`** protocol branches when the file is a Master Plan or PR plan.
 
-Complete the step 5 handoff block, inline decomposition handoff, and any child-lane wait announcement **before** the terminal line when spawned. When a wait ends the assistant turn, close with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — then stop after the terminal line when applicable (see **`../README.md`** § *Terminal stop (normative)*).
+Complete the step 5 handoff block, inline decomposition handoff, and any child-lane wait announcement **before** the MCP result call when spawned. When a wait ends the assistant turn, close with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — then stop after the MCP result call when applicable (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Completion (spawned)
 
 ### MCP result preflight (`mission_control_send_agent_result`)
-
-When **`agent-messaging-mcp`** is **on** and this skill documents MCP-primary completion (see [Agent messaging (MCP-primary, dual-stack)](#agent-messaging-mcp-primary-dual-stack)):
 
 | Step | Check |
 |------|--------|
 | R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
 | R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
 | R3 | Populate **`outputs`** from the required field list below |
-| R4 | **Do not** also emit **`AGENT_RESULT_RESPONSE_V1`** on the same terminal completion when MCP result routing succeeded |
-| R5 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
+| R5 | **`MC_REFOCUS_PARENT_V1`** — **forbidden** when **`outputs.continuationStatus`** is **`active`**, when **`outputs.phaseShipComplete`** is not **`true`**, when open PR rows or **`remainingTasks`** remain under this phase subtree, or when §5f implementation handoff was not yet offered while handoff is pending — see **§ MCP parent refocus** below |
 
-When flag is **off** or MCP result validation fails, use **sentinel fallback** below.
+### MCP parent refocus (`MC_REFOCUS_PARENT_V1`)
 
-Optional: emit **`MC_REFOCUS_PARENT_V1`** on its own line immediately before the terminal notification when parent refocus after completion is desirable — see spawn bootstrap § *Optional parent refocus*.
+| Signal on this terminal | Refocus? |
+|-------------------------|----------|
+| **`continuationStatus: active`** | **Forbidden** |
+| **`phaseShipComplete: false`** with open **`### PR list`** rows or non-empty **`remainingTasks`** | **Forbidden** |
+| **`prPlanHandoffSkipped: true`** and §5f / **`implementationHandoffStatus: not-offered`** | **Forbidden** — work remains on this lane |
+| **`phaseShipComplete: true`**, explicit defer/abandon, or unrecoverable failure with no retry | **Optional** — skill may omit refocus in v1 |
 
-### Host protocol line — sentinel fallback
-
-When MCP result path is **not** active, emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status`, `summary`, `outputs`, `errors` (use `[]` when none). Populate `outputs` from the list below. The emitted line must be **valid JSON** (no `{...}` placeholders in the actual output). Re-emit an **updated** line after user-requested follow-up on this lane (same `correlationId`). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
+**Binding:** Do **not** treat the first **`status: success`** terminal (§§1–4 drafted, inline **`pr-breakdown`**, PR 1 expanded) as skill completion eligible for parent refocus. **`MC_REFOCUS_PARENT_V1`** is **not** the mechanism for notifying **`master-planner`** of progress — parent **ack-only** until **`phaseShipComplete`** per **`master-planner`** Step **7b**.
 
 Required `outputs` fields:
 
@@ -692,10 +691,10 @@ Required `outputs` fields:
 - Product PR row ledger (parallel rules fork) — per affected PR row when Step **5e** spawns or merges **`hosting-repo-rules`**: **`rulesUpdatesStatus`** (`not-spawned` | `spawned` | `in-progress` | `complete` | `failed` | `abandoned`), optional **`hostingRepoRulesCorrelationId`**, optional **`rulesPrUrl`**
 - `outputs.parentPlanningFollowUpNotification`, `outputs.parentPlanningFollowUps`, `outputs.pendingParentFollowUps` — when §5e merged child parent follow-up notification
 
-Stop after the terminal notification (MCP tool call or sentinel line). Do not emit another child spawn for **`delivery-phases`** or **`pr-breakdown`** (see **`../README.md`** § *Terminal stop (normative)*).
+Stop after the MCP result call. Do not emit another child spawn for **`delivery-phases`** or **`pr-breakdown`** (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Completion (inline)
 
-Report the fields below in prose to the invoker on the **same lane**. Do **not** emit terminal **`AGENT_RESULT_RESPONSE_V1`** or call **`mission_control_send_agent_result`** for **`phase-planner`** inline completion. Do **not** emit `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*). **Exception:** nested **`phase-planner`** or **`coding-session`** spawns from inline decomposition on this lane use [Agent messaging (MCP-primary, dual-stack)](#agent-messaging-mcp-primary-dual-stack) — MCP primary when flag on, sentinel fallback otherwise.
+Report the fields below in prose to the invoker on the **same lane**. Do **not** emit terminal **`mission_control_send_agent_result`** or call **`mission_control_send_agent_result`** for **`phase-planner`** inline completion. Do **not** emit `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **MCP result** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*). **Exception:** nested **`phase-planner`** or **`coding-session`** spawns from inline decomposition on this lane use [Agent messaging (MCP)](#agent-messaging-mcp).
 
 **Primary path:** **`new-plan`** spawns this skill on a child lane. If another invoker runs inline, use the same `outputs` semantics as **`## Completion (spawned)`** in prose only.

@@ -5,7 +5,7 @@
  * preflight row 11 — README § Definitive laneRules for author-prd, master-planner,
  * coding-session).
  *
- * Also lints AGENT_RUN_REQUEST_V1 spawn examples on master-planner skills (R&D and Sedea
+ * Also lints mission_control_spawn_agent spawn examples on master-planner skills (R&D and Sedea
  * maintenance copies): when frontmatter declares inputs.parent.type: string, JSON
  * null for parent is forbidden — wire encoding must use "parent":"null".
  *
@@ -452,7 +452,7 @@ async function listSedeaPlannerSkillFiles(hostingRoot) {
 function extractSpawnExampleLines(body) {
   const lines = [];
   for (const line of body.split('\n')) {
-    if (line.includes('AGENT_RUN_REQUEST_V1') && line.includes('"inputs"')) {
+    if (line.includes('mission_control_spawn_agent') && line.includes('"inputs"')) {
       lines.push(line.trim());
     }
   }
@@ -489,7 +489,7 @@ async function validateNullableParentSpawnWire(hostingRoot, repoRelativePaths) {
     for (const line of spawnLines) {
       if (JSON_NULL_PARENT_IN_SPAWN_RE.test(line)) {
         errors.push(
-          `${rel}: AGENT_RUN_REQUEST_V1 spawn example uses JSON null for \`parent\` — ` +
+          `${rel}: mission_control_spawn_agent spawn example uses JSON null for \`parent\` — ` +
             `inputs.parent is type string; wire encoding must be \`"parent":"null"\` (see master-planner spawn contract)`,
         );
       }

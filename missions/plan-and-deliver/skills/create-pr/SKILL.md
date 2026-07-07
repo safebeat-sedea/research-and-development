@@ -62,7 +62,7 @@ inputs:
 
 # Create PR
 
-**Inline context schema (not spawn).** The frontmatter **`inputs`** map describes values **`coding-session`** passes in prose or handoff on the **same lane**. Mission Control does **not** spawn **`create-pr`** via **`AGENT_RUN_REQUEST_V1`**. Do **not** treat **`inputs`** as a spawn contract.
+**Inline context schema (not spawn).** The frontmatter **`inputs`** map describes values **`coding-session`** passes in prose or handoff on the **same lane**. Mission Control does **not** spawn **`create-pr`** via **`mission_control_spawn_agent`**. Do **not** treat **`inputs`** as a spawn contract.
 
 **Lane requirement (no separate warm-up).** This skill has **no** frontmatter **`warmUpRules`** by design. Run it **only** on the active **`coding-session`** lane after that session has loaded ship rules (**`20_efficient-pr-shipping`**, **`.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc`**, **`skills/README.md`**, dev-process) and **`pre-pr-review`** has returned `recommendation: "go"`. Do **not** start a standalone Mission Control session on **`create-pr`** alone — context will be incomplete.
 
@@ -242,7 +242,7 @@ Set `continuationStatus`:
 
 ## Mission Control section 8 sync (via coding-session)
 
-**`create-pr`** is **not** a separate child terminal. After inline completion, the invoker **must** merge these fields into the next **`coding-session`** **`AGENT_RESULT_RESPONSE_V1`** **`outputs`** (or re-emit updated terminal on that lane):
+**`create-pr`** is **not** a separate child terminal. After inline completion, the invoker **must** merge these fields into the next **`coding-session`** **`mission_control_send_agent_result`** **`outputs`** (or re-emit updated terminal on that lane):
 
 | Field | When |
 |-------|------|
@@ -261,7 +261,7 @@ Set `continuationStatus`:
 
 ## Completion (inline)
 
-Report on the **same `coding-session` lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1` from this procedure alone.
+Report on the **same `coding-session` lane**. Do **not** emit `mission_control_spawn_agent`, `mission_control_send_agent_result`, or `MC_DISPATCH_RESOLVED_V1` from this procedure alone.
 
 Required fields (prose to invoker / merged into **`coding-session`** `outputs`):
 

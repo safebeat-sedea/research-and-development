@@ -102,7 +102,7 @@ This skill prepares a fresh **`WORKTREE_ROOT`** after Mission Control attach. **
 
 Full compile, linked primary-clone build artifacts, and add-on sync per dot-sedea apply **only** on **`full`** / linked-build overlay profiles — not on every script repo.
 
-**Normative invocation (superseded):** **`coding-session`** maps **`bootstrapStatus`** from center **`worktree-setup.sh`** on the default path — **do not** invoke this skill after successful setup. **Exception-only:** **`coding-session`** may read this skill **inline** when setup failed and the developer attests retry (see [`coding-session/SKILL.md`](../coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*). **Forbidden:** spawn (`AGENT_RUN_REQUEST_V1`) for this skill on the default path.
+**Normative invocation (superseded):** **`coding-session`** maps **`bootstrapStatus`** from center **`worktree-setup.sh`** on the default path — **do not** invoke this skill after successful setup. **Exception-only:** **`coding-session`** may read this skill **inline** when setup failed and the developer attests retry (see [`coding-session/SKILL.md`](../coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*). **Forbidden:** spawn (`mission_control_spawn_agent`) for this skill on the default path.
 
 Running bootstrap is **not** developer approval for worktrees — layer 2 **`developerApprovedImplementation`** stays on the parent **`coding-session`** lane.
 
@@ -178,7 +178,7 @@ Required:
 
 When **`upstreamSkill`** is **`coding-session`** and inline validation succeeded (paths exist, **`outputs.bootstrapMode`** resolved, required script present when applicable), close Step **1** with structured choice **before** [Step 2 — Run bootstrap](#step-2--run-bootstrap).
 
-**When required:** Exception-only inline retry path only — after center **`worktree-setup.sh`** failed on the parent lane and the developer attested retry. **Forbidden:** opening this gate on the default path when center setup already reported success-class **`bootstrapStatus`**. **Forbidden:** prose-only bootstrap recap without this gate under Checkpoint trust. **Forbidden:** emitting **`AGENT_RESULT_RESPONSE_V1`** from this skill on inline runs — the parent **`coding-session`** lane owns terminal sentinels.
+**When required:** Exception-only inline retry path only — after center **`worktree-setup.sh`** failed on the parent lane and the developer attested retry. **Forbidden:** opening this gate on the default path when center setup already reported success-class **`bootstrapStatus`**. **Forbidden:** prose-only bootstrap recap without this gate under Checkpoint trust. **Forbidden:** emitting **`mission_control_send_agent_result`** from this skill on inline runs — the parent **`coding-session`** lane owns MCP results.
 
 Put resolved **`worktreePath`**, **`hostingRoot`**, **`outputs.bootstrapMode`**, and any attested **`bootstrapSkipFlags`** in **`display.markdown`**. Include [Session orientation table (binding)](#session-orientation-table-binding) as the first block.
 
@@ -241,7 +241,7 @@ When spawned by **`coding-session`**, populate at least:
 
 ## Mission Control section 8 sync (spawned terminal)
 
-When `targetPlanPath` is set, include on every terminal **`AGENT_RESULT_RESPONSE_V1`**:
+When `targetPlanPath` is set, include on every terminal **`mission_control_send_agent_result`**:
 
 | Field | Rule |
 |-------|------|
@@ -251,15 +251,20 @@ When `targetPlanPath` is set, include on every terminal **`AGENT_RESULT_RESPONSE
 
 ## Completion (spawned)
 
-### Host protocol line (required)
+### MCP result preflight (`mission_control_send_agent_result`)
 
-Emit **exactly one** line: `AGENT_RESULT_RESPONSE_V1` immediately followed by valid JSON on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status`, `summary`, `outputs`, `errors` (`[]` when none). Populate `outputs` from **Spawned result contract** and **Mission Control section 8 sync**. Re-emit an **updated** line after user-requested follow-up on this lane (same `correlationId`). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
+| Step | Check |
+|------|--------|
+| R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
+| R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
+| R3 | Populate **`outputs`** from the required field list below |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
 
-Stop after the terminal line. Do not emit another `AGENT_RUN_REQUEST_V1` on this lane (see **`../README.md`** § *Terminal stop (normative)*).
+Stop after the MCP result call. Do not emit another `mission_control_spawn_agent` on this lane (see **`../README.md`** § *Terminal stop (normative)*).
 
 ## Completion (inline)
 
-Report the same `outputs` semantics in prose to the invoker on the **same lane** (or populate `outputs` on **`coding-session`** terminal lines when this skill runs inline there). Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section.
+Report the same `outputs` semantics in prose to the invoker on the **same lane** (or populate `outputs` on **`coding-session`** MCP result calls when this skill runs inline there). Do **not** emit `mission_control_spawn_agent`, `mission_control_send_agent_result`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **MCP result** under this section.
 
 **Primary path:** **`coding-session`** invokes this skill inline after attach and blocks implementation until **`outputs.bootstrapStatus: success`**. See [`../coding-session/SKILL.md`](../coding-session/SKILL.md) § *Worktree bootstrap (inline mandatory)*.
 

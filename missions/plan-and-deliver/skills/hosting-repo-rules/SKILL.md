@@ -63,7 +63,7 @@ warmUpRules:
 
 **Spawnable detached lane** for hosting-repo **`.cursor/rules/*.mdc`** updates when a **`coding-session`** terminal indicates §5 repo-rule work was **not fully landed** on the product lane. Distinct skill identity and lane slug from **`coding-session`** — same sedea ship primitives, different designation and scope.
 
-**Normative execution:** **`spawned`** (detached child lane). Parent **`master-planner`** / **`phase-planner`** emit **fire-and-forget** **`AGENT_RUN_REQUEST_V1`** — do **not** add the rules lane to **`pendingByParent`** or block next-row expand.
+**Normative execution:** **`spawned`** (detached child lane). Parent **`master-planner`** / **`phase-planner`** emit **fire-and-forget** **`mission_control_spawn_agent`** — do **not** add the rules lane to **`pendingByParent`** or block next-row expand.
 
 ## Warm-up manifest (spawned)
 
@@ -168,7 +168,7 @@ When implementation discovers center/mission changes are required, stop and rout
 
 ## Spawn trigger (parent spawners — PR 2 wiring)
 
-Parent **`master-planner`** Step **7c** / **`phase-planner`** Step **5e** evaluate **after** **`coding-session`** terminal. Emit fire-and-forget **`AGENT_RUN_REQUEST_V1`** when **all** apply:
+Parent **`master-planner`** Step **7c** / **`phase-planner`** Step **5e** evaluate **after** **`coding-session`** terminal. Emit fire-and-forget **`mission_control_spawn_agent`** when **all** apply:
 
 1. Plan-anchored run (`targetPlanPath` on coding-session terminal).
 2. `outputs.repoRulesReconciliationStatus` is **`pending`** **or** §5 lists `.mdc` action bullets not covered by `reconciledRepoRulesPaths`.
@@ -301,10 +301,17 @@ Remove or detach **only** **`WORKTREE_ROOT`** this pass created. **`git worktree
 | `rowStatus` | `closed` when ship chain complete |
 | `continuationStatus` | `terminal` when safe for parent to mark **`rulesUpdatesStatus: complete`** |
 
-### Host protocol line (required)
+### MCP result preflight (`mission_control_send_agent_result`)
+
+| Step | Check |
+|------|--------|
+| R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
+| R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
+| R3 | Populate **`outputs`** from the required field list below |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
 
 ```text
-AGENT_RESULT_RESPONSE_V1 {"version":1,"correlationId":"<uuid>","status":"success","summary":"Rules-only PR shipped.","outputs":{"targetPlanPath":"/path/to/plan.plan.md","targetPlanSlug":"slug","worktreeRoot":"/path/to/worktree","prUrl":"https://github.com/...","prShipComplete":true,"reconciledRepoRulesPaths":["/path/.cursor/rules/foo.mdc"],"shipPhase":"done","rowStatus":"closed","continuationStatus":"terminal"},"errors":[]}
+mission_control_send_agent_result {"version":1,"correlationId":"<uuid>","status":"success","summary":"Rules-only PR shipped.","outputs":{"targetPlanPath":"/path/to/plan.plan.md","targetPlanSlug":"slug","worktreeRoot":"/path/to/worktree","prUrl":"https://github.com/...","prShipComplete":true,"reconciledRepoRulesPaths":["/path/.cursor/rules/foo.mdc"],"shipPhase":"done","rowStatus":"closed","continuationStatus":"terminal"},"errors":[]}
 ```
 
 ## Completion (inline)

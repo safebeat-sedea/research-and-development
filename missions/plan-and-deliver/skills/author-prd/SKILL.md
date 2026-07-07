@@ -149,7 +149,7 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
 
 10a. **On open-item resolution pick** — Apply the selected resolution for **that question's item** to the PRD and source ledger, re-run step 7 completeness review, rewrite when needed (step 8), then return to step 10 with the same multi-question approval shape.
 
-11. **On approve** — Set `outputs.developerApprovedPrd: true`, emit terminal **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: terminal` and `continuationOwner: squad-leader`.
+11. **On approve** — Set `outputs.developerApprovedPrd: true`, emit terminal **`mission_control_send_agent_result`** with `continuationStatus: terminal` and `continuationOwner: squad-leader`.
 
 ## Default section policy
 
@@ -280,9 +280,14 @@ Use this template as a starting point. Remove optional sections that do not appl
 
 The **`plan and deliver`** Squad Leader spawns this skill on a child lane (**`plan.mdc`** §3). The **Author PRD agent** owns recap, approval, and revision (steps 10–11) — the Squad Leader does **not** duplicate approval on the leader lane.
 
-### Host protocol line (required)
+### MCP result preflight (`mission_control_send_agent_result`)
 
-Emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status`, `summary`, `outputs`, `errors` (use `[]` when none). Populate `outputs` from the list below. The emitted line must be **valid JSON** (no `{...}` placeholders in the actual output). Re-emit an **updated** line after user-requested follow-up on this lane (same `correlationId`). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line* and **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Agent session closure*.
+| Step | Check |
+|------|--------|
+| R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
+| R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
+| R3 | Populate **`outputs`** from the required field list below |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
 
 Top-level `status`: `success`, `partial`, `failure`, `aborted`, or `abandoned`.
 
@@ -305,7 +310,7 @@ Required `outputs` fields:
 - `outputs.continuationStatus` — `active` until approval; `terminal` when approved or abandoned
 - `outputs.recommendedNextAction` — when approved, Squad Leader auto-chains **`plan.mdc`** §4 seed + §5 **`master-planner`** on **this dispatch**
 
-After initial write (step 8), before approval: emit **`AGENT_RESULT_RESPONSE_V1`** with `developerApprovedPrd: false`, `continuationOwner: author-prd-agent`, `continuationStatus: active` so the Squad Leader **acknowledges only**.
+After initial write (step 8), before approval: emit **`mission_control_send_agent_result`** with `developerApprovedPrd: false`, `continuationOwner: author-prd-agent`, `continuationStatus: active` so the Squad Leader **acknowledges only**.
 
 Status guidance:
 
@@ -314,7 +319,7 @@ Status guidance:
 - `failure` — no usable PRD artifact (write blocked, invalid inputs after retries); populate `errors`.
 - `aborted` / `abandoned` — user or agent stopped before a deliverable PRD.
 
-On spawned lanes, put **`MC_PHASED_RESPONSE_V1`** on **line 1** and **`AGENT_RESULT_RESPONSE_V1`** on the **last line** of the same message when the turn ends (rule **2** § *Same message as spawn terminal*). Stop after the terminal line. Do not spawn downstream planning agents from this skill.
+On spawned lanes, put **`MC_PHASED_RESPONSE_V1`** on **line 1** and **`mission_control_send_agent_result`** on the **last line** of the same message when the turn ends (rule **2** § *Same message as spawn terminal*). Stop after the MCP result call. Do not spawn downstream planning agents from this skill.
 
 ## Completion (inline)
 

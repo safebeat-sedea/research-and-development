@@ -397,7 +397,7 @@ Stop when the target plan is archived or explicitly not archive-eligible with no
 
 When **`upstreamSkill`** is **`coding-session`**, close every inline pass with structured choice **before** emitting **`## Completion (inline)`** prose to the parent — even when archive mutations, follow-ups triage, and §5 cleanup are complete or skipped.
 
-**When required:** After Flow steps **1–6** finish (or pause with a terminal outcome ready for handback). **Forbidden:** prose-only reconcile summary without this gate under Checkpoint trust. **Forbidden:** emitting **`AGENT_RESULT_RESPONSE_V1`** from this skill — the parent **`coding-session`** lane owns terminal sentinels.
+**When required:** After Flow steps **1–6** finish (or pause with a terminal outcome ready for handback). **Forbidden:** prose-only reconcile summary without this gate under Checkpoint trust. **Forbidden:** emitting **`mission_control_send_agent_result`** from this skill — the parent **`coding-session`** lane owns MCP results.
 
 Put reconcile counts, archived slugs, flagged/postponed leftovers, and §5 cleanup summary in **`display.markdown`**.
 
@@ -418,7 +418,7 @@ USER_CHECKPOINT — confirm plan-reconcile inline closure and hand results back 
 
 ## Completion (inline)
 
-Report the fields from **## Inline result contract** in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
+Report the fields from **## Inline result contract** in prose to the invoker on the **same lane**. Do **not** emit `mission_control_spawn_agent`, `mission_control_send_agent_result`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **MCP result** (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
 
 Normally invoked inline from **`coding-session`** after deploy verification or when the developer chooses reconcile on that lane. **`plan reconcile`** phrases on the active coding-session lane use the same procedure body.
 

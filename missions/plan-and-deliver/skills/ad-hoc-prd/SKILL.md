@@ -54,7 +54,7 @@ warmUpRules:
 
 Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea/docs/lane-manifest-contract.md) and **`../README.md`** § *Default warm-up*. Spawned from **`single-phase`** §3 or **`debug-and-fix`** §5c — **not** plan-and-deliver §3 (which uses **`author-prd`**). Host merge: `effectiveWarmUp = dedupe(bootstrapRules → laneRules → skillWarmUp)`. Frontmatter matches this table. **No `alwaysApply` frontmatter flip.**
 
-**Invoker `warmUpRules` override (binding):** On **`AGENT_RUN_REQUEST_V1`**, invokers merge skill frontmatter **`warmUpRules`** but **must add** the **invoking mission `plan.mdc`** — **`.sedea/centers/research-and-development/missions/single-phase/plan.mdc`** (§§1–3) or **`.sedea/centers/research-and-development/missions/debug-and-fix/plan.mdc`** (post-fix step **5c**) — **instead of** `plan-and-deliver/plan.mdc`. See **`../README.md`** § *Definitive `laneRules`* and each mission's spawn step.
+**Invoker `warmUpRules` override (binding):** On **`mission_control_spawn_agent`**, invokers merge skill frontmatter **`warmUpRules`** but **must add** the **invoking mission `plan.mdc`** — **`.sedea/centers/research-and-development/missions/single-phase/plan.mdc`** (§§1–3) or **`.sedea/centers/research-and-development/missions/debug-and-fix/plan.mdc`** (post-fix step **5c**) — **instead of** `plan-and-deliver/plan.mdc`. See **`../README.md`** § *Definitive `laneRules`* and each mission's spawn step.
 
 ### `bootstrapRules` — host-resolved (R&D layer)
 
@@ -84,7 +84,7 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 
 ### Downstream `master-planner` (invoker-owned — binding)
 
-This skill **never** emits **`AGENT_RUN_REQUEST_V1`** for **`master-planner`**. Downstream Master Plan work is **invoker protocol**, not ad-hoc PRD scope:
+This skill **never** emits **`mission_control_spawn_agent`** for **`master-planner`**. Downstream Master Plan work is **invoker protocol**, not ad-hoc PRD scope:
 
 | Invoker | After terminal PRD approval (`developerApprovedPrd: true`) |
 |---------|-----------------------------------------------------------|
@@ -172,14 +172,19 @@ See [`.sedea/centers/research-and-development/rules/50_mission-control-display-m
 
 5a. **On open-item resolution pick** — Apply the selected resolution for **that question's item** to the `.ad-hoc-prd.md`, then return to step 5 with the same multi-question approval shape.
 
-6. **On approve** — Set `outputs.developerApprovedPrd: true`, ensure `prdRef` / `prdPath` / `prdTitle` reflect the approved file, then emit the terminal **`AGENT_RESULT_RESPONSE_V1`** with `continuationStatus: terminal` and `continuationOwner: "squad-leader"`.
+6. **On approve** — Set `outputs.developerApprovedPrd: true`, ensure `prdRef` / `prdPath` / `prdTitle` reflect the approved file, then emit the terminal **`mission_control_send_agent_result`** with `continuationStatus: terminal` and `continuationOwner: "squad-leader"`.
 7. **On revise** — Apply edits to the Ad-Hoc PRD file, then repeat step 5 until the developer approves or abandons (report `aborted` / `abandoned` only when they clearly stop).
 
 ## Completion (spawned)
 
-### Host protocol line (required)
+### MCP result preflight (`mission_control_send_agent_result`)
 
-Emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status`, `summary`, `outputs`, `errors` (use `[]` when none). Populate `outputs` from the list below. The emitted line must be **valid JSON** (no `{...}` placeholders in the actual output). Re-emit an **updated** line after user-requested follow-up on this lane (same `correlationId`). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
+| Step | Check |
+|------|--------|
+| R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
+| R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
+| R3 | Populate **`outputs`** from the required field list below |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
 
 Required `outputs` fields:
 
@@ -199,7 +204,7 @@ Required `outputs` fields:
 
 Set `continuationOwner` and `continuationStatus`:
 
-- After the initial write (step 4), before developer approval: `continuationOwner: "ad-hoc-prd-agent"`, `continuationStatus: "active"`. Emit an **`AGENT_RESULT_RESPONSE_V1`** with `developerApprovedPrd: false` so the invoking Squad Leader **acknowledges only** — do **not** advance **`single-phase`** §4 or **`debug-and-fix`** §7 from that result alone.
+- After the initial write (step 4), before developer approval: `continuationOwner: "ad-hoc-prd-agent"`, `continuationStatus: "active"`. Emit an **`mission_control_send_agent_result`** with `developerApprovedPrd: false` so the invoking Squad Leader **acknowledges only** — do **not** advance **`single-phase`** §4 or **`debug-and-fix`** §7 from that result alone.
 - While required inputs are missing: `continuationOwner: "ad-hoc-prd-agent"`, `continuationStatus: "active"`, `developerApprovedPrd: false` — Squad Leader collects only when this skill cannot run step 5 (see missing-fields cases below).
 - On developer **Approve PRD**: `continuationOwner: "squad-leader"`, `continuationStatus: "terminal"`, `developerApprovedPrd: true`, `prdRef` populated — invoking Squad Leader may continue (**`single-phase`** §4 → §5 **`master-planner`**, or **`debug-and-fix`** post-fix routing per that mission's `plan.mdc`).
 - `partial` with `continuationStatus: "active"` when file writing fails or content is too thin to offer approval until clarification.
@@ -219,11 +224,11 @@ Error states:
 - File already exists at the generated path → generate a different 8-hex suffix once; if still blocked, return `failure`.
 - Write failure → `status: "failure"` or `partial` if recoverable, with `errors[].message` and `remainingTasks`.
 
-Stop after each **`AGENT_RESULT_RESPONSE_V1`** for the current turn (see **`../README.md`** § *Terminal stop (normative)*). When `continuationStatus` is `active`, the developer continues on **this** lane (approve, revise, or clarify); re-emit an **updated** terminal line with the same `correlationId` when approval completes or scope changes. Do not emit another `AGENT_RUN_REQUEST_V1` or spawn **`master-planner`** from this skill.
+Stop after each **`mission_control_send_agent_result`** for the current turn (see **`../README.md`** § *Terminal stop (normative)*). When `continuationStatus` is `active`, the developer continues on **this** lane (approve, revise, or clarify); re-emit an **updated** MCP result call with the same `correlationId` when approval completes or scope changes. Do not emit another `mission_control_spawn_agent` or spawn **`master-planner`** from this skill.
 
 ## Completion (inline)
 
-Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1`, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
+Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `mission_control_spawn_agent`, `mission_control_send_agent_result`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **MCP result** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*).
 
 **Normative invokers:** **`single-phase`** §3 and **`debug-and-fix`** §5c run this skill **spawned only**. **`plan and deliver`** uses **`author-prd`** §3 instead — not this skill. If another invoker runs inline, use the same `outputs` semantics as **`## Completion (spawned)`** in prose only.
 
