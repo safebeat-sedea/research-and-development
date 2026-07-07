@@ -95,6 +95,10 @@ node "$ROOT/.sedea/centers/.../plan-state.mjs" ...
 
 Use **`HOSTING_ROOT`** plus a repo-relative script path from the hosting repo, or an absolute path to the script file under **`HOSTING_ROOT`**.
 
+### Operations plan files (binding)
+
+**Forbidden:** editing `.plan.md` or `.state.yaml` under **worktree** `.sedea/operations/`. Plan Board authority lives on **`HOSTING_ROOT`** only. Worktree bootstrap may copy operations for read-only context; all plan/sidecar writes target primary paths. See **`coding-session/SKILL.md`** § *Plan and sidecar IO (binding)* and **0_hosting-repo.mdc** § *Operations persistence (main hosting root only)*.
+
 Cross-refs: [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](31_dispatch-scope.mdc) § *Worked example*; [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc).
 
 ## Plan for independence

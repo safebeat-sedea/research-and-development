@@ -394,7 +394,9 @@ Free-form English equivalents (e.g. *"step 3 done — staging green"*, *"actuall
 
 ## Step 1 — Resolve the target plan
 
-The target is a `.plan.md` file under the **`.sedea/operations/`** plan union with a `## N. Deploy test plan` section. Resolve it from chat context per [`30_planning-target-resolution.mdc`](../../../../rules/30_planning-target-resolution.mdc) § *Resolution order*, with **one additional filter**: only consider plans whose body has `## N. Deploy test plan` *and* a `**Status:**` line.
+The target is a `.plan.md` file under the **`.sedea/operations/`** plan union on **`HOSTING_ROOT`** with a `## N. Deploy test plan` section. Resolve it from chat context per [`30_planning-target-resolution.mdc`](../../../../rules/30_planning-target-resolution.mdc) § *Resolution order*, with **one additional filter**: only consider plans whose body has `## N. Deploy test plan` *and* a `**Status:**` line.
+
+When spawn **`inputs.targetPlanPath`** is supplied (typical inline run from **`coding-session`**), use that **absolute path verbatim** for all plan reads and `StrReplace` edits — it points at **`HOSTING_ROOT`** `.sedea/operations/…`, not the worktree copy. **Forbidden:** resolving or editing deploy checklist paths under `WORKTREE_ROOT/.sedea/operations/`.
 
 Resolution order (highest confidence first):
 

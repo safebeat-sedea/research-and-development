@@ -196,6 +196,8 @@ Give developers a **consistent state snapshot** at ship gates so they can re-ori
 | Field | Value |
 |-------|-------|
 | Plan | `<slug>` @ `<path>` or — |
+| Plan IO host | `<absolute HOSTING_ROOT>` or — |
+| Code IO | `<absolute WORKTREE_ROOT>` or — |
 | Worktree | `<absolute WORKTREE_ROOT>` or — |
 | Branch | `<worktreeName>` or — |
 | PR | `<url>` (#N) or — |
@@ -208,6 +210,7 @@ Give developers a **consistent state snapshot** at ship gates so they can re-ori
 | Rule | Requirement |
 |------|-------------|
 | No invention | Use `—` when unknown; never guess paths or PR numbers |
+| Plan IO host / Code IO | Set after worktree attach — **Plan IO host** = **`HOSTING_ROOT`**; **Code IO** = **`WORKTREE_ROOT`** (see § *Plan and sidecar IO (binding)*) |
 | Worktree row | Populated while session worktree exists; `—` after authorized cleanup |
 | PR row | Populated when `prUrl` or `prNumber` exists |
 | Deploy scope | `Before deploy` during before-deploy-only walk; `After deploy` post-merge walk; `—` otherwise |
@@ -227,6 +230,22 @@ Give developers a **consistent state snapshot** at ship gates so they can re-ori
 | Implementation continuation | [Implementation continuation gate](#implementation-continuation-gate) |
 
 Inline **`deploy-walk`** and **`pr-review`** on this lane must include the same table per their skill contracts.
+
+## Plan and sidecar IO (binding)
+
+Operations plan and sidecar IO always targets **`HOSTING_ROOT`** — never **`WORKTREE_ROOT/.sedea/operations/`**.
+
+| IO kind | Root | Rule |
+|---------|------|------|
+| Plan body (`Read` / `StrReplace` on `*.plan.md`) | **`HOSTING_ROOT`** | Use spawn `inputs.targetPlanPath` verbatim when supplied |
+| Sidecar (`plan-state.mjs`) | **`HOSTING_ROOT`** | `cd "$HOSTING_ROOT"` before every script invocation |
+| Inline **`deploy-walk`** checklist patches | **`HOSTING_ROOT`** | Same absolute path as the anchored plan |
+
+**Worktree operations copy:** Center **`worktree-setup.sh`** may copy `.sedea/operations/` from primary into the worktree for **read-only context** at bootstrap. That copy **does not sync** after creation and is **not** Plan Board authority. **Forbidden:** `Read` for write intent, `StrReplace`, `Write`, or hand edits under `WORKTREE_ROOT/.sedea/operations/`.
+
+**Pre-write guard (binding):** Before any `.sedea/operations/` file mutation, resolve the absolute path. If the path contains a `*-worktrees/` segment or lies under a worktree checkout's `.sedea/operations/`, **stop** and rewrite to the equivalent path under **`HOSTING_ROOT`** (match slug; prefer spawn `targetPlanPath`).
+
+Cross-refs: **20_efficient-pr-shipping.mdc** § *Hosting repo cwd for scripts* and § *Operations plan files (binding)*; **0_hosting-repo.mdc** § *Operations persistence (main hosting root only)*.
 
 ## Refresh lane display (when stale)
 
@@ -621,8 +640,8 @@ When the developer **confirms** a numbered step in the anchored PR plan’s **`#
 
 **Forbidden on ad-hoc path:** flipping filesystem, `dispatch.yaml`, bundle JSON, sidecar, grep/diff, or YAML/JSON checks from developer confirmation alone when the inventory covers that work.
 
-1. **Resolve `targetPlanPath`** — from spawn `inputs`, `plan-state.mjs resolve --cwd "<worktreePath>"`, or an explicit `@path` in the message. If multiple plans could apply, use **AskQuestion** once for **which plan** or **which step number** — not whether to persist.
-2. **Classify then act** — apply the classification gate above. When agent-executable work applies, run it before any plan edit. Before patching, **Read** `targetPlanPath` and confirm it is the anchored PR plan under `.sedea/operations/` (matching spawn `inputs.targetPlanPath` or `plan-state.mjs resolve --cwd` for the current worktree); if the path is missing, stale, or outside operations, stop without editing.
+1. **Resolve `targetPlanPath`** — from spawn `inputs` (prefer verbatim absolute path under **`HOSTING_ROOT`**), `plan-state.mjs resolve --cwd "<worktreePath>"` with shell **`cwd`** at **`HOSTING_ROOT`**, or an explicit `@path` in the message. If multiple plans could apply, use **AskQuestion** once for **which plan** or **which step number** — not whether to persist.
+2. **Classify then act** — apply the classification gate above. When agent-executable work applies, run it before any plan edit. Before patching, **Read** `targetPlanPath` and confirm it is the anchored PR plan under **`HOSTING_ROOT`** `.sedea/operations/` (matching spawn `inputs.targetPlanPath`); **forbidden:** paths under `WORKTREE_ROOT/.sedea/operations/`; if the path is missing, stale, or outside operations, stop without editing.
 3. **Same-turn file edit** — before the reply ends, patch the matching §7 line only when classification + evidence rules pass. Append a dated note citing tool evidence or manual resolution.
 4. **Reply** — state the **absolute `targetPlanPath`**, step numbers checked, and one-line evidence per flipped step.
 5. **Do not** tell the developer “you can mark” or “likely done” without editing when you can write the operations plan. If you cannot write (permissions, wrong repo, missing path), say why and offer **`deploy-walk present 7`** / **`deploy-walk <N> done`** / **`deploy-walk all-manual-done`** or a concrete absolute path.
