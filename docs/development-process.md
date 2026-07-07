@@ -142,7 +142,7 @@ flowchart TD
 | --- | --- | --- | --- |
 | **§1 Open** | Every **`plan and deliver`** dispatch | Optional opening seeds (title, `@path`, URL) | §2 intake |
 | **§2 Intake** | Leader lane before spawn | `prdTitle`, `prdDescription`, `operation` (`create` \| `manage`), `sourceMaterials` | §3 spawn **`author-prd`** |
-| **§3 Author PRD** | Child lane | Full or updated PRD under **`.sedea/operations/.../docs/`** (or managed existing path) via **`author-prd`** | Developer approves on **Author PRD** lane → Squad Leader **auto-chains** §4 seed + §5 **`master-planner`** same turn |
+| **§3 Author PRD** | Child lane | Full or updated PRD under **`.sedea/operations/.../docs/`** (scope-level `docs/` or `<bundleDirectory>/docs/`, or managed existing path) via **`author-prd`** | Developer approves on **Author PRD** lane → Squad Leader **auto-chains** §4 seed + §5 **`master-planner`** same turn |
 | **§4–§5 Planning** | After terminal approved PRD | Master Plan via **`master-planner`** | Decomposition / ship per mission protocol |
 
 **Intake boundaries**
@@ -152,10 +152,19 @@ flowchart TD
 - **`ad-hoc-prd`** is **not** used on **`plan and deliver`** — it remains for **`debug-and-fix`** and **`single-phase`** (minimal fix-scope PRD). **`ad-hoc-prd`** does **not** spawn **`master-planner`**; **`single-phase`** Squad Leader auto-chains §4 seed → §5 **`master-planner`** after terminal PRD approval (see **`ad-hoc-prd/SKILL.md`** § *Downstream `master-planner` (invoker-owned)*).
 - **PRD approval UX (binding):** On **`author-prd`** step 10 and **`ad-hoc-prd`** step 5, when open questions, concerns, ambiguities, or incompleteness remain, the approval modal **co-presents** per-item resolution picks **and** **Approve PRD** / **Revise PRD** on the **same** turn — **forbidden** to hide Approve until all items are cleared. See those skills for batching when many items remain.
 
+**Docs placement (operational PRDs and reports)**
+
+Operational documents (PRDs, brainstorm reports, ad-hoc PRDs, triage reports) may be written under **either**:
+
+- **Workspace scope-level `docs/`** — `.sedea/operations/<workspace-bound-scope>/docs/` via host-supplied **`operationsDocsDirectory`**, **or**
+- **Per-dispatch bundle `docs/`** — `<bundleDirectory>/docs/` when Mission Control injects a non-empty bundle directory.
+
+An empty **`bundleDirectory`** does **not** block doc writes when **`operationsDocsDirectory`** is supplied. Resolution order is normative in **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Docs write root resolution*.
+
 **Do not use**
 
 - Skipping **`author-prd`** because a PRD `@path` was pasted in the opening message — §2 may set **`operation: manage`**, but §3 still runs for approval and gap closure.
-- Legacy **`joint/docs/`** for new PRD writes — **forbidden**; use **`author-prd`** **`create`** mode writes under **`.sedea/operations/.../docs/`** using Mission Control handover paths.
+- Legacy **`joint/docs/`** for new PRD writes — **forbidden**; use **`author-prd`** **`create`** mode writes under the resolved operations docs write root (scope-level **`docs/`** or bundle **`docs/`**) per Mission Control handover paths — see **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Docs write root resolution*.
 
 **Handoff phrase examples**
 
@@ -174,7 +183,7 @@ Every R&D delivery mission (**`plan-and-deliver`**, **`single-phase`**, **`quick
 | Intake option | Behavior |
 | --- | --- |
 | **`direct-intake`** | Existing leader-lane collection (unchanged) |
-| **`brainstorm-first`** | Spawn **`brainstorm-research`** child → free-form session → report under **`<bundleDirectory>/docs/*.brainstorm-report.md`** |
+| **`brainstorm-first`** | Spawn **`brainstorm-research`** child → free-form session → report under resolved operations **`docs/`** (`*.brainstorm-report.md`) |
 | **`pause`** | Stop until developer continues |
 
 **Close on brainstorm lane**
@@ -300,7 +309,7 @@ Labels reuse numbers and § symbols across documents. **Read the owning doc** be
 
 | Branch | Path | Role in this process |
 | --- | --- | --- |
-| `author-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md` | Squad Leader §3 child lane: gather evidence, draft or update a flexible PRD, developer approval — mandatory before **`master-planner`** on every **`plan and deliver`** dispatch. **`create`** writes under **`.sedea/operations/.../docs/`** only. |
+| `author-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md` | Squad Leader §3 child lane: gather evidence, draft or update a flexible PRD, developer approval — mandatory before **`master-planner`** on every **`plan and deliver`** dispatch. **`create`** writes under the resolved operations docs write root (scope-level **`docs/`** or `<bundleDirectory>/docs/`). |
 | `ad-hoc-prd` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md` | Minimal fix-scope PRD for **`single-phase`** (§3) and **`debug-and-fix`** (post-fix §5c) — **not** **`plan and deliver`** (which uses **`author-prd`** §3). Does **not** spawn **`master-planner`**; **`single-phase`** Squad Leader auto-chains §4 seed → §5 **`master-planner`** after terminal PRD approval. |
 | `quick-fix-plan` | `.sedea/centers/research-and-development/missions/quick-fix/skills/quick-fix-plan/SKILL.md` | **`quick-fix`** §3 spawn target — minimal parent scaffold plus inline **`new-plan`** + **`pr-plan`** on one child lane (single PR, complexity **≤ 6**). |
 | `master-planner` | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/master-planner/SKILL.md` | PRD → **Master Plan** (mode #1). Drafts §§ 1–5 in the initial turn, including **`### Decomposition assessment`** and **`### Complexity score (plan-scope signal)`** under § 5. **High** complexity (overall score > 20) recommends **Route §6 → Delivery phases** — not withholding §6 — to split into lower-complexity phase plans via **`phase-planner`**. Follow-up moves use **AskQuestion** per **`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`** § *Sedea input channel* — run **`delivery-phases`** or **`pr-breakdown`** **inline** on the master-master-planner lane, draft §7 Caveats inline, or revise sections. **Operations git** (`.sedea/operations/` plan files) is **user-managed** — agents never solicit commit/push/PR via modal **`options`** (rule **6** § Operations repository). |

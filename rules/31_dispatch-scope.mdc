@@ -55,9 +55,27 @@ During **Phase 0** and **hybrid**, the host may still resolve internal filesyste
 |---------|------|
 | **PR / phase plans** | Use **`targetPlanPath`**, **`parentPlanPath`**, or other explicit spawn **`inputs`** — absolute or workspace-relative paths supplied by Mission Control |
 | **Follow-up edits** | Reuse the anchored absolute plan path from the lane — do not re-derive from directory segments under `.sedea/operations/` |
-| **Docs reports** | Write only when a skill names the doc type; path comes from Mission Control handover or skill procedure on the **main hosting clone** |
+| **Docs reports** | Resolve write root per **Docs write root resolution** below; write on the **main hosting clone** only |
 
-**Path placeholders in documentation:** `` `...` `` inside path examples marks **omitted middle segments**, not a folder named `...`. Substitute the **bundle-relative** or **handover-supplied** segment — never literal **`joint`** or a user-id segment you constructed yourself.
+### Docs write root resolution (binding)
+
+Operational docs (PRDs, brainstorm reports, ad-hoc PRDs, requirements docs, triage reports) may live under **either**:
+
+- **Per-dispatch bundle docs** — `<bundleDirectory>/docs/` when Mission Control injects a non-empty bundle directory, **or**
+- **Workspace scope-level docs** — `operationsDocsDirectory` (absolute path to `.sedea/operations/<workspace-bound-scope>/docs/` from lane identity or spawn **`inputs`**).
+
+Both are **first-class** write surfaces. An empty **`bundleDirectory`** does **not** block doc writes when **`operationsDocsDirectory`** or an explicit **`targetPath`** is supplied.
+
+| Priority | Source | Write root |
+|----------|--------|------------|
+| 1 | **`targetPath`** (`manage`) or other explicit handover absolute path | That path (must be under `.sedea/operations/`) |
+| 2 | Non-empty **`bundleDirectory`** | `<bundleDirectory>/docs/` |
+| 3 | **`operationsDocsDirectory`** from spawn **`inputs`** or lane identity | That absolute directory (workspace scope `docs/` under `.sedea/operations/`) |
+| 4 | None resolvable | Return **`partial`** with `outputs.missingFields` naming the gap — **do not write** |
+
+**Forbidden:** agents constructing `.sedea/operations/.../` path segments from **user-id**, **`joint`**, dispatch **mtime** heuristics, or “newest” folder scans. **Allowed:** host-supplied absolute paths including scope-level **`.../docs/`**.
+
+**Path placeholders in documentation:** `` `...` `` inside path examples marks **omitted middle segments**, not a folder named `...`. Substitute the **handover-supplied** absolute path — never literal **`joint`** or a user-id segment you constructed yourself.
 
 ---
 

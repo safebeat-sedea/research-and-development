@@ -17,8 +17,12 @@ inputs:
     required: true
   bundleDirectory:
     type: string
-    description: Absolute dispatch bundle directory from lane identity / spawn preamble.
-    required: true
+    description: Absolute dispatch bundle directory from lane identity / spawn preamble; optional when operationsDocsDirectory is supplied.
+    required: false
+  operationsDocsDirectory:
+    type: string
+    description: Absolute workspace scope-level docs directory under .sedea/operations/.../docs/ from lane identity or spawn inputs.
+    required: false
   researchTopic:
     type: string
     description: Optional short title for the research session and report filename.
@@ -95,15 +99,15 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 
 **Actor:** **Brainstorm research agent** — spawned child lane only.
 
-**Act when** the invoker selected **`brainstorm-first`** at mission intake and supplied **`bundleDirectory`** + **`invokerMissionSlug`**.
+**Act when** the invoker selected **`brainstorm-first`** at mission intake and supplied **`invokerMissionSlug`** plus a resolvable **docs write root** per **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Docs write root resolution* (`bundleDirectory` → `<bundleDirectory>/docs/` or `operationsDocsDirectory`).
 
-If **`bundleDirectory`** or **`invokerMissionSlug`** is missing, stop with `status: "partial"`, `outputs.missingFields` populated — do not write files.
+If **`invokerMissionSlug`** is missing or neither docs path resolves, stop with `status: "partial"`, `outputs.missingFields` populated — do not write files.
 
 ## Research session (steps)
 
 1. **Open the session** — Restate `researchTopic`, `researchPrompt`, and `openingSeeds` when present. Ask what the developer wants to explore; follow free-form chat until enough material exists for a report (no fixed turn count).
 2. **Synthesize** — Draft report sections from the conversation (see **Report file shape** below). Use tools (read codebase, search docs) when helpful; cite paths in **Sources consulted**.
-3. **Write report** — Save under **`<bundleDirectory>/docs/`** as `brainstorm_<slug>_<8hex>.brainstorm-report.md` (kebab slug from title; regenerate hex on collision once).
+3. **Write report** — Resolve docs write root per **31_dispatch-scope.mdc** § *Docs write root resolution*; save under that directory as `brainstorm_<slug>_<8hex>.brainstorm-report.md` (kebab slug from title; regenerate hex on collision once).
 4. **Present for approval** — Show report path and summary in **`display.markdown`** (phased) or brief prose; open structured choice:
    - **Approve report** — send to Squad Leader; auto-chain downstream planning per invoker mission
    - **Revise research** — continue session on this lane

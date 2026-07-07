@@ -34,6 +34,14 @@ inputs:
     type: string
     description: Existing PRD content when operation is manage.
     required: false
+  bundleDirectory:
+    type: string
+    description: Absolute dispatch bundle directory when host injects it; optional when operationsDocsDirectory is supplied.
+    required: false
+  operationsDocsDirectory:
+    type: string
+    description: Absolute workspace scope-level docs directory under .sedea/operations/.../docs/ from lane identity or spawn inputs.
+    required: false
 laneRules:
   - ".sedea/centers/sedea/rules/2_ask-question-instructions.mdc"
   - ".sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md"
@@ -98,16 +106,20 @@ Gather evidence, calibrate section policy, and draft or update a Product or Feat
 - `operation`: `create` or `manage`
 - `targetPath` when supplied
 - `sourceMaterials` (optional seed materials)
-- **Dispatch scope** — `create` writes under `<bundleDirectory>/docs/` (absolute bundle path from lane identity / spawn preamble); do not construct `.sedea/operations/.../...` paths
+- **Docs write root** — resolve per **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Docs write root resolution* from `targetPath`, non-empty `bundleDirectory`, or `operationsDocsDirectory` (lane identity / spawn **`inputs`**); do not construct `.sedea/operations/.../` path segments
+- `bundleDirectory` (optional when `operationsDocsDirectory` is supplied)
+- `operationsDocsDirectory` (optional scope-level `docs/` fallback when `bundleDirectory` is empty)
 - `sectionPolicy`
 - `existingPrdBody` for updates
 
 ## Procedure
 
-1. Validate the operation:
+1. Validate the operation and resolve **docs write root** (binding — **`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`** § *Docs write root resolution*):
  - `create` drafts a new PRD.
  - `manage` updates or reviews an existing PRD.
- - `create` always resolves output under `<bundleDirectory>/docs/` on the active dispatch scope (absolute path from lane identity / spawn preamble). Reject paths outside that bundle directory.
+ - **`create`:** resolve write root in priority order: explicit `targetPath` when under `.sedea/operations/` → non-empty `bundleDirectory` → `<bundleDirectory>/docs/` → `operationsDocsDirectory` from spawn **`inputs`** or lane identity. If none resolve → `failure` with `errors` and `summary` naming the gap — **do not write**.
+ - **`create`:** reject paths outside the resolved docs write root.
+ - **`manage`:** use explicit `targetPath` or handover-supplied existing PRD path only.
 1b. **Leader intake guard** (spawned from **`plan and deliver`**):
  - If `prdDescription` is missing or empty → end with `failure` and ask the Squad Leader to complete **plan.mdc** §2 intake (do not draft).
  - When `sourceMaterials` is empty and the user did not explicitly choose **no sources yet** on the leader lane → run step 3 (evidence loop) before drafting; **do not** infer goals, requirements, or acceptance criteria from `prdTitle` alone.
@@ -345,5 +357,5 @@ Report **`## Completion (spawned)`** `outputs` in prose. Do **not** emit host pr
 - Do not invent source evidence.
 - Do not treat optional sections as mandatory unless the caller or user explicitly marks them mandatory.
 - Do not overwrite an existing PRD without preserving useful existing content.
-- In `create` mode, do not write outside `<bundleDirectory>/docs/` on the active dispatch scope.
+- In `create` mode, do not write outside the resolved docs write root (bundle `docs/` or scope-level `operationsDocsDirectory`).
 - In `manage` mode, update only the existing PRD target supplied by the caller or user.

@@ -365,7 +365,7 @@ When fetch fails (auth, VPN, paywall, empty body), use **AskQuestion** once:
 
 | Option | Action |
 |--------|--------|
-| **Paste PRD body** or save to `@path` under **`<bundleDirectory>/docs/`** on the active dispatch | Re-read; set **`manage`** |
+| **Paste PRD body** or save to `@path` under the resolved operations **`docs/`** write root (scope-level or bundle) | Re-read; set **`manage`** |
 | **Switch to create** — draft new PRD via **`author-prd`** | Set **`operation: create`**; continue §2 intake |
 | **Provide a different readable `@path`** | Retry read |
 | **More details for option _** | Elaborate; re-ask |
@@ -382,7 +382,7 @@ Do **not** invent PRD content from a URL alone.
 - **Trigger:** Developer selects **`brainstorm-first`** at §2 step 0.
 - **Target agent role:** Brainstorm research agent
 - **Assigned skill:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](skills/brainstorm-research/SKILL.md)
-- **Inputs:** `invokerMissionSlug: plan-and-deliver`, `bundleDirectory` from lane identity, optional `researchTopic`, `researchPrompt`, `openingSeeds` from §1.
+- **Inputs:** `invokerMissionSlug: plan-and-deliver`, `bundleDirectory` and/or `operationsDocsDirectory` from lane identity / spawn preamble, optional `researchTopic`, `researchPrompt`, `openingSeeds` from §1.
 - **Expected output:** Child terminal with `outputs.brainstormReportPath`, `outputs.developerApprovedReport`, `outputs.downstreamHandoffSummary`, or `outputs.abandonMission: true`.
 - **Next-step resolution:**
   - `developerApprovedReport: true` + `continuationStatus: terminal` → set `operation: create`, `prdTitle` from `outputs.reportTitle`, `prdDescription` from `outputs.downstreamHandoffSummary`, `sourceMaterials: [{ path: outputs.brainstormReportRef }]`, then **auto-chain §3** on the same leader turn (no repeat §2 USER_CHECKPOINT).
@@ -411,7 +411,7 @@ USER_CHECKPOINT — pick next step when brainstorm child reports failure or part
 
 **Procedure**
 
-1. Compile child **`inputs`** from §2: `prdTitle`, `prdDescription`, `operation`, `targetPath` when set, `sourceMaterials`, optional `sectionPolicy`, `existingPrdBody` when **`manage`**, and dispatch **`bundleDirectory`** when the spawn preamble supplies it.
+1. Compile child **`inputs`** from §2: `prdTitle`, `prdDescription`, `operation`, `targetPath` when set, `sourceMaterials`, optional `sectionPolicy`, `existingPrdBody` when **`manage`**, dispatch **`bundleDirectory`** when the spawn preamble supplies it, and **`operationsDocsDirectory`** when `bundleDirectory` is empty or host injects scope-level `docs/`.
 2. Set **`initiatingPrompt`** with the user's description and numbered source list; instruct the child to extend the source ledger and **not** invent scope from title alone.
 3. Run **`skills/README.md`** § *Universal spawn preflight* (including display metadata). Set **`name`** to `PRD-{prdTitle}` and **`description`** from PRD scope — not generic child placeholders (rule **50** § *Lane title prefix conventions*).
 4. Emit exactly one **`AGENT_RUN_REQUEST_V1`** for **`author-prd`** with a new `correlationId`, dispatch-unique `slug`, and preflight **`inputs`**.
@@ -717,7 +717,7 @@ Before treating §8 as fully operational on a **`plan and deliver`** dispatch, e
 |------------|--------|
 | Milestone has no scripted terminal contract | **Mission gap** — extend the ship skill; do not add manual recap |
 | Child finished but host sync skipped | Fix terminal **`outputs`**; re-emit **`AGENT_RESULT_RESPONSE_V1`** on the ship lane |
-| Gap cannot be closed in-session | Start **mission completeness triage** as a **new** Mission Control dispatch on **sedea** (`mission completeness triage` / `report mission gap`) — this dispatch cannot open it; file a Mission Completeness Report under **`<bundleDirectory>/docs/`** on the active dispatch scope |
+| Gap cannot be closed in-session | Start **mission completeness triage** as a **new** Mission Control dispatch on **sedea** (`mission completeness triage` / `report mission gap`) — this dispatch cannot open it; file a Mission Completeness Report under the resolved operations **`docs/`** write root |
 
 Until the audit passes, treat **`plan-and-deliver`** §8 automation as **incomplete** for dispatch resolution purposes.
 

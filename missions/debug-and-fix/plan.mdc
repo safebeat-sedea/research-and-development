@@ -104,7 +104,7 @@ USER_CHECKPOINT — pick intake mode or provide issue summary before spawning th
 - `intent`: Optional research before debug spawn; approved report enriches §3 handover.
 - `trigger`: Developer selects **`brainstorm-first`** at §2 step 0.
 - `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](../plan-and-deliver/skills/brainstorm-research/SKILL.md).
-- `inputs`: `invokerMissionSlug: debug-and-fix`, `bundleDirectory`, optional seeds from §1.
+- `inputs`: `invokerMissionSlug: debug-and-fix`, `bundleDirectory` and/or `operationsDocsDirectory` from lane identity, optional seeds from §1.
 - `next-step resolution`: Terminal **`developerApprovedReport: true`** → merge `outputs.downstreamHandoffSummary` into `issueSummary` (append or replace per developer choice in **`initiatingPrompt`**), add report path to handover → **auto-chain §3**. **`abandonMission: true`** → **`MC_DISPATCH_RESOLVED_V1`** **`abandoned`**.
 
 **Procedure:** Emit spawn with **`warmUpRules`** including **`debug-and-fix/plan.mdc`**; **#external-wait**; on approve continue §3 without repeat §2 USER_CHECKPOINT.
@@ -183,7 +183,7 @@ USER_CHECKPOINT — revise planning anchor, retry, or switch exits when PR plan 
 - `intent`: Capture fix context as an Ad-Hoc PRD when the developer wants product-context documentation instead of immediate code promotion.
 - `target agent role`: Ad-Hoc PRD creator (plan-and-deliver).
 - `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md`](../plan-and-deliver/skills/ad-hoc-prd/SKILL.md).
-- `inputs`: `createIntent: true`, `title` from fix summary, `details` from child `outputs.fixSummary` from Mission Control, optional `sourceSummary` referencing debug dispatch and test evidence.
+- `inputs`: `createIntent: true`, `title` from fix summary, `details` from child `outputs.fixSummary` from Mission Control, optional `sourceSummary` referencing debug dispatch and test evidence, and **`bundleDirectory`** and/or **`operationsDocsDirectory`** from lane identity when supplied.
 - `spawn run-request fields`: `inputs`, `warmUpRules` per target skill frontmatter, `initiatingPrompt` with debug handover and the selected Ad-Hoc PRD-only exit.
 - `expected output`: Child terminal with `outputs.adHocPrdPath`, `outputs.developerApprovedPrd` after PRD approval flow inside skill.
 - `next-step resolution`: Continue to step 7 after child terminal; do not spawn **`coding-session`** from this branch unless the developer later selects code promotion and step 5 creates a PR plan anchor.
