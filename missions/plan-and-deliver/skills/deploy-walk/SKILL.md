@@ -115,6 +115,14 @@ Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-p
 
 Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
 
+### Developer input vs external-wait (Checkpoint)
+
+Under Checkpoint trust, **happy-path** inline walk steps (bootstrap, agent-executable pass, sub-section auto-advance) **auto-advance without a turn-end modal**. **Manual** step presentation is **developer-input** — a **USER_CHECKPOINT** — and **must** close with [Manual step await gate](#manual-step-await-gate-binding) on the **same turn** as Step 4 presentation.
+
+**Forbidden:** recap of manual **Testing steps** + *reply with results*, *tell me when done*, *run these spot-checks then reply*, or *auto-advancing (no modal)* — those phrases describe developer-input gates, not happy-path auto-advance. **Forbidden:** treating manual deploy verification as rule **2** external-wait.
+
+When inline on **`coding-session`** After deploy under [Post-merge Checkpoint chain](../coding-session/SKILL.md#post-merge-checkpoint-chain-binding), the parent auto-advance chain stops **at** manual presentation; this skill owns the turn-end modal.
+
 | Step | Checkpoint behavior | Gate |
 |------|---------------------|------|
 | **1** — Resolve target plan | Auto-advance when slug/path is unambiguous | exception: multiple candidates → structured pick |
@@ -437,7 +445,7 @@ If the Deploy test plan section uses **dash bullets** (`- ...`) instead of numbe
 
 Each command has its own contract. After agent-executable auto-runs, you may chain multiple steps in one turn. When a **manual** step is presented, the walk is **blocked**, or a lifecycle gate applies, close with **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** (step status + next action) — do **not** prose-only “stop and wait for the next user message.”
 
-**Turn completion (binding):** When the assistant turn ends, **always** emit structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**. Put recap and suggested next walk actions in **`display.markdown`**; mirror each choosable path in **`options`** (for example *Present step N+1*, *Mark deployed*, *Step N done*, *Deploy walk status*). The developer may still type **`deploy-walk …`** commands in chat, but **forbidden** as the sole turn ending: “reply when ready”, “tell me when done”, or command hints without a modal.
+**Turn completion (binding):** When the assistant turn ends, **always** emit structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — **except** when Checkpoint happy-path auto-advance continues mid-turn without ending the turn. Put recap and suggested next walk actions in **`display.markdown`**; mirror each choosable path in **`options`** (for example *Present step N+1*, *Mark deployed*, *Step N done*, *Deploy walk status*). The developer may still type **`deploy-walk …`** commands in chat, but **forbidden** as the sole turn ending: “reply when ready”, “reply with results”, “tell me when done”, “auto-advancing (no modal)”, or command hints without [Manual step await gate](#manual-step-await-gate-binding) when a **manual** step was presented.
 
 ### `deploy-walk present <N>` — process step N
 

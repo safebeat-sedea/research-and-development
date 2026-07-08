@@ -72,7 +72,7 @@ Give developers a **consistent state snapshot** during PR review cycles so they 
 
 **Population rules:** Same as [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`](../coding-session/SKILL.md) § *Session orientation table (binding)* — recover missing PR/worktree context from **`coding-session`** before triage.
 
-**Mandatory gates (this skill):** Step **3b** disposition gate; Step **4** report + disposition gate; external-wait next-step modal after push; each cycle reopen when new comments land.
+**Mandatory gates (this skill):** Step **3b** disposition gate; Step **4** report + disposition gate; developer-input resume modal after push (not external-wait when developer must pick next action); each cycle reopen when new comments land.
 
 ## Helper script
 
@@ -159,7 +159,7 @@ After inline **`create-pr`** opens a PR, **`coding-session`** runs this skill **
 3. **Triage** — Steps **1–4** below.
 4. **Developer gate** — structured choice for dispositions and commit/push depth per rule **6**.
 5. **Reconcile on GitHub** — Step **5** when required (same turn as push when fixes landed).
-6. **Wait for reviewers** — external; open structured choice naming resume paths per rule **2** § *External-wait / next-step modal*.
+6. **Wait for reviewers** — **developer-input**; **`MC_PHASED_RESPONSE_V1`** via **`coding-session`** [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate) when the developer returns — **not** rule **2** external-wait. **Forbidden:** *reply with results*, *tell me when review is done*, *auto-advancing (no modal)*.
 7. **Loop** — when new comments land, return to step **2** on the **same lane** until every comment is fixed, skipped with rationale, captured as deferred work, or explicitly deferred by the developer.
 
 ## When coding-session executes `pr-review`
@@ -310,13 +310,13 @@ After Step 3 classification, compute:
 | `apply-rule-updates` | **`ruleUpdateCount > 0`** | Apply rule updates — `.mdc` edits on open PR |
 | `follow-ups-only` | **`followUpCount > 0`** | Follow-ups only — no source edits |
 | `skip-reject` | Triage non-empty | When **`skippedOnly`**: *Skip / reject — reconcile on GitHub (recommended)*; else *Skip / reject selected comments* |
-| `submit-manual-review` | **`skippedOnly`** or (**`followUpCount > 0`** and **`mustCount === 0`** and **`shouldCount === 0`**) | Submit manual review on GitHub — open **`coding-session`** [Manual review submission (external-wait)](../coding-session/SKILL.md#manual-review-submission-external-wait) |
+| `submit-manual-review` | **`skippedOnly`** or (**`followUpCount > 0`** and **`mustCount === 0`** and **`shouldCount === 0`**) | Submit manual review on GitHub — open **`coding-session`** [Manual review submission (developer-input)](../coding-session/SKILL.md#manual-review-submission-developer-input) |
 | `merged-pr-proceed` | **`prNumber`** or **`prUrl`** known (always during PR ship chain) | PR merged — proceed with cleanup — **Act** per § *Merged-forward act mapping* below |
 | `more-details` | Always | More details for option _ |
 
-**Merged-forward (binding):** Include **`merged-pr-proceed`** on **every** disposition gate, post-fix commit/push gate, and external-wait resume modal while **`prNumber`** or **`prUrl`** is set — **even when** last `gh pr view` showed **`OPEN`**. **Forbidden:** omitting **`merged-pr-proceed`** because merge status was stale; using **`check-pr-status`** alone as the only way to discover developer merge on GitHub.
+**Merged-forward (binding):** Include **`merged-pr-proceed`** on **every** disposition gate, post-fix commit/push gate, and developer-input resume modal while **`prNumber`** or **`prUrl`** is set — **even when** last `gh pr view` showed **`OPEN`**. **Forbidden:** omitting **`merged-pr-proceed`** because merge status was stale; using **`check-pr-status`** alone as the only way to discover developer merge on GitHub.
 
-**Act mapping:** selecting an option not shown in the modal is impossible; do not treat hidden options as implicit consent. When the developer picks **`submit-manual-review`**, run **`coding-session`** [Manual review submission (external-wait)](../coding-session/SKILL.md#manual-review-submission-external-wait) — do not run Step **5 — GitHub only** on that turn. When the developer picks **`merged-pr-proceed`**, run § *Merged-forward act mapping* below.
+**Act mapping:** selecting an option not shown in the modal is impossible; do not treat hidden options as implicit consent. When the developer picks **`submit-manual-review`**, run **`coding-session`** [Manual review submission (developer-input)](../coding-session/SKILL.md#manual-review-submission-developer-input) — do not run Step **5 — GitHub only** on that turn. When the developer picks **`merged-pr-proceed`**, run § *Merged-forward act mapping* below.
 
 #### Merged-forward act mapping (binding)
 

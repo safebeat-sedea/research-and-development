@@ -299,6 +299,7 @@ On spawned **`coding-session`** lanes, Mission Control opens the AskQuestion UI 
 | *Stay advisory until you pick …* / *I'll wait until you …* | Prose handoff — conduct **1** § *No idle handoff*; rule **2** § *Turn completion invariant* |
 | *Pick Ship cut-point* / *tell me to push* without **`MC_PHASED_RESPONSE_V1`** | User cannot click options — same |
 | *PR created* / PR URL only — *review on GitHub* without post-create-pr **`MC_PHASED_RESPONSE_V1`** | Same — § [Post-create-pr handoff gate](#post-create-pr-handoff-gate) step **7** |
+| *Run these spot-checks, then reply with results* / *tell me when review is done* / *auto-advancing (no modal)* at a **developer-input** gate | § [Developer input vs external-wait (Checkpoint)](#developer-input-vs-external-wait-checkpoint) — manual deploy steps need **`deploy-walk`** [Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding); PR-review resume needs post-create-pr or **`pr-review`** disposition gate |
 | Recap + diff summary **without** phased envelope on the **same** turn | **No modal** — agent failure |
 | Redirect cut-point to Squad Leader or another tab | § *Post-reload / cold session* — cut-point runs **on this lane** |
 
@@ -318,10 +319,12 @@ On spawned **`coding-session`** lanes, **any** assistant turn where the develope
 | Pre-PR findings | [Review feedback approval gate](#review-feedback-approval-gate) |
 | Open PR (exceptional) | [Create-PR handoff after go](#create-pr-handoff-after-go) — only when **`hasProposedFollowUps`** or (**`actionablePrePrFindings`** and developer chose **`proceed-create-pr`**) |
 | **After `gh pr create` succeeds** | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — **same turn**, not prose-only PR URL |
+| **Waiting for PR review / merge resume** (developer returns after GitHub review or idle PR) | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) or **`pr-review`** disposition gate — **developer-input**, **not** rule **2** external-wait prose |
 | **After fix push — Step 5 pending** | Run **`pr-review`** Step 5 **same turn** as push — **no** post-create-pr or pre-merge modal until **`githubReconciliationStatus: complete`** (or auto-run Step 5 before modal) |
-| Waiting on child **`pre-pr-review`** | Structured choice before turn ends (rule **2** § *Default continuation options* or defer) |
+| Waiting on child **`pre-pr-review`** | **`MC_PHASED_RESPONSE_V1`** with resume paths before turn ends — rule **2** § *Default continuation options* or defer; **not** prose-only *waiting for reviewer* |
+| **After deploy manual §7 step** (inline **`deploy-walk`**) | **`deploy-walk`** [Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding) — **same turn** as Step 4 presentation |
 
-**Forbidden:** ending a turn with only a PR link, *PR created — review on GitHub*, *tell me when*, or *pick … in chat* when a gate table exists for that await point.
+**Forbidden:** ending a turn with only a PR link, *PR created — review on GitHub*, *tell me when*, *reply with results*, or *pick … in chat* when a gate table exists for that await point. **Forbidden:** treating **developer-input** gates as **external-wait** — see § [Developer input vs external-wait (Checkpoint)](#developer-input-vs-external-wait-checkpoint).
 
 ### Post-reload / cold session (binding)
 
@@ -395,6 +398,24 @@ Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-p
 
 Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
 
+### Developer input vs external-wait (Checkpoint)
+
+Under Checkpoint trust, **happy-path protocol steps auto-advance without a turn-end modal**. Emit **`MC_PHASED_RESPONSE_V1`** or **AskQuestion** only at **USER_CHECKPOINT** markers in this skill, **implicit external-wait** surfaces (host-delivered child results, true async waits), or **exception** paths.
+
+**Developer-input** (continuation requires the **developer** to pick a modal option or structured choice on **this lane**) is **not** external-wait. These are USER_CHECKPOINT surfaces — **must** close the turn with **`MC_PHASED_RESPONSE_V1`** / **AskQuestion**, not prose *reply with results*, *tell me when*, or *waiting for review*:
+
+| Situation | Normative gate |
+|-----------|----------------|
+| PR opened — next ship action (review, merge check, defer) | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) |
+| Developer submits own GitHub review — resume triage | [Manual review submission (developer-input)](#manual-review-submission-developer-input) |
+| Inline **`pr-review`** — triage disposition / fix scope | **`pr-review`** Step **3b** / Step **4** disposition gates |
+| Before / After deploy — manual §7 verification | **`deploy-walk`** [Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding) |
+| Pre-PR findings after child returns | [Review feedback approval gate](#review-feedback-approval-gate) |
+
+**Implicit external-wait** (host or async event may resume the lane **without** a developer modal pick on that turn): **`mission_control_send_agent_result`** delivery from spawned **`pre-pr-review`**; Squad Leader **`#external-wait`** resume per mission `plan.mdc` — still open the **next-step resume** structured choice **before** **StreamFinal** when the skill says so. **Forbidden:** classifying *waiting for the developer to review the PR on GitHub and return* as external-wait — GitHub reviewers are external; **lane continuation** is developer-input via the gates above.
+
+**Checkpoint auto-advance does not apply** when a row in § *Every developer-await turn* names a gate and no clean auto-advance criterion in the Checkpoint table passes — including **manual After deploy** presentation: auto-advance stops **at** presentation; the **same turn** must emit **`deploy-walk`** Manual step await gate.
+
 | Step | Checkpoint behavior | Gate |
 |------|---------------------|------|
 | **Pre-worktree validation** — `plan-ws-completeness.mjs` | Auto-advance — record `planCompleteness`; route in worktree-open or auto-authorize | exception: missing plan path |
@@ -405,7 +426,7 @@ Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.s
 | **Implementation continuation gate** | **Auto-advance** — resolve **`ready-for-review`** when [clean implementation](#implementation-continuation-gate) criteria pass | **Gate** when any clean criterion fails — [Implementation continuation gate](#implementation-continuation-gate) |
 | **Repo rules reconciliation** + **pre-review verification** (steps **7–8**) | Auto-advance on happy path before ship cut-point | exception: action bullets without `.mdc` diff; verification failures |
 | **Ship cut-point gate** | **Auto-advance** — resolve **`commit-only`** (full path: commit + inline Before deploy **`deploy-walk`** when plan-anchored) when [clean cut-point](#ship-cut-point-gate-approve-commit-before-deploy) criteria pass | **Gate** when any clean criterion fails — [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) |
-| **Pre-merge ship** (post-create-pr → **`pr-review`** → merge delegation) | Deferred — existing gate markers and external-wait surfaces | pre-PR findings, create-PR, post-create-PR, pre-merge authorization |
+| **Pre-merge ship** (post-create-pr → **`pr-review`** → merge delegation) | Auto-advance only on documented clean paths; **developer-input** at gate markers | post-create-PR, **`pr-review`** disposition, pre-PR findings, pre-merge authorization — **not** external-wait when developer must pick |
 | **Post-merge tail** (cleanup → promote-pin hint → After deploy walk entry) | **Auto-advance** — no turn-end modal between PR merge and first After deploy manual step | exception: cleanup partial / merge unconfirmed / promote-pin hard failure |
 | **After deploy deploy-walk** — manual §7 steps (Production Deploy Steps) | **Gate** — **sole** USER_CHECKPOINT surface **after PR merge** on this lane | [`deploy-walk` Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding) |
 | **Post-after-deploy tail** (plan-reconcile → **`prShipComplete`**) | **Auto-advance** — run remainder inventory without batch modal when clean | exception: reconcile flags requiring developer picks |
@@ -422,6 +443,8 @@ Under Checkpoint trust, after **`outputs.prState: merged`** (or merge confirmed 
 2. Inline **`promote-center-submodule-pin`** when cleanup JSON **`nextAction: promote-pin-required`** (agent-owned handoff — no spawn, no modal per that skill).
 3. [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) — inline **`deploy-walk`** for **`### After deploy`** only.
 4. When **`deployStatus: done`** and **`deployTodoStatus: done`**, auto-run [Post–After deploy remainder inventory](#post-after-deploy-remainder-inventory) steps (**`plan-reconcile`** then **`pr-ship-complete`**) without [Post–After deploy remainder authorization](#post-after-deploy-remainder-authorization) batch modal when reconcile requires no developer picks.
+
+**Manual step presentation (binding):** When step **3** inline **`deploy-walk`** presents a **manual** After deploy step (Step 4 presentation), **same assistant turn** must close with **`deploy-walk`** [Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding). **Forbidden:** listing unchecked After deploy steps in recap and ending with *reply with results*, *run these spot-checks then tell me*, or *auto-advancing (no modal)* — that gate is the **allowed** USER_CHECKPOINT after merge, not an optional extra modal.
 
 **Forbidden turn-end modals after PR merge (Checkpoint — binding):**
 
@@ -1328,7 +1351,7 @@ When inline **`create-pr`** completes with a PR URL/number (or the developer ret
 | `start-pr-review-delegate-merge` | Start PR review — agent approve + merge when clean | Set `outputs.mergeDelegationAuthorized: true`; run [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) on **next** turn; when **`mergeDelegationReady`**, open [Pre-merge authorization gate](#pre-merge-authorization-gate) |
 | `start-pr-review` | Start inline PR review only | Run [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) on **next** turn — **you** merge on GitHub when ready |
 | `reconcile-github-only` | Reconcile GitHub only (Step 5) | Run **`pr-review`** Step 5 only — when triage already ran and push landed without reconciliation |
-| `submit-manual-review` | Submit manual review on GitHub | [Manual review submission (external-wait)](#manual-review-submission-external-wait) — open structured choice; developer submits Approve / Comment / Request changes on GitHub |
+| `submit-manual-review` | Submit manual review on GitHub | [Manual review submission (developer-input)](#manual-review-submission-developer-input) — open structured choice; developer submits Approve / Comment / Request changes on GitHub |
 | `check-pr-status` | Check PR merge status | Refresh `prState` / `mergeSha` / `mergedAt` via `gh` or repo tooling; re-open this gate |
 | `rebase-onto-main` | Rebase onto origin/main | On **next** turn, [Rebase onto origin/main after PR creation](#rebase-onto-origin-main-after-pr-creation) |
 | `spawn-after-deploy-walk` | PR merged — start After deploy deploy-walk | On **next** turn, [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) when merge confirmed |
@@ -1356,16 +1379,18 @@ Run on the **developer's response turn** — **not** in the same assistant turn 
 | **`start-pr-review-delegate-merge`** | Set `outputs.mergeDelegationAuthorized: true`; [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) on **next** turn — **Step 1 `pr-review.mjs` collect first**; when **`mergeDelegationReady`**, open [Pre-merge authorization gate](#pre-merge-authorization-gate) |
 | **`start-pr-review`** | [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) on **next** turn — **Step 1 `pr-review.mjs` collect first** |
 | **`reconcile-github-only`** | Run **`pr-review`** Step 5 only (§ *Post-fix push — Step 5 same turn*); then re-open this gate or pre-merge gate when **`githubReconciliationStatus: complete`** |
-| **`submit-manual-review`** | [Manual review submission (external-wait)](#manual-review-submission-external-wait) |
+| **`submit-manual-review`** | [Manual review submission (developer-input)](#manual-review-submission-developer-input) |
 | **`check-pr-status`** | Query PR state; update `outputs`; when **`merged`**, run [Post-merge workspace cleanup](#post-merge-workspace-cleanup) **auto-apply** on **next** turn |
 | **`rebase-onto-main`** | [Rebase onto origin/main after PR creation](#rebase-onto-origin-main-after-pr-creation) |
 | **`spawn-after-deploy-walk`** | When merge confirmed: [Post-merge workspace cleanup](#post-merge-workspace-cleanup) **auto-apply** on **next** turn, then [After deploy deploy-walk handoff](#after-deploy-deploy-walk-handoff) after cleanup completes or is skipped |
 | **`defer-ship`** | Stop with recap; `continuationStatus: active` |
 | **`more-details`** | Clarify; re-open gate |
 
-### Manual review submission (external-wait)
+### Manual review submission (developer-input)
 
 Run when the developer picks **`submit-manual-review`** at [Post-create-pr handoff gate](#post-create-pr-handoff-gate), at **`pr-review`** Step **3b** disposition gate, or when they choose to submit their own GitHub review before further agent triage or merge.
+
+**Checkpoint (binding):** This path is **developer-input**, not rule **2** external-wait. Emit **`MC_PHASED_RESPONSE_V1`** on the pick turn and again on the **resume** turn below — the developer attests review submission via modal pick; the lane does **not** idle in external-wait mode waiting for a GitHub webhook.
 
 **Purpose:** Open structured choice naming **`manual-review-done-check-status`** and **`start-pr-review`** while the developer submits their own pull request review on GitHub (Approve, Comment, or Request changes) — without forcing agent triage or delegate-merge paths.
 
@@ -1705,7 +1730,7 @@ Run only after the developer chooses **`start-pr-review`** or **`start-pr-review
 1. **Read** [pr-review/SKILL.md](../pr-review/SKILL.md) (or confirm it is already loaded this pass).
 2. Run **`pr-review`** **Step 1** — the **`pr-review.mjs`** collection array from **`HOSTING_ROOT`** — as the **first GitHub-touching shell** in that turn.
 
-**Forbidden:** generic `gh pr view --json reviews,comments`, `gh api`, or GraphQL substitutes before Step 1; prose *review the PR on GitHub* without opening the post-create-pr or disposition gate; external-wait / next-step modal that skips Step 1 when triage was requested.
+**Forbidden:** generic `gh pr view --json reviews,comments`, `gh api`, or GraphQL substitutes before Step 1; prose *review the PR on GitHub* without opening the post-create-pr or disposition gate; external-wait prose that skips Step 1 when triage was requested; ending a turn in *waiting for PR review* mode without [Post-create-pr handoff gate](#post-create-pr-handoff-gate) or **`pr-review`** disposition gate when the developer must pick the next action.
 
 Inline `pr-review` inputs come from coding-session state:
 
