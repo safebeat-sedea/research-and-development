@@ -239,8 +239,17 @@ function isDocumentationExempt(line) {
   if (!trimmed) return true;
   if (/^\|/.test(trimmed)) return true;
   if (/^#{1,6}\s/.test(trimmed) && /\bForbidden\b/i.test(trimmed)) return true;
-  if (/\*\*Forbidden\*\*/.test(trimmed)) return true;
+  // Normative **Forbidden:** / **Forbidden** catalogs (colon variant was a false-positive gap).
+  if (/\*\*Forbidden\b/.test(trimmed)) return true;
   if (/\*\*Forbidden on this lane:\*\*/.test(trimmed)) return true;
+  // Binding sections that quote forbidden idle-handoff phrases as anti-pattern examples.
+  if (
+    /\*\*(?:Turn completion|Merged-forward|Implicit external-wait|Manual step presentation|When required)\b/.test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
   if (/\bdo not call\b/i.test(trimmed)) return true;
   if (
     /\bmission_control_propose_dispatch_resolution\b/.test(trimmed) &&
@@ -249,6 +258,11 @@ function isDocumentationExempt(line) {
     return true;
   }
   if (/\bnot\b/i.test(trimmed) && /\b(?:external-wait|prose-only|idle handoff)\b/i.test(trimmed)) {
+    return true;
+  }
+  // Detection-procedure bullets quoting softened prose as examples to match, not prescribe.
+  if (/^\s*-\s+Use semantic matching\b/.test(trimmed)) return true;
+  if (/\bsuch as\s+["'][^"']*\b(?:tell me when|reply with|come back when)\b/i.test(trimmed)) {
     return true;
   }
   return false;
