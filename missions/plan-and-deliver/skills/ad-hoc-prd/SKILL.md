@@ -161,16 +161,65 @@ After **`title`** / change-request scope is clear (before writing the Ad-Hoc PRD
 
 See [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Child lane — refresh own slot when labels are stale*.
 
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`ad-hoc-prd`**; invoker missions **`single-phase`** and **`debug-and-fix`** document their own Squad Leader gates — see **`single-phase/plan.mdc`** §3 / §2 and **`debug-and-fix/plan.mdc`** §5c for spawn and leader-lane resume tables.
+
+**Real-dispatch test loop (binding):** After merge, run one full **`ad-hoc-prd`** spawn on a Checkpoint dispatch through step **5** PRD approval and collect a developer verdict before the parent phase advances the next cross-mission skill PR — per **Planning protocol skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **1** — Validate inputs | Auto-advance when spawn `inputs` supply all required fields | **Gate** when required fields missing — [Missing inputs gate](#missing-inputs-gate-binding) |
+| **2–3** — Template + filename | Auto-advance | — |
+| **4** — Write `.ad-hoc-prd.md` | Auto-advance on successful write | exception: write failure → `failure` / `partial` |
+| **Refresh lane display** | Auto-advance when spawn labels already match scope | run MCP display update then auto-advance when stale |
+| **Post-write MCP result** (`developerApprovedPrd: false`) | External-wait on invoker leader — Squad Leader **acks only** | **not** permission to advance **`single-phase`** §4 or **`debug-and-fix`** §7 |
+| **5** — Present for approval | **Gate** — **first developer-pick gate on this lane** | PRD approval (below) |
+| **5a** — Open-item resolution | **Gate** — apply pick, return to step **5** | same multi-question approval shape |
+| **6** — On approve | Auto-advance to terminal **`mission_control_send_agent_result`** | — |
+| **7** — On revise | Auto-advance back to step **5** | — |
+
+### Missing inputs gate (binding)
+
+When **`createIntent`**, **`title`**, **`details`**, or resolvable **`operationsDocsDirectory`** are missing and the invoker cannot supply them on the leader lane:
+
+USER_CHECKPOINT — provide missing ad-hoc PRD inputs on this lane.
+
+| Option id | Label |
+|-----------|--------|
+| `provide-title` | Supply title |
+| `provide-details` | Supply change-request details |
+| `defer` | Defer — return partial result to invoker |
+| `more-details` | More details for option _ |
+
+- **Next-step resolution:** Auto-advance to step **2** when all required inputs resolve — no `USER_CHECKPOINT` on happy-path spawn handoff with complete `inputs`.
+
 ## Steps
 
 1. **Validate inputs** — `createIntent === true`, non-empty `title`, non-empty `details`, and resolvable **docs write root** (see § *Docs write root*).
+
+   - **Next-step resolution:** Auto-advance to step **2** when validation passes — no `USER_CHECKPOINT` on happy path. When required fields are missing, open [Missing inputs gate](#missing-inputs-gate-binding) or return `partial` with `outputs.missingFields` when the skill cannot collect on this lane.
+
 2. **Use** **§ Ad-Hoc PRD file shape (template)** below — no external template file.
+
+   - **Next-step resolution:** Auto-advance to step **3** — no `USER_CHECKPOINT` on this step.
+
 3. **Filename:** `ad_hoc_<slugified-title>_<8-hex>.ad-hoc-prd.md` — slugify title (lowercase, non-alphanumerics → `_`, collapse repeats, max ~48 chars) + `_<random 8 hex>` (`crypto.randomBytes(4).toString('hex')` or equivalent).
+
+   - **Next-step resolution:** Auto-advance to step **4** — no `USER_CHECKPOINT` on this step.
+
 4. **Write** under the resolved docs write root:
  - `# <Title>` — handoff title (not the filename).
  - **`Master Plan:`** line — `_TBD_` plus one sentence that **`master-planner`** will create the `.plan.md` from this Ad-Hoc PRD and the developer should paste or link that path here when it exists (do **not** invent a plan path).
  - **`## 1–3`** sections filled from handoff details; `_TBD_` where unavoidable + say what is missing.
+
+   - **Next-step resolution:** Auto-advance to step **5** after successful write — emit non-terminal **`mission_control_send_agent_result`** with `developerApprovedPrd: false` when the invoker protocol requires leader ack before step **5**; do **not** treat that ack as PRD approval.
+
 5. **Present for approval** — Recap the new file (workspace / `file://` link, one-line summary of §§1–3). Use **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** per **`../README.md`** § *Recap, structured choice, act* and **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**.
+
+USER_CHECKPOINT — approve, revise, or resolve open items on this Ad-Hoc PRD before invoker downstream steps.
 
  **Detect open items** before building the modal: `_TBD_` bullets in §§1–3, explicit risks or unknowns in **§3 Proposed solution**, thin or ambiguous acceptance criteria, and `outputs.complexityGuard: needs-master-plan-assessment`.
 
@@ -190,8 +239,15 @@ See [`.sedea/centers/research-and-development/rules/50_mission-control-display-m
 
 5a. **On open-item resolution pick** — Apply the selected resolution for **that question's item** to the `.ad-hoc-prd.md`, then return to step 5 with the same multi-question approval shape.
 
+   - **Next-step resolution:** Re-open step **5** PRD approval gate after each resolution pick.
+
 6. **On approve** — Set `outputs.developerApprovedPrd: true`, ensure `prdRef` / `prdPath` / `prdTitle` reflect the approved file, then emit the terminal **`mission_control_send_agent_result`** with `continuationStatus: terminal` and `continuationOwner: "squad-leader"`.
+
+   - **Next-step resolution:** Auto-advance to terminal MCP result — no additional `USER_CHECKPOINT` on this step.
+
 7. **On revise** — Apply edits to the Ad-Hoc PRD file, then repeat step 5 until the developer approves or abandons (report `aborted` / `abandoned` only when they clearly stop).
+
+   - **Next-step resolution:** Auto-advance back to step **5** — no `USER_CHECKPOINT` until step **5** presents the revised PRD.
 
 ## Completion (spawned)
 

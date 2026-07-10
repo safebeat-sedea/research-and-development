@@ -158,7 +158,7 @@ USER_CHECKPOINT — pick intake mode or confirm ad-hoc scope intake before spawn
 - **Required rule context:** Sedea baseline, **this `plan.mdc` (§§1–3)**, **`development-process.md`**, target skill.
 - **Spawn `warmUpRules` (binding):** On **`mission_control_spawn_agent`**, merge skill frontmatter **`warmUpRules`** but **replace** `plan-and-deliver/plan.mdc` with **`single-phase/plan.mdc`** so the child loads this mission's protocol, not full plan-and-deliver.
 - **Inputs:** `createIntent: true`, `title`, `details` from Mission Control, optional `sourceSummary`, optional `roadmapHints`, and **`operationsDocsDirectory`** from lane identity when the spawn preamble supplies it.
-- **Expected output:** Child terminal with `outputs.adHocPrdPath`, `outputs.developerApprovedPrd`, `outputs.continuationStatus: terminal` when PRD approved.
+- **Expected output:** Child terminal with `outputs.prdPath`, `outputs.prdRef`, `outputs.prdTitle`, `outputs.developerApprovedPrd`, `outputs.continuationStatus: terminal` when PRD approved — per **`ad-hoc-prd/SKILL.md`** **`## Completion (spawned)`**.
 - **Next-step resolution:** Terminal approved PRD → auto-chain §4 → §5 on leader (no re-approval gate). Failure/partial → USER_CHECKPOINT gate below.
 
 USER_CHECKPOINT — pick next step when Ad-Hoc PRD child reports failure or partial.

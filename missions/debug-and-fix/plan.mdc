@@ -185,7 +185,7 @@ USER_CHECKPOINT — revise planning anchor, retry, or switch exits when PR plan 
 - `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/ad-hoc-prd/SKILL.md`](../plan-and-deliver/skills/ad-hoc-prd/SKILL.md).
 - `inputs`: `createIntent: true`, `title` from fix summary, `details` from child `outputs.fixSummary` from Mission Control, optional `sourceSummary` referencing debug dispatch and test evidence, and **`operationsDocsDirectory`** from lane identity when supplied.
 - `spawn run-request fields`: `inputs`, `warmUpRules` per target skill frontmatter, `initiatingPrompt` with debug handover and the selected Ad-Hoc PRD-only exit.
-- `expected output`: Child terminal with `outputs.adHocPrdPath`, `outputs.developerApprovedPrd` after PRD approval flow inside skill.
+- `expected output`: Child terminal with `outputs.prdPath`, `outputs.prdRef`, `outputs.prdTitle`, `outputs.developerApprovedPrd` after PRD approval flow inside **`ad-hoc-prd`** skill — per **`ad-hoc-prd/SKILL.md`** **`## Completion (spawned)`**.
 - `next-step resolution`: Continue to step 7 after child terminal; do not spawn **`coding-session`** from this branch unless the developer later selects code promotion and step 5 creates a PR plan anchor.
 - **Agent session closure** and **Dispatch resolution**: Same as step 3 — child terminal only; Squad Leader continues protocol.
 
