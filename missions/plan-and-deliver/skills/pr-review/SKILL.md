@@ -256,21 +256,21 @@ For each **new** (not filtered in Step 2) comment, verify it against the **curre
 
 **CI failures (from Step 1b):** Each **failing required check** is classified as **Must fix** — same blocking bar as comment **Must fix**. Include check name, workflow, and log summary in the Step 4 report alongside comment rows. When **`ciFailureCount > 0`** and all comment dispositions are **Skipped** variants, the disposition gate still offers CI fix paths (see Step **4** § *Build disposition options*).
 
-Do **not** apply fixes yet. First report the classification; then open the Step **3b** gate (below) — do **not** end the turn with prose “wait for approval”.
+Do **not** apply fixes yet. First report the classification; then open the Step **3b** gate (below) — **except** under Checkpoint auto-advance in Step **4** — do **not** end the turn with prose “wait for approval”.
 
 ### Step 3b — Developer approval gate
 
 Run this gate only after Step 3a has prepared proposed follow-ups and Step **4** has printed the classification report.
 
-Before applying any code, plan, or GitHub changes, open the **disposition gate** in Step **4** (`MC_PHASED_RESPONSE_V1` or **AskQuestion** with the **contextual** option set in Step **4** § *Build disposition options*). **Do not** duplicate the gate in prose.
+Before applying any code, plan, or GitHub changes, open the **disposition gate** in Step **4** (`MC_PHASED_RESPONSE_V1` or **AskQuestion** with the **contextual** option set in Step **4** § *Build disposition options*) — **unless** Checkpoint auto-advance in Step **4** applies. **Do not** duplicate the gate in prose.
 
 **Contextual options (binding):** List **only** disposition actions valid for this PR's Step 3 classification counts — see Step **4** § *Build disposition options*. **Forbidden:** showing **`apply-must`** or **`apply-must-should`** when **`mustCount`** and **`shouldCount`** are both **0** and **`ciFailureCount === 0`**; showing **`apply-rule-updates`** when **`ruleUpdateCount`** is **0**; showing **`follow-ups-only`** when **`followUpCount`** is **0**; showing **`skip-reject`** or **`submit-manual-review`** as the primary path when **`ciFailureCount > 0`** without also offering **`fix-ci-only`** or **`apply-must-should`** (CI fixes). **`more-details`** is always included.
 
-No source edits, plan edits, commits, pushes, GitHub replies, resolves, minimizes, or review re-requests may happen until the developer chooses an approval option shown in the modal.
+No source edits, plan edits, commits, pushes, GitHub replies, resolves, minimizes, or review re-requests may happen until the developer chooses an approval option shown in the modal **or** Checkpoint auto-advance resolves an implicit pick.
 
 When the approved scope includes **Follow-ups only** or includes any **Skipped → follow-up** comments, append only those approved bullets to the linked PR plan's `## Follow-ups` section before Step 5. If the developer rejects a proposed follow-up, do not mutate the plan or mention it as captured in GitHub reconciliation.
 
-After approved fixes are applied, open a **second** structured-choice gate (commit/push options per Step **4** post-fix) before `git commit` or `git push` — do not commit or push silently.
+After approved fixes are applied, open a **second** structured-choice gate (commit/push options per Step **4** post-fix) before `git commit` or `git push` — **Checkpoint:** auto-advance commit + push when the invoker lane is Checkpoint and the developer did not name defer — do not commit or push silently on non-Checkpoint.
 
 ### Step 3a — Propose out-of-scope flags as follow-ups
 
@@ -304,7 +304,21 @@ When **`ciFailureCount > 0`**, add a **CI failures** subsection after comment ro
 
 Do **not** reply to, resolve, or minimize any threads yet.
 
-**Next-step modal (binding):** After the report, emit **`MC_PHASED_RESPONSE_V1`** (preferred on **`coding-session`** spawned lanes — sentinel line **1**, report recap in **`display.markdown`**) or the **AskQuestion** tool with the **contextual** Step **3b** option set from § *Build disposition options* below. The developer may review on GitHub or inspect local diffs **while the modal stays open**; they continue by **selecting an option**, not free-form chat.
+### Checkpoint — auto-advance disposition (binding)
+
+Under Checkpoint trust on the invoker **`coding-session`** lane, **auto-advance** the disposition pick — **no** **`MC_PHASED_RESPONSE_V1`** — when the developer did **not** name defer / revise / skip-reject / submit-manual-review in the **same** message:
+
+| Condition | Implicit pick |
+|-----------|---------------|
+| **`ciFailureCount > 0`** and **`mustCount === 0`** and **`shouldCount === 0`** | **`fix-ci-only`** |
+| **`mustCount > 0`** or **`shouldCount > 0`** (with or without CI) | **`apply-must-should`** when Should present, else **`apply-must`** |
+| **`skippedOnly`** (no Must/Should/CI/rule-update/follow-up) | **`skip-reject`** → Step **5** same turn |
+| **`followUpCount > 0`** only | **`follow-ups-only`** |
+| **`ruleUpdateCount > 0`** only | **`apply-rule-updates`** |
+
+One-line recap of counts + implicit pick, then **Act** on the **next** turn (or same turn for skipped-only → Step 5). **Exception — gate required:** ambiguous classification, Rule-update mixed with Must when paths unclear, or developer named a non-default path — emit the modal below.
+
+**Next-step modal (binding):** After the report, when Checkpoint auto-advance does **not** apply, emit **`MC_PHASED_RESPONSE_V1`** (preferred on **`coding-session`** spawned lanes — sentinel line **1**, report recap in **`display.markdown`**) or the **AskQuestion** tool with the **contextual** Step **3b** option set from § *Build disposition options* below. The developer may review on GitHub or inspect local diffs **while the modal stays open**; they continue by **selecting an option**, not free-form chat.
 
 #### Build disposition options (contextual — binding)
 
@@ -364,13 +378,13 @@ Run on the **developer's response turn** when they pick **`merged-pr-proceed`**:
 | CI-only (0 Must / 0 Should / 0 rule-update / 0 follow-up, N failing checks) | `fix-ci-only`, `defer-ci`, `merged-pr-proceed`, `more-details` |
 | CI + Must | `apply-must`, `apply-must-should`, `fix-ci-only`, `defer-ci`, `merged-pr-proceed`, `more-details` |
 
-**Forbidden:** “Review the PR and tell me when to continue”, “wait for the user to review”, fixed five-option menus when counts make options inert, or ending the turn without structured choice when dispositions need approval.
+**Forbidden:** “Review the PR and tell me when to continue”, “wait for the user to review”, fixed five-option menus when counts make options inert, or ending the turn without structured choice when dispositions need approval **and** Checkpoint auto-advance does not apply.
 
-**Act** (edits, plan append, GitHub reconciliation) runs on the **developer's response turn** after modal selection — not in the same turn as the disposition gate.
+**Act** (edits, plan append, GitHub reconciliation) runs on the **developer's response turn** after modal selection — or on the **next** turn after Checkpoint auto-advance — not in the same turn as the disposition gate modal.
 
 When the developer picks **`apply-rule-updates`**, run **`coding-session`** [Post-review repo rules handoff](../coding-session/SKILL.md#post-review-repo-rules-handoff) on the **next** turn — apply approved **`.mdc`** edits in **`WORKTREE_ROOT`**, commit/push to the **same open PR**, then re-run Step **5** in the **same turn** as push. When **`apply-rule-updates`** is combined with **`apply-must`** / **`apply-must-should`**, complete code fixes first, then run the rule-update handoff before Step **5**.
 
-When fixes are applied and ready to land, use a **separate** structured-choice gate before commit/push. Include at least:
+When fixes are applied and ready to land, use a **separate** structured-choice gate before commit/push — **Checkpoint:** auto-advance *commit and push* (same-message consent implied by Checkpoint ship trust on this invoker) then run Step **5** same turn after push. Non-Checkpoint: include at least:
 
 1. **Commit and push** (same message must say *commit* / *push* per **`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`**) — when Step 4 ran in this chat, rule **20** § *Commit and push cadence* step 3 requires **this skill’s Step 5 (GitHub only)** in the **same agent turn** after push, before plan upsert and **create-pr** prompt. **After push**, re-run **Step 1b** before declaring CI cleared or opening merge paths.
 2. **Revise dispositions or fixes**
