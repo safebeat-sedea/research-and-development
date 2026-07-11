@@ -374,7 +374,7 @@ On spawned **`coding-session`** lanes, **any** assistant turn where the develope
 | Before deploy manual step | § [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) step 4 |
 | Pre-PR findings | [Review feedback approval gate](#review-feedback-approval-gate) — **Checkpoint:** auto-advance **`fix-now-session`** |
 | Open PR (exceptional) | [Create-PR handoff after go](#create-pr-handoff-after-go) — **Checkpoint:** auto-advance **`approve-followups-create-pr`** when **`hasProposedFollowUps`** |
-| **After `gh pr create` succeeds** | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — **Checkpoint:** auto-advance **`start-pr-review-delegate-merge`** |
+| **After `gh pr create` succeeds** | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — **Checkpoint:** **Gate** — emit post-create-pr **`MC_PHASED_RESPONSE_V1`** same turn |
 | **Waiting for PR review / merge resume** (developer returns after GitHub review or idle PR) | **`pr-review`** disposition gate — **Checkpoint:** PR review stop only |
 | **After fix push — Step 5 pending** | Run **`pr-review`** Step 5 **same turn** as push — **Checkpoint:** auto-run; no post-create-pr or pre-merge modal until **`githubReconciliationStatus: complete`** |
 | Waiting on child **`pre-pr-review`** | **Checkpoint:** implicit external-wait — auto-advance on child result per [Review result aggregation](#review-result-aggregation); **non-Checkpoint:** **`MC_PHASED_RESPONSE_V1`** with resume paths |
@@ -450,18 +450,19 @@ Only **two** developer-consent layers apply before worktrees. Do not stack extra
 
 Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`coding-session`**; other ship-chain skills document their own markers.
 
-### Checkpoint two-stop model (binding)
+### Checkpoint three-stop model (binding)
 
 On a **clean** Checkpoint ship chain (no eligibility failures, named defer/revise, executive override, or plan-change notify), the lane opens a turn-end modal **only** at these surfaces:
 
 | # | Surface | Normative gate |
 |---|---------|----------------|
-| **1** | **PR review** — inline **`pr-review`** disposition (Step **3b** / Step **4**) after PR exists | **`pr-review/SKILL.md`** disposition gate on this lane |
-| **2** | **Manual deploy verification** — §7 Production Deploy Steps the agent cannot execute | **`deploy-walk`** [Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding) for **`### Before deploy`** and **`### After deploy`** manual steps |
+| **1** | **PR opened** — next ship action after inline **`create-pr`** | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) on this lane |
+| **2** | **PR review** — inline **`pr-review`** disposition (Step **3b** / Step **4**) after PR exists | **`pr-review/SKILL.md`** disposition gate on this lane |
+| **3** | **Manual deploy verification** — §7 Production Deploy Steps the agent cannot execute | **`deploy-walk`** [Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding) for **`### Before deploy`** and **`### After deploy`** manual steps |
 
-**Auto-advance under Checkpoint (not modal stops — standard ship operations):** worktree-open when [Auto-authorize](#auto-authorize-implementation-pr-plan-spawn) applies; implementation continuation; repo rules reconciliation; ship cut-point; agent-executable Before deploy **`deploy-walk`** steps; **`pre-pr-review`** child wait and result handback; pre-PR findings with **`flags`** / Must / Should (**`fix-now-session`**); inline **`create-pr`** on clean **`go`** (including **`create-pr`** [Checkpoint — auto-advance `authorize-create-pr`](../create-pr/SKILL.md#checkpoint--auto-advance-authorize-create-pr-binding) — **forbidden:** *Create the pull request now?* modal); create-PR when **`hasProposedFollowUps`** (**`approve-followups-create-pr`** when non-empty); post-create-pr (**`start-pr-review-delegate-merge`**); rebase onto **`origin/main`** including conflict resolution and **`--force-with-lease`** push; failing CI remediation; post-fix push + **`pr-review`** Step 5; pre-merge when **`mergeDelegationReady`** (**`delegate-merge-confirm`**); post-merge cleanup and After deploy agent-executable steps.
+**Auto-advance under Checkpoint (not modal stops — standard ship operations):** worktree-open when [Auto-authorize](#auto-authorize-implementation-pr-plan-spawn) applies; implementation continuation; repo rules reconciliation; ship cut-point; agent-executable Before deploy **`deploy-walk`** steps; **`pre-pr-review`** child wait and result handback; pre-PR findings with **`flags`** / Must / Should (**`fix-now-session`**); inline **`create-pr`** on clean **`go`** (including **`create-pr`** [Checkpoint — auto-advance `authorize-create-pr`](../create-pr/SKILL.md#checkpoint--auto-advance-authorize-create-pr-binding) — **forbidden:** *Create the pull request now?* modal); create-PR when **`hasProposedFollowUps`** (**`approve-followups-create-pr`** when non-empty); rebase onto **`origin/main`** including conflict resolution and **`--force-with-lease`** push; failing CI remediation; post-fix push + **`pr-review`** Step 5; pre-merge when **`mergeDelegationReady`** (**`delegate-merge-confirm`**); post-merge cleanup and After deploy agent-executable steps.
 
-**Not exceptions (binding):** pre-PR review **`flags`**, open-PR resume, PR comment fix loops, rebase conflict resolution, failing CI fix paths, and post-create-pr rebase push — run as **standard operations** without an extra coding-session modal between steps. The **PR review** stop is the inline **`pr-review`** disposition gate; addressing approved fix scope afterward is agent work until the next disposition cycle or deploy manual gate.
+**Not exceptions (binding):** pre-PR review **`flags`**, PR comment fix loops, rebase conflict resolution, failing CI fix paths, and post-create-pr rebase push — run as **standard operations** without an extra coding-session modal between steps **except** [Post-create-pr handoff gate](#post-create-pr-handoff-gate) stop **1** and **`pr-review`** disposition stop **2**. **Forbidden:** prose-only *Next: inline pr-review* / PR URL recap without post-create-pr **`MC_PHASED_RESPONSE_V1`** on the **`create-pr`** completion turn — that gate is the resume surface for PR handling, not external-wait.
 
 **Real-dispatch test loop (binding):** After merge, run one full **`coding-session`** spawn on a Checkpoint dispatch through the worktree-open gate (or auto-authorize path when eligible) and collect a developer verdict before the parent phase advances **`pre-pr-review`** PR 2 — per **Ship-chain skills UX** § *Single-concern strategy*.
 
@@ -471,17 +472,17 @@ Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.s
 
 Under Checkpoint trust, **happy-path protocol steps auto-advance without a turn-end modal**. Emit **`MC_PHASED_RESPONSE_V1`** or **AskQuestion** only at **USER_CHECKPOINT** markers in this skill, **implicit external-wait** surfaces (host-delivered child results, true async waits), or **exception** paths.
 
-**Developer-input** (continuation requires the **developer** to pick a modal option or structured choice on **this lane**) is **not** external-wait. Under **non-Checkpoint** trust, these USER_CHECKPOINT surfaces **must** close the turn with **`MC_PHASED_RESPONSE_V1`** / **AskQuestion**. Under **Checkpoint** trust, only rows marked **Checkpoint gate** require a modal; others auto-advance per [Checkpoint two-stop model](#checkpoint-two-stop-model-binding) and subsection auto-advance tables below.
+**Developer-input** (continuation requires the **developer** to pick a modal option or structured choice on **this lane**) is **not** external-wait. Under **non-Checkpoint** trust, these USER_CHECKPOINT surfaces **must** close the turn with **`MC_PHASED_RESPONSE_V1`** / **AskQuestion**. Under **Checkpoint** trust, only rows marked **Checkpoint gate** require a modal; others auto-advance per [Checkpoint three-stop model](#checkpoint-three-stop-model-binding) and subsection auto-advance tables below.
 
 | Situation | Normative gate | Checkpoint |
 |-----------|----------------|------------|
-| PR opened — next ship action (review, merge check, defer) | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) | Auto-advance **`start-pr-review-delegate-merge`** |
+| PR opened — next ship action (review, merge check, defer) | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) | **Checkpoint gate** — post-create-pr stop **1** |
 | Developer submits own GitHub review — resume triage | [Manual review submission (developer-input)](#manual-review-submission-developer-input) | Auto-advance **`start-pr-review-delegate-merge`** when triage was requested |
 | Inline **`pr-review`** — triage disposition / fix scope | **`pr-review`** Step **3b** / Step **4** disposition gates | **Checkpoint gate** — PR review stop |
 | Before / After deploy — manual §7 verification | **`deploy-walk`** [Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding) | **Checkpoint gate** — deploy manual stop |
 | Pre-PR findings after child returns | [Review feedback approval gate](#review-feedback-approval-gate) | Auto-advance **`fix-now-session`** |
 | Agent-delegated merge when clean | [Pre-merge authorization gate](#pre-merge-authorization-gate) | Auto-advance **`delegate-merge-confirm`** when **`mergeDelegationReady`** |
-| Parent plan-change notify UserSend | [Plan-change notification receive (child lane)](#plan-change-notification-receive-child-lane) | **Checkpoint gate** (exception to two-stop) |
+| Parent plan-change notify UserSend | [Plan-change notification receive (child lane)](#plan-change-notification-receive-child-lane) | **Checkpoint gate** (exception to three-stop when notify arrives mid-ship) |
 
 **Implicit external-wait** (host or async event may resume the lane **without** a developer modal pick on that turn): **`mission_control_send_agent_result`** delivery from spawned **`pre-pr-review`**; Squad Leader **`#external-wait`** resume per mission `plan.mdc` — still open the **next-step resume** structured choice **before** **StreamFinal** when the skill says so. **Forbidden:** classifying *waiting for the developer to review the PR on GitHub and return* as external-wait — GitHub reviewers are external; **lane continuation** is developer-input via the gates above.
 
@@ -498,7 +499,8 @@ Under Checkpoint trust, **happy-path protocol steps auto-advance without a turn-
 | **Repo rules reconciliation** + **pre-review verification** (steps **7–8**) | Auto-advance on happy path before ship cut-point | exception: action bullets without `.mdc` diff; verification failures — [Repo rules reconciliation gate](#repo-rules-reconciliation-gate) |
 | **Ship cut-point gate** | **Auto-advance** — resolve **`commit-only`** (full path: commit + inline Before deploy **`deploy-walk`** when plan-anchored) when [clean cut-point](#ship-cut-point-gate-approve-commit-before-deploy) criteria pass | **Gate** when any clean criterion fails — [Ship cut-point gate](#ship-cut-point-gate-approve-commit-before-deploy) |
 | **Pre-PR review feedback** | **Auto-advance** — **`fix-now-session`** when **`actionablePrePrFindings`**; inline **`create-pr`** on clean **`go`** without findings; **`approve-followups-create-pr`** when **`hasProposedFollowUps`** only | Exception: developer **`defer`** / **`revise-scope`** in **same** message — [Review feedback approval gate](#review-feedback-approval-gate) |
-| **Pre-merge ship** (post-create-pr → **`pr-review`** → merge delegation) | **Auto-advance** — post-create-pr → **`start-pr-review-delegate-merge`**; rebase push **`--force-with-lease`**; pre-merge → **`delegate-merge-confirm`** when **`mergeDelegationReady`** | **Checkpoint gate** at **`pr-review`** disposition only; exception: merge blockers after inspect — [Pre-merge authorization gate](#pre-merge-authorization-gate) |
+| **Pre-merge ship** (after post-create-pr pick → **`pr-review`** → merge delegation) | **Auto-advance** — rebase push **`--force-with-lease`**; pre-merge → **`delegate-merge-confirm`** when **`mergeDelegationReady`** | **Checkpoint gate** at **`pr-review`** disposition only; exception: merge blockers after inspect — [Pre-merge authorization gate](#pre-merge-authorization-gate) |
+| **Post-create-pr handoff** | **Gate** — emit post-create-pr **`MC_PHASED_RESPONSE_V1`** same turn as inline **`create-pr`** completion | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) — **Checkpoint** stop **1** |
 | **Post-merge tail** (cleanup → promote-pin hint → After deploy walk entry) | **Auto-advance** — no turn-end modal between PR merge and first After deploy manual step | exception: cleanup partial / merge unconfirmed / promote-pin hard failure |
 | **After deploy deploy-walk** — manual §7 steps (Production Deploy Steps) | **Gate** — **sole** USER_CHECKPOINT surface **after PR merge** on this lane | [`deploy-walk` Manual step await gate](../deploy-walk/SKILL.md#manual-step-await-gate-binding) |
 | **Post-after-deploy tail** (plan-reconcile → **`prShipComplete`**) | **Auto-advance** — run remainder inventory without batch modal when clean | exception: reconcile flags requiring developer picks |
@@ -976,7 +978,7 @@ Pre-ship setup on this lane (not shown): implement → [Repo rules reconciliatio
 | 2 | [Before deploy deploy-walk handoff](#before-deploy-deploy-walk-handoff) | inline | **Yes** — after cut-point **Act** (commit when needed, then inline walk) | **No** (manual §7 step only) |
 | 3 | [Auto-spawn pre-pr-review](#auto-spawn-pre-pr-review) + [Pre-PR review handoff](#pre-pr-review-handoff) | spawn | **Yes** — Before deploy resolved or skipped | **No** — auto-spawn on next turn |
 | 4 | [Inline create-pr (auto on clean go)](#inline-create-pr-auto-on-clean-go) or [Create-PR handoff after go](#create-pr-handoff-after-go) | inline | After **`pre-pr-review`** **go** | **Checkpoint:** **No** — auto create-pr / **`approve-followups-create-pr`**; **non-Checkpoint:** modal when **`hasProposedFollowUps`** or **`proceed-create-pr`** |
-| 5 | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) | gate | **No** | **Checkpoint:** **No** — auto **`start-pr-review-delegate-merge`**; **non-Checkpoint:** **Yes** |
+| 5 | [Post-create-pr handoff gate](#post-create-pr-handoff-gate) | gate | **No** | **Yes** — **Checkpoint** and non-Checkpoint; **forbidden:** prose-only PR URL / *Next: inline pr-review* without modal |
 | 6 | Inline **`pr-review`** (see skill path in **`plan.mdc`** §8) | inline | **No** — after PR exists | **Checkpoint:** **Yes** at disposition gate (PR review stop); **non-Checkpoint:** triage disposition modal |
 | 7 | [Agent-delegated PR approve and merge](#agent-delegated-pr-approve-and-merge) | procedure | **No** — after clean **`pr-review`** when delegation authorized | **Checkpoint:** **No** when **`mergeDelegationReady`** — auto **`delegate-merge-confirm`**; modal on blockers only |
 | 8 | [Post-merge workspace cleanup](#post-merge-workspace-cleanup) | procedure | **No** — after **`prState: merged`**, before After deploy | **No** — auto **`--apply`** when authorized; modal on failure/unclear ownership only; Checkpoint: [Post-merge Checkpoint chain](#post-merge-checkpoint-chain-binding) |
@@ -1396,7 +1398,7 @@ Construct inline context:
 | `upstreamSkill` | `"coding-session"` |
 
 4. Follow **`create-pr`** gates and procedure (`gh pr create` when authorized). Under Checkpoint trust, **`create-pr`** [Checkpoint — auto-advance `authorize-create-pr`](../create-pr/SKILL.md#checkpoint--auto-advance-authorize-create-pr-binding) runs **`gh pr create`** on the **same** turn — **forbidden:** deferring to **`create-pr`** [Pre-gh authorization gate](../create-pr/SKILL.md#pre-gh-authorization-gate-binding) on the clean path. Merge **`## Completion (inline)`** into coding-session `outputs`.
-5. **Same assistant turn** — when step **4** completes with a PR URL/number, under Checkpoint trust **auto-advance** [Post-create-pr handoff gate](#post-create-pr-handoff-gate) per [Checkpoint — auto-advance `start-pr-review-delegate-merge`](#checkpoint--auto-advance-start-pr-review-delegate-merge-binding); otherwise open the gate before **StreamFinal**.
+5. **Same assistant turn** — when step **4** completes with a PR URL/number, open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) with **`MC_PHASED_RESPONSE_V1`** before **StreamFinal** — **Checkpoint** and non-Checkpoint. **Forbidden:** prose-only PR URL, *PR created — review on GitHub*, or *Next: inline pr-review* without the post-create-pr modal on this turn.
 
 **Forbidden:** opening *Coding session — create PR* modal on clean **`go`** without proposed follow-ups; opening **`create-pr`** *Create the pull request now?* / [Pre-gh authorization gate](../create-pr/SKILL.md#pre-gh-authorization-gate-binding) on Checkpoint clean path; opening this section when **`hasProposedFollowUps`** is **false**; treating reviewer **`go`** alone as follow-up append consent; any **`approve-followups-create-pr`** option when `proposedFollowUps` is empty.
 
@@ -1440,35 +1442,37 @@ MC_PHASED_RESPONSE_V1
 ```
 
 4. On the **developer's response turn** (not the same turn as the modal), load **`create-pr/SKILL.md`** and run inline per steps in [Inline create-pr (auto on clean go)](#inline-create-pr-auto-on-clean-go) with `followUpsAppended` per pick.
-5. **Same assistant turn** as inline **`create-pr`** completion — under Checkpoint trust **auto-advance** post-create-pr per [Checkpoint — auto-advance `start-pr-review-delegate-merge`](#checkpoint--auto-advance-start-pr-review-delegate-merge-binding); otherwise open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) before **StreamFinal**.
+5. **Same assistant turn** as inline **`create-pr`** completion — open [Post-create-pr handoff gate](#post-create-pr-handoff-gate) with **`MC_PHASED_RESPONSE_V1`** before **StreamFinal** — **Checkpoint** and non-Checkpoint.
 
 ### Post-create-pr handoff gate
 
 When inline **`create-pr`** completes with a PR URL/number (or the developer returns to this lane with a confirmed open PR from the same ship chain):
 
-### Checkpoint — auto-advance `start-pr-review-delegate-merge` (binding)
+**Binding — Checkpoint and non-Checkpoint:** When **`prState`** is **`open`** (or just created this turn) and **`prState`** is not **`merged`**, **same assistant turn** must close with **`MC_PHASED_RESPONSE_V1`** post-create-pr **`options`** — not prose-only PR URL, *Next: inline pr-review*, or idle handoff. **`defaultOptionId: start-pr-review-delegate-merge`** when CI is **`passing`** or **`pending`** and the developer did not name **`defer-ship`**, **`submit-manual-review`**, or **`rebase-onto-main`** in the **same** message.
 
-Under Checkpoint trust, **auto-advance** as if the developer picked **`start-pr-review-delegate-merge`** — **no** **`MC_PHASED_RESPONSE_V1`** — when **all** hold:
+USER_CHECKPOINT — pick next ship action after PR creation on this lane.
+
+### Checkpoint — default `start-pr-review-delegate-merge` (binding)
+
+Under Checkpoint trust, set **`defaultOptionId: start-pr-review-delegate-merge`** on the post-create-pr modal when **all** hold:
 
 1. `prState` is **`open`** (or just created this turn).
 2. Required CI is **`passing`** or **`pending`** (not failing without an in-progress fix path).
 3. Developer did **not** name **`defer-ship`**, **`submit-manual-review`**, or **`rebase-onto-main`** in the **same** message.
 4. When `prState` is already **`merged`**, skip this gate — run [Post-merge Checkpoint chain](#post-merge-checkpoint-chain-binding) instead.
 
-When clean: set `outputs.mergeDelegationAuthorized: true`; one-line recap; run [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) on the **next** turn.
+**Forbidden on Checkpoint clean path:** auto-running [Inline PR review after PR creation](#inline-pr-review-after-pr-creation) on the **`create-pr`** completion turn without the post-create-pr modal; prose-only *Next: inline pr-review* substitutes.
 
-**Exception — gate required:** When any clean criterion fails, CI is failing and needs a disposition pick, or the developer named a non-default path, emit the modal below.
-
-USER_CHECKPOINT — pick next ship action after PR creation on this lane.
+**Exception — gate required:** When **`prState: merged`**, CI is failing and needs a disposition pick, or the developer named a non-default path in the **same** message, still emit the post-create-pr modal (adjust **`defaultOptionId`** / option order per inspect).
 
 ### Non-Checkpoint and exception modal (binding)
 
-When Checkpoint auto-advance does **not** apply:
+When Checkpoint **`defaultOptionId`** criteria do **not** apply, or non-Checkpoint trust applies:
 
 1. Recap: `prUrl`, `prNumber`, `prState`, `reviewState`, and §7 **`### After deploy`** unchecked count when plan-anchored.
-2. Use **one** **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *Coding session — PR opened, next step*) — **Checkpoint:** skip when auto-advance above applies. Required options **in this order**:
+2. Use **one** **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *Coding session — PR opened, next step*) with session [orientation table](#session-orientation-table-binding) as the first block in **`display.markdown`**. Required options **in this order**:
 
-**Post-PR handoff (binding):** **`create-pr`** opens the PR only. This gate is the mandatory resume point for the ship chain when Checkpoint auto-advance does **not** apply. Generic **`gh`** PR inspection, review summaries, or status checks are **not** substitutes for inline **`pr-review`** when the developer picks **`start-pr-review`** — the lane must load **`pr-review/SKILL.md`** and run **`pr-review.mjs`** Step 1 before offering generic review/wait/merge continuation.
+**Post-PR handoff (binding):** **`create-pr`** opens the PR only. This gate is the mandatory resume point for the ship chain after every inline **`create-pr`** completion — **Checkpoint** stop **1** and non-Checkpoint. Generic **`gh`** PR inspection, review summaries, or status checks are **not** substitutes for inline **`pr-review`** when the developer picks **`start-pr-review`** — the lane must load **`pr-review/SKILL.md`** and run **`pr-review.mjs`** Step 1 before offering generic review/wait/merge continuation.
 
 | Option id | Label (brief) | Agent action |
 |-----------|---------------|--------------|
@@ -1853,7 +1857,7 @@ If any precondition fails, report one line what is missing; offer defer or compl
 
 ### Inline PR review after PR creation
 
-Run only after the developer chooses **`start-pr-review`** or **`start-pr-review-delegate-merge`** at [Post-create-pr handoff gate](#post-create-pr-handoff-gate), after Checkpoint **auto-advance** **`start-pr-review-delegate-merge`**, or an explicit *triage PR comments* message on this lane with a known `prUrl`. Under Checkpoint trust, **auto-start** immediately when inline **`create-pr`** completes via [Checkpoint — auto-advance `start-pr-review-delegate-merge`](#checkpoint--auto-advance-start-pr-review-delegate-merge-binding).
+Run only after the developer chooses **`start-pr-review`** or **`start-pr-review-delegate-merge`** at [Post-create-pr handoff gate](#post-create-pr-handoff-gate), or an explicit *triage PR comments* message on this lane with a known `prUrl`. **Forbidden:** starting inline **`pr-review`** on the same turn as inline **`create-pr`** completes — post-create-pr modal pick is required first per [Post-create-pr handoff gate](#post-create-pr-handoff-gate).
 
 **First-action invariant (binding):** On the **Act** turn after **`start-pr-review`** or **`start-pr-review-delegate-merge`**, the agent **must**:
 
