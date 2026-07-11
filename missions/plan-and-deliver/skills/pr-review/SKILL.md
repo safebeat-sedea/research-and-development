@@ -53,6 +53,38 @@ When a **global Cursor or developer rule** directs agents to use `gh` for GitHub
 
 Triage and fix loops use **AskQuestion**, **`mission_control_present_structured_choice`** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* on the **`coding-session`** lane — **preferred:** recap (comment summary) + modal in one message. **Act** (code/plan edits) only after developer approval per this skill.
 
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`pr-review`**; other ship-chain skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one full inline **`pr-review`** on a **`coding-session`** Checkpoint dispatch through [Disposition gate](#step-4--report-and-disposition-gate) (and [Post-fix commit/push gate](#post-fix-commitpush-gate-binding) when fixes apply) and collect a developer verdict before the parent phase advances **`coding-session`** agent-delegated approve + merge (ship step **6**) — per **Ship-chain skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+### Developer input vs external-wait (Checkpoint)
+
+Under Checkpoint trust, **happy-path** triage steps (Steps **0–3a**, **1b**, approved fix edits, Step **5** after push or skipped-only pick) **auto-advance without a turn-end modal**. **Developer-input** surfaces — disposition scope, commit/push depth, and cycle resume — are **USER_CHECKPOINT** gates on **this lane** (via **`coding-session`** when inline); **must** close with **`MC_PHASED_RESPONSE_V1`** / **AskQuestion**, not prose idle handoff.
+
+**Forbidden:** *Review the PR and tell me when to continue*, *wait for the user to review*, *tell me when review is done*, or *auto-advancing (no modal)* when dispositions need approval, commit/push is pending, or the developer must pick the next ship action. **Forbidden:** classifying *waiting for the developer to return after GitHub review* as rule **2** external-wait — lane continuation is developer-input via this skill's disposition gate or **`coding-session`** [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate).
+
+**Implicit external-wait:** none on this inline skill — child **`pre-pr-review`** delivery and Squad Leader **`#external-wait`** resume are owned by **`coding-session`**, not **`pr-review`**.
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **0** — Resolve PR + plan sidecar upsert | Auto-advance when PR identity known | exception: unresolvable PR → stop with recap |
+| **1** — Collect comments (`pr-review.mjs`) | Auto-advance — first GitHub-touching action after load | exception: script failure |
+| **1b** — CI / check status | Auto-advance on same turn as Step **1** | — |
+| **2** — Filter handled comments | Auto-advance | — |
+| **3** — Validate and classify | Auto-advance — report prep only; no edits | — |
+| **3a** — Propose follow-ups | Auto-advance (handoff only; no plan mutation) | — |
+| **3b** / **4** — Report + disposition | **Gate** — mandatory developer pick before any Act | [Disposition gate](#step-4--report-and-disposition-gate) |
+| **Approved fix pass** | Auto-advance through edits until commit/push required | exception: blocking tool/git failure |
+| **Post-fix commit/push** | **Gate** before `git commit` / `git push` when fixes landed | [Post-fix commit/push gate](#post-fix-commitpush-gate-binding) |
+| **5** — GitHub reconciliation | Auto-advance **same turn** as push or skipped-only disposition pick | exception: stale Step **1** payloads → re-fetch first |
+| **Cycle resume** — wait for reviewers / new comments | Developer-input on **`coding-session`** — **not** external-wait prose | **`coding-session`** [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate) |
+
+**Skip disposition modal (binding):** When [Standalone dispatch (stop immediately)](#standalone-dispatch-stop-immediately) applies, **skip** all gates — stop before Steps **1–5**.
+
 ## Session orientation table (binding)
 
 Give developers a **consistent state snapshot** during PR review cycles so they can re-orient after reload, tab switch, or parallel work.
@@ -74,7 +106,7 @@ Give developers a **consistent state snapshot** during PR review cycles so they 
 
 **Population rules:** Same as [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`](../coding-session/SKILL.md) § *Session orientation table (binding)* — recover missing PR/worktree context from **`coding-session`** before triage.
 
-**Mandatory gates (this skill):** Step **3b** disposition gate; Step **4** report + disposition gate; developer-input resume modal after push (not external-wait when developer must pick next action); each cycle reopen when new comments land **or** required CI fails again.
+**Mandatory gates (this skill):** [Disposition gate](#step-4--report-and-disposition-gate); [Post-fix commit/push gate](#post-fix-commitpush-gate-binding) when approved fixes require commit/push; **`coding-session`** [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate) for cycle resume (developer-input — **not** rule **2** external-wait). Each cycle reopen when new comments land **or** required CI fails again.
 
 ## Helper script
 
@@ -163,7 +195,7 @@ After inline **`create-pr`** opens a PR, **`coding-session`** runs this skill **
 4. **Developer gate** — structured choice for dispositions, CI fix scope, and commit/push depth per rule **6**.
 5. **Fix pass** — approved comment and/or CI fixes in **`WORKTREE_ROOT`**; re-run **Step 1b** after push before treating CI as cleared.
 6. **Reconcile on GitHub** — Step **5** when required (same turn as push when fixes landed).
-7. **Wait for reviewers** — **developer-input**; **`mission_control_present_structured_choice`** via **`coding-session`** [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate) when the developer returns — **not** rule **2** external-wait. **Forbidden:** *reply with results*, *tell me when review is done*, *auto-advancing (no modal)*.
+7. **Wait for reviewers** — **developer-input**; **`mission_control_present_structured_choice`** via **`coding-session`** [Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate) when the developer returns — **not** rule **2** external-wait. Under Checkpoint, **no** turn-end modal on this skill for idle PR wait — parent gate owns resume picks. **Forbidden:** prose-only *reply with results*, *tell me when review is done*, or *auto-advancing (no modal)* on **`pr-review`** when a developer pick is required.
 8. **Loop** — when new comments land **or** CI fails again after push, return to step **2** on the **same lane** until every comment is fixed, skipped with rationale, captured as deferred work, or explicitly deferred by the developer, **and** required CI is green or explicitly deferred.
 
 ## When coding-session executes `pr-review`
@@ -178,6 +210,8 @@ Determine the PR to review using the **first match**:
 3. Neither above → read the current worktree name ref (`git branch --show-current`), parse `owner`/`repo` from the git remote (`git remote get-url origin`), then look up the open PR via the `pr-for-branch` script command.
 
 Always confirm which PR is being reviewed (print URL and title) before proceeding.
+
+- **Next-step resolution:** Auto-advance to Step **1** on the happy path — no `USER_CHECKPOINT` on this step.
 
 #### Link the PR to its plan sidecar (idempotent)
 
@@ -270,7 +304,9 @@ No source edits, plan edits, commits, pushes, GitHub replies, resolves, minimize
 
 When the approved scope includes **Follow-ups only** or includes any **Skipped → follow-up** comments, append only those approved bullets to the linked PR plan's `## Follow-ups` section before Step 5. If the developer rejects a proposed follow-up, do not mutate the plan or mention it as captured in GitHub reconciliation.
 
-After approved fixes are applied, open a **second** structured-choice gate (commit/push options per Step **4** post-fix) before `git commit` or `git push` — **Checkpoint:** auto-advance commit + push when the invoker lane is Checkpoint and the developer did not name defer — do not commit or push silently on non-Checkpoint.
+After approved fixes are applied, open [Post-fix commit/push gate](#post-fix-commitpush-gate-binding) before `git commit` or `git push` — **Checkpoint:** auto-advance commit + push when the invoker lane is Checkpoint and the developer did not name defer — do not commit or push silently on non-Checkpoint.
+
+- **Next-step resolution:** Auto-advance through Steps **1–3a** on the happy path — no `USER_CHECKPOINT` until Step **4** disposition gate.
 
 ### Step 3a — Propose out-of-scope flags as follow-ups
 
@@ -319,6 +355,8 @@ Under Checkpoint trust on the invoker **`coding-session`** lane, **auto-advance*
 One-line recap of counts + implicit pick, then **Act** on the **next** turn (or same turn for skipped-only → Step 5). **Exception — gate required:** ambiguous classification, Rule-update mixed with Must when paths unclear, or developer named a non-default path — emit the modal below.
 
 **Next-step modal (binding):** After the report, when Checkpoint auto-advance does **not** apply, call **`mission_control_present_structured_choice`** (preferred on **`coding-session`** spawned lanes — MCP tool call, report recap in **`displayMarkdown`**) or the **AskQuestion** tool with the **contextual** Step **3b** option set from § *Build disposition options* below. The developer may review on GitHub or inspect local diffs **while the modal stays open**; they continue by **selecting an option**, not free-form chat.
+
+USER_CHECKPOINT — pick how to proceed with PR review dispositions on this lane.
 
 #### Build disposition options (contextual — binding)
 
@@ -380,19 +418,34 @@ Run on the **developer's response turn** when they pick **`merged-pr-proceed`**:
 
 **Forbidden:** “Review the PR and tell me when to continue”, “wait for the user to review”, fixed five-option menus when counts make options inert, or ending the turn without structured choice when dispositions need approval **and** Checkpoint auto-advance does not apply.
 
+- **`defaultOptionId: skip-reject`** when **`skippedOnly`** is **true** and **`ciFailureCount === 0`**.
+- **Next-step resolution:** Auto-advance through Steps **0–3a** and **1b** on the happy path — no `USER_CHECKPOINT` until this gate.
+
 **Act** (edits, plan append, GitHub reconciliation) runs on the **developer's response turn** after modal selection — or on the **next** turn after Checkpoint auto-advance — not in the same turn as the disposition gate modal.
 
 When the developer picks **`apply-rule-updates`**, run **`coding-session`** [Post-review repo rules handoff](../coding-session/SKILL.md#post-review-repo-rules-handoff) on the **next** turn — apply approved **`.mdc`** edits in **`WORKTREE_ROOT`**, commit/push to the **same open PR**, then re-run Step **5** in the **same turn** as push. When **`apply-rule-updates`** is combined with **`apply-must`** / **`apply-must-should`**, complete code fixes first, then run the rule-update handoff before Step **5**.
 
-When fixes are applied and ready to land, use a **separate** structured-choice gate before commit/push — **Checkpoint:** auto-advance *commit and push* (same-message consent implied by Checkpoint ship trust on this invoker) then run Step **5** same turn after push. Non-Checkpoint: include at least:
+### Post-fix commit/push gate (binding)
 
-1. **Commit and push** (same message must say *commit* / *push* per **`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`**) — when Step 4 ran in this chat, rule **20** § *Commit and push cadence* step 3 requires **this skill’s Step 5 (GitHub only)** in the **same agent turn** after push, before plan upsert and **create-pr** prompt. **After push**, re-run **Step 1b** before declaring CI cleared or opening merge paths.
-2. **Revise dispositions or fixes**
-3. **Defer — stay on pr-review**
-4. **`merged-pr-proceed`** — *PR merged — proceed with cleanup* (when **`prNumber`** / **`prUrl`** known)
-5. **More details for option _**
+When the disposition pick authorizes source edits and fixes are ready to land, use structured choice **before** `git commit` or `git push` — even when **`coding-session`** already authorized push at ship cut-point. Under Checkpoint trust, this gate is **developer-input** — not happy-path auto-advance.
 
-If all comments were **Skipped (no follow-up)** with **no** code edits **and** **`ciFailureCount === 0`**, the Step **3b** pick may authorize proceeding directly to Step **5 — GitHub only** (skipped-only path).
+Put the session orientation table, disposition summary, and `git status --short` in **`display.markdown`**.
+
+USER_CHECKPOINT — authorize commit and push for approved PR review fixes on this lane.
+
+| Option id | Label (brief) | Act |
+|-----------|---------------|-----|
+| `commit-and-push` | Commit and push — run Step 5 same turn | **`git commit`** + **`git push`** per rule **6**; **same turn** run Step **5 — GitHub only**; re-run **Step 1b** before declaring CI cleared |
+| `commit-only` | Commit only — defer push | **`git commit`**; open push gate on next turn or defer via **`coding-session`** |
+| `revise-dispositions` | Revise dispositions or fixes | Re-open [Disposition gate](#step-4--report-and-disposition-gate) |
+| `defer-pr-review` | Defer — stay on pr-review | `continuationStatus: "active"`; no commit/push |
+| `merged-pr-proceed` | PR merged — proceed with cleanup | § *Merged-forward act mapping* |
+| `more-details` | More details for option _ | Elaborate; re-open this gate |
+
+- **`defaultOptionId: commit-and-push`** when fixes are complete and CI re-check is not pending.
+- **Next-step resolution:** Auto-advance from disposition **Act** through fix edits until this gate — no modal between approved edits and commit authorization.
+
+If all comments were **Skipped (no follow-up)** with **no** code edits **and** **`ciFailureCount === 0`**, the Step **4** disposition pick may authorize proceeding directly to Step **5 — GitHub only** (skipped-only path) — **no** post-fix commit/push gate.
 
 ### Step 5 — GitHub reconciliation (after commit and push or skipped-only)
 
