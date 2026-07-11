@@ -529,7 +529,7 @@ When route is **`pr-breakdown`** (single or multi on **this phase plan**), run *
 When this skill is running as a spawned child and `autoContinue` is not `false`, run the next decomposition branch **inline on this lane** **only** when route signal is clear:
 
 - `delivery-phases` → load and follow **`delivery-phases/SKILL.md`** on **this** phase plan per [Inline handoff](#inline-handoff--phase-planner--delivery-phases--pr-breakdown-step-5b). **`delivery-phases`** drafts the full phase list first; **`new-plan`** expand uses **depth-first** ship-complete gates — do not expect all phase children in one pass.
-- `pr-breakdown-multi` → load and follow **`pr-breakdown/SKILL.md`** on **this** phase plan with `prBreakdownShape: "multi"`. **`pr-breakdown`** honors **`### Sequencing`** for parallel vs sequential PR expand.
+- `pr-breakdown-multi` → load and follow **`pr-breakdown/SKILL.md`** on **this** phase plan with `prBreakdownShape: "multi"`. **`pr-breakdown`** honors **`### Sequencing`** for parallel vs sequential PR expand. Under Checkpoint trust, follow **`pr-breakdown`** § *Checkpoint turn UX (skill-local)* — Step **6** list-approval gate and Step **4** route gate when applicable.
 - `pr-breakdown-single` → load and follow **`pr-breakdown/SKILL.md`** on **this** phase plan with `prBreakdownShape: "single"` — **same target file as multi-PR**; **forbidden:** ancestor retarget.
 
 Before handoff, present the drafted phase plan body and the route signal via **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** in **one turn** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`** and **`../README.md`** § *Recap, structured choice, act* (`display.markdown` + `askQuestion`). Required options:

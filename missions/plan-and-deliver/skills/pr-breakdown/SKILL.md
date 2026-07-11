@@ -152,16 +152,32 @@ Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-p
 
 Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
 
+### Developer input vs external-wait (Checkpoint)
+
+Under Checkpoint trust, **happy-path** protocol steps (target verify, assessment insert, draft writes, step **5d** recap) **auto-advance without a turn-end modal**. Emit **`MC_PHASED_RESPONSE_V1`** or **AskQuestion** only at **USER_CHECKPOINT** markers in this section, **implicit external-wait** surfaces (spawned child **`mission_control_send_agent_result`** delivery), or **exception** paths.
+
+**Developer-input** (continuation requires the **developer** to pick a modal option on **this lane**) is **not** external-wait. These are USER_CHECKPOINT surfaces — **must** close the turn with **`MC_PHASED_RESPONSE_V1`** / **AskQuestion**, not prose *reply with results*, *tell me when*, or *waiting for child*:
+
+| Situation | Normative gate |
+|-----------|----------------|
+| Dual-title section still `_TBD_` and no upstream route lock | Step **4** — [Decision gate](#step-4--decision-gate-when-the-heading-is-still-delivery-phases--pr-breakdown) |
+| Step **5d** recap complete and **K > 0** | Step **6** — [Structured choice — Approval](#structured-choice--approval-interactive) |
+| Step **6a** handoff ends turn while child lanes run | Structured choice per rule **2** § *Turn completion invariant* — not prose-only stop |
+| Open items at Step **4** or Step **6** | **Step 4-open-items** — scoped `questions[]` per item; terminal gate question last |
+
+**Implicit external-wait** (host may resume the lane when a child delivers **`mission_control_send_agent_result`** without a developer modal pick on **that** delivery turn): standalone spawned **`new-plan`** / nested **`coding-session`** children per Step **6b**. After merge, open the **next** structured-choice turn (expand / approve / defer) **before** StreamFinal when Step **6b** requires a developer pick — **not** prose *waiting for child*.
+
 | Step | Checkpoint behavior | Gate |
 |------|---------------------|------|
-| **1** — Identify target | Auto-advance on spawned handoff with locked `inputs` | exception: wrong template / missing target |
+| **1** — Identify target | Auto-advance on spawned handoff with locked `inputs` | exception: wrong template / missing target → structured pick |
 | **2** — Load development-process | Auto-advance | — |
-| **3** — Read target / dual-title section | Auto-advance on happy path | — |
+| **3** — Read target / dual-title section | Auto-advance on happy path | exception: ambiguous stage → structured pick |
 | **3.5** — Decomposition assessment | Auto-advance when assessment exists or insert completes | — |
-| **4** — Decision gate | Auto-advance when `routeLock: pr-breakdown` or upstream route already chosen | **Gate** when dual-title body is `_TBD_` and no route lock |
+| **4** — Decision gate | Auto-advance when `routeLock: pr-breakdown` or upstream route already chosen | **Gate** when dual-title body is `_TBD_` and no route lock — **first developer-pick gate when route decision required** |
 | **5** — Draft list (**5a–5d** / **5s**) | Auto-advance through write and step **5d** notify recap | — |
-| **6** — Approve PR list | **Gate** when **K > 0** — **first developer-pick gate in this calibration PR** | Approve PR list (below) |
-| **6a–6b** | Act-after-select; external-wait on spawned child lanes | — |
+| **6** — Approve PR list | **Gate** when **K > 0** | Approve PR list (below) — **first developer-pick gate when Step **4** skipped or route-locked** |
+| **6a** — Act-after-select | Auto-advance through chosen action on happy path | exception: revise / defer / abandon paths |
+| **6b** — Aggregate child results | **waiting** on standalone spawned child lanes in flight | Host delivers child result → resume structured choice when expand / terminal merge requires developer pick |
 
 ### Inline invoker lane (binding)
 
@@ -216,6 +232,8 @@ Acknowledge in one line: *"Target plan: `<slug>`."*
 
 Acknowledge: *"Stage: <Master Plan | Phase plan>; proceeding."*
 
+- **Next-step resolution:** Auto-advance to Step **2** on valid Master or Phase plan — no `USER_CHECKPOINT` on this step.
+
 ### 1b — Ancestor write guard (phase-planner single-PR)
 
 Run **after** stage verification when **`parentAgentRole`** is **`phase-planner-agent`** and **`targetPlanPath`** names the decomposition **ancestor** (Master Plan) instead of the **phase plan**.
@@ -231,6 +249,8 @@ Return `partial` with `remainingTasks` naming the retarget — **not** permissio
 Read `.sedea/centers/research-and-development/docs/development-process.md` with the Read tool, **no offset, no limit** (hosting repo root). Acknowledge in one sentence: *"Loaded development-process.md; will follow § 3 PR breakdown set-level template + § 6/§ 5 contents rule."*
 
 This is a **standards document**, not an executable plan — its sections describe the process you apply. Re-read on every invocation; do not rely on session memory.
+
+- **Next-step resolution:** Auto-advance to Step **3** — no `USER_CHECKPOINT` on this step.
 
 ## Step 3 — Read the target plan and locate the dual-title section
 
@@ -251,6 +271,8 @@ Inspect the section and apply:
 
 Acknowledge the state in one line.
 
+- **Next-step resolution:** Auto-advance to Step **3.5** or Step **4** / **5** / **6** per section-state table — no `USER_CHECKPOINT` on happy path.
+
 ## Step 3.5 — Ensure `### Decomposition assessment`
 
 Before **AskQuestion** (step 4) or before drafting set-level **`PR breakdown`** (step 5 when step 4 is skipped), the plan file must contain **`### Decomposition assessment`** so the **developer** and the agent share the same sizing snapshot.
@@ -261,6 +283,8 @@ Before **AskQuestion** (step 4) or before drafting set-level **`PR breakdown`** 
  - `new_string` is: `### Decomposition assessment` + blank line + bullet lines + blank line + the same `## <N>. …` heading + `\n\n_TBD_`.
 
 Do **not** remove an existing assessment authored by **`phase-planner`** / **`master-planner`** unless the **developer** asked to replace it.
+
+- **Next-step resolution:** Auto-advance to Step **4** or Step **5** when assessment is present — no `USER_CHECKPOINT` on insert.
 
 ## Step 4 — Decision gate (when the heading is still `Delivery phases | PR breakdown`)
 
@@ -289,6 +313,8 @@ When no upstream route lock exists, use **AskQuestion** to ask:
 
 > How should this plan recurse next? Use **`### Decomposition assessment`** as the default if you agree with it.
 
+USER_CHECKPOINT — pick decomposition route (Delivery phases vs PR breakdown) on this lane.
+
 **Three options (required):**
 
 - **Delivery phases** (`id: delivery_phases`) — child entries are phase plans; the **`delivery-phases`** protocol branch owns that decomposition path.
@@ -298,6 +324,8 @@ When no upstream route lock exists, use **AskQuestion** to ask:
 If the developer picks **`delivery_phases`**, **stop** with: *"Use the **`delivery-phases`** protocol branch on this plan — it sets the heading to **`Delivery phases`** and drafts the numbered list of child phases per the doc."* Do not draft anything in this skill; do not change the heading here.
 
 If the developer picks **`pr_breakdown_multi`** or **`pr_breakdown_single`**, continue to step 5. Treat **`pr_breakdown_single`** as routing to **step 5s**; **`pr_breakdown_multi`** runs **5a–5d** with **K ≥ 2** expected (**K = 1** only on the single-PR path from step 4, or when step 4 was skipped and assessment forces one PR — see step 5).
+
+- **Next-step resolution:** Auto-advance to Step **5** when route lock applies or developer selects **`pr_breakdown_*`** — no `USER_CHECKPOINT` when Step **4** is skipped.
 
 ## Step 5 — Draft the three sub-sections
 
@@ -426,6 +454,8 @@ Required **`options`** (adapt labels; keep **K** visible in the **`prompt`** whe
 - When **K = 0** → drafting failure; do **not** open this gate.
 - **`defaultOptionId: approve-list`** when **K > 0** and no blocking open items remain.
 
+**Checkpoint auto-advance does not apply** at Step **6** when **K > 0** and step **5d** recap is complete — the same turn must emit this gate via **`MC_PHASED_RESPONSE_V1`** or **AskQuestion**.
+
 When approval or expansion has open items (sequencing caveats, row-specific blockers, K/shape concerns, parent-row mismatches, or eligibility blockers), apply **Step 4-open-items**: put one scoped `questions[]` entry per item before this approval/expansion question, and keep this approval/expansion question last in the array.
 
 **Inline under `master-planner` or `phase-planner`:** Structured-choice approval is mandatory before indexed **`new-plan`** handoff **except** when **`upstreamRouteApproved: true`** or **`skipPrBreakdownApprovalModal: true`** from **`phase-planner`** with **`autoContinue: true`** (see **Cascade route approval** in act-after-select below) — then run **`approve-list`** act-after-select **same turn** without opening Step **6** modal. Do **not** emit **`mission_control_send_agent_result`** for this skill when **`parentAgentRole`** is **`master-plan-agent`** or **`phase-planner-agent`** — report **`## Completion (inline)`** to the invoker instead. Run **`new-plan`** **inline** on this lane (no child lanes for **`new-plan`**); **`coding-session`** child lanes may open from inline **`pr-plan`**.
@@ -455,6 +485,8 @@ When the **developer** asks to revise the **`PR breakdown`** block, re-read that
 When the **developer** chooses hand off or populate children in standalone use, run **`new-plan`** inline or emit child-spawn requests for **`new-plan`** / **`pr-plan`** instead of impersonating those skills’ full procedures in the same turn. When the handoff ends the assistant turn while waiting for a child result, close with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — do not prose-only stop after handoff.
 
 ## Step 6b — Aggregate indexed child results
+
+**External-wait on standalone spawned children (binding):** When Step **6** act-after-select emits **`mission_control_spawn_agent`** for **`new-plan`** or announces wait on nested **`coding-session`** / inline **`pr-plan`** children, the handoff turn may end without a developer modal on **this** lane until Mission Control delivers **`mission_control_send_agent_result`**. That delivery is **implicit external-wait** — not prose *tell me when the child finishes*. On the **next** turn after merge, when **`expandEligibleIndices`** is non-empty or terminal status requires a developer pick, emit structured choice (prefer **`MC_PHASED_RESPONSE_V1`** with one-line recap in `display.markdown`) before StreamFinal.
 
 **Inline `new-plan` under `master-planner` or `phase-planner`:** After each inline **`new-plan`** row completes, merge its **`## Completion (inline)`** into `childRows` and `spawnedPlans`. If inline **`pr-plan`** reports handoff in progress or an active **`coding-session`** child, keep the row open and add the lane to `activeLanes`. When Mission Control delivers a **`coding-session`** child result, match by correlation id from inline **`pr-plan`** `spawnCorrelationId`, then `outputs.targetPlanPath` / `outputs.targetPlanSlug`.
 
