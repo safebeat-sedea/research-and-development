@@ -205,15 +205,24 @@ Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-p
 
 Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
 
+### Developer input vs external-wait (Checkpoint)
+
+Under Checkpoint trust, **happy-path** substeps (validation, worktree-setup, `.mdc` implementation until review-ready) **auto-advance without a turn-end modal**. **Ship cut-point**, **post-create-pr**, and **`pr-review`** return picks are **developer-input** — **USER_CHECKPOINT** surfaces — and **must** close with **`MC_PHASED_RESPONSE_V1`** / **AskQuestion**.
+
+**Forbidden:** prose-only turn ends at developer-input gates — use structured choice instead of idle-handoff phrasing (conduct 1 § No idle handoff).
+
+**Spawned `pre-pr-review` child terminal** is **implicit external-wait** — resume on child result delivery; do **not** end the parent turn with prose-only *waiting for reviewer*.
+
 | Step | Checkpoint behavior | Gate |
 |------|---------------------|------|
 | **1** — Pre-worktree validation | Auto-advance when `targetPlanPath` / §5 scope is valid | exception: missing plan path or scope escapes `.cursor/rules/` |
 | **Worktree-open gate** | **Gate** — first developer-pick gate on spawned rules lane | [Worktree-open gate](#worktree-open-gate-binding) |
 | **2** — Worktree-setup | Auto-advance on happy path | exception: setup / attach failure |
-| **3** — Implement | Auto-advance through `.mdc` edits until review-ready | — |
-| **4** — Pre-PR review (spawned) | Auto-advance spawn; await reviewer terminal | implicit external-wait on child lane |
-| **5** — Ship cut-point | **Gate** before commit + push | deferred to JIT step PR |
-| **6** — PR review (inline) | implicit external-wait | GitHub review cycles |
+| **3** — Implement | Auto-advance through `.mdc` edits until review-ready | exception: scope escape → Alignment Drift Brief |
+| **4** — Ship cut-point | **Auto-advance** `commit-only` when clean criteria pass | **Gate** when any criterion fails — [Ship cut-point gate](#ship-cut-point-gate-binding) |
+| **5** — Pre-PR review (spawned) | Auto-advance spawn; await reviewer terminal | implicit external-wait on child lane |
+| **5b** — Create PR (inline) | Auto-advance through [create-pr Gate](create-pr/SKILL.md#gate) steps **1–4** | **Gate** at [Pre-gh authorization](create-pr/SKILL.md#pre-gh-authorization-gate-binding) |
+| **6** — PR review (inline) | **Gate** when developer returns after GitHub review or idle PR | [Post-create-pr handoff](#post-create-pr-handoff-binding) · **`pr-review`** disposition |
 | **7** — Merge and cleanup | Auto-advance cleanup after merge confirm | exception: cleanup script failure |
 
 ## Session orientation table (binding)
@@ -230,7 +239,7 @@ Render as the **first block** in `displayMarkdown` at every mandatory gate.
 | Deploy scope | — (no deploy-walk on rules-only lane) |
 | Review | `prReviewStatus` · GitHub `reviewState` when in PR cycles |
 
-**Mandatory gates:** [Worktree-open gate](#worktree-open-gate-binding); ship cut-point; post-**`create-pr`** recap; each **`pr-review`** cycle. Under Checkpoint trust, only steps with **USER_CHECKPOINT** markers (or implicit external-wait) open modals — see [Checkpoint turn UX (skill-local)](#checkpoint-turn-ux-skill-local).
+**Mandatory gates:** [Worktree-open gate](#worktree-open-gate-binding); [Ship cut-point gate](#ship-cut-point-gate-binding); [Post-create-pr handoff](#post-create-pr-handoff-binding); [create-pr Pre-gh authorization](create-pr/SKILL.md#pre-gh-authorization-gate-binding); each **`pr-review`** disposition cycle. Under Checkpoint trust, only steps with **USER_CHECKPOINT** markers (or implicit external-wait) open modals — see [Checkpoint turn UX (skill-local)](#checkpoint-turn-ux-skill-local).
 
 ## Worktree-open gate (binding)
 
@@ -253,6 +262,54 @@ USER_CHECKPOINT — authorize rules-only worktree and implementation on this lan
 - **`defaultOptionId: start-rules-implementation`** when §5 scope is valid and spawn inputs are complete.
 - **Next-step resolution:** Auto-advance through [Step 1 — Pre-worktree validation](#1-pre-worktree-validation) on the happy path — no `USER_CHECKPOINT` until this gate.
 
+## Ship cut-point gate (binding)
+
+When **`.mdc`** implementation is **ready for developer review**, **stop** product edits and reach this gate — Checkpoint auto-advance or **`MC_PHASED_RESPONSE_V1`** on exception paths. Rules-only lane: **no** inline **`deploy-walk`** — cut-point authorizes **commit only** before **`pre-pr-review`** spawn.
+
+**Precondition:** [Step 3 — Implement](#3-implement) complete; edits limited to **`WORKTREE_ROOT/.cursor/rules/`**.
+
+### Checkpoint — auto-advance `commit-only` (binding)
+
+Under Checkpoint trust, **auto-advance** as if the developer picked **`commit-only`** — **no** modal — when **all** hold:
+
+1. Implementation batch complete; no open gotchas or blocking test failures on rules scope.
+2. `git status --short` shows only expected **`.mdc`** paths (or is clean after prior commit).
+3. Developer did **not** pick **`more-changes`**, **`defer`**, or name executive override in the **same** message.
+
+Recap diff summary on the auto-advance turn; run **`git commit`** on the **next** turn when tree dirty; then spawn **`pre-pr-review`** when tree is clean.
+
+**Exception — gate required:** When any clean criterion fails or the developer requests **`more-changes`** / **`defer`**, emit **`MC_PHASED_RESPONSE_V1`** per below — not prose-only recap.
+
+USER_CHECKPOINT — approve commit on rules-only lane before pre-PR review.
+
+Put [Session orientation table (binding)](#session-orientation-table-binding) first in **`display.markdown`**. Recap includes `git status --short`, files touched, and §5 / `pendingRepoRulesPaths` scope.
+
+| Option id | Label (brief) | Act |
+|-----------|---------------|-----|
+| `commit-only` | Approve and commit | **`git commit`** on response turn when dirty; spawn **`pre-pr-review`** when clean |
+| `more-changes` | More `.mdc` edits first | Return to [Step 3 — Implement](#3-implement) |
+| `defer` | Defer ship chain | `continuationStatus: active` |
+| `more-details` | More details for option _ | Elaborate; re-open this gate |
+
+- **`defaultOptionId: commit-only`** when implementation is review-ready and tree shows only expected rules diffs.
+- **Forbidden:** `git push`, inline **`create-pr`**, or spawn **`pre-pr-review`** in the same assistant turn as this gate's modal.
+- **Forbidden:** prose-only idle handoff at this gate — use structured choice per rule **2**.
+- **Next-step resolution:** Auto-advance through Step **3** on the happy path — no `USER_CHECKPOINT` until review-ready.
+
+## Post-create-pr handoff (binding)
+
+After inline [create-pr](create-pr/SKILL.md) records `prUrl` / `prNumber` on **this** lane, open structured choice **same turn** — adapted from [coding-session Post-create-pr handoff gate](../coding-session/SKILL.md#post-create-pr-handoff-gate). **This** spawned lane owns the modal; the parent product **`coding-session`** does not substitute.
+
+**When required:** Same turn as inline **`create-pr`** **`## Completion (inline)`** with PR URL.
+
+**Forbidden:** prose-only PR URL recap without **`MC_PHASED_RESPONSE_V1`** at this handoff.
+
+USER_CHECKPOINT — pick next ship action after rules-only PR creation on this lane.
+
+Include [Session orientation table (binding)](#session-orientation-table-binding) as the first block. Reuse stable option ids from **`coding-session`** post-create-pr gate (`start-pr-review`, `check-pr-status`, `defer-pr-review`, `more-details`, …) — act on **this** lane through inline **`pr-review`** and merge delegation per [Step 6 — PR review](#6-pr-review-inline).
+
+- **Next-step resolution:** Auto-advance through inline [create-pr](create-pr/SKILL.md) pre-PR validation and [Pre-gh authorization](create-pr/SKILL.md#pre-gh-authorization-gate-binding) on the happy path — no `USER_CHECKPOINT` until this handoff after **`gh pr create`** succeeds.
+
 ## Steps
 
 ### 1. Pre-worktree validation
@@ -272,20 +329,25 @@ Run [worktree-setup](.sedea/centers/sedea/skills/worktree-setup/SKILL.md) with *
 - Apply §5 action bullets and `pendingRepoRulesPaths` under **`WORKTREE_ROOT/.cursor/rules/`** only.
 - Populate plan §§5–8 when required (tests/deploy may be minimal for rules-only PRs).
 
-### 4. Pre-PR review (spawned)
+### 4. Ship cut-point
 
-Spawn **`pre-pr-review`** after commit + Before deploy walk (or documented skip) per **`coding-session`** ship family. Wait for **`recommendation: go`** before push/create-pr unless executive override documented in rule **20**.
+Run [Ship cut-point gate](#ship-cut-point-gate-binding). On **`commit-only`** (Checkpoint auto-advance or developer pick), **`git commit`** on the response turn when tree dirty. **No** **`deploy-walk`** on this lane.
 
-### 5. Ship cut-point and create-pr
+### 5. Pre-PR review (spawned)
 
-- Structured choice before commit when tree is dirty (rule **6**).
-- Inline **`create-pr`** on **`go`** — **new** rules-only PR.
+Spawn **`pre-pr-review`** after cut-point commit when tree is clean. Wait for **`recommendation: go`** before push / inline **`create-pr`** unless executive override documented in rule **20**.
 
-### 6. PR review (inline)
+### 6. Create PR (inline)
 
-Run [pr-review](.sedea/centers/sedea/skills/pr-review/SKILL.md) until **`continuationStatus: terminal`**.
+Inline [create-pr](create-pr/SKILL.md) on **`go`** — **new** rules-only PR. Checkpoint gates live in **`create-pr`** § *Checkpoint turn UX* — [Pre-gh authorization](create-pr/SKILL.md#pre-gh-authorization-gate-binding) on this lane.
 
-### 7. Merge and cleanup
+Open [Post-create-pr handoff](#post-create-pr-handoff-binding) **same turn** when PR URL is known.
+
+### 7. PR review (inline)
+
+Run [pr-review](.sedea/centers/sedea/skills/pr-review/SKILL.md) until **`continuationStatus: terminal`**. When the developer returns after GitHub review, re-open [Post-create-pr handoff](#post-create-pr-handoff-binding) or **`pr-review`** disposition gate — **not** external-wait prose.
+
+### 8. Merge and cleanup
 
 Developer merges on GitHub. Inline **`worktree-cleanup`** for **this pass's** **`WORKTREE_ROOT`** only.
 
