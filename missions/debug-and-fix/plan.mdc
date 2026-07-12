@@ -180,6 +180,7 @@ USER_CHECKPOINT — pick intake mode or provide issue summary before spawning th
 - `intent`: Optional research before debug spawn; approved report enriches §3 handover.
 - `trigger`: Developer selects **`brainstorm-first`** at §2 step 0.
 - `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](../plan-and-deliver/skills/brainstorm-research/SKILL.md).
+- `checkpoint child UX`: Report approval USER_CHECKPOINT on **`brainstorm-research/SKILL.md`** § *Report approval gate*; this §2.5 **#external-wait** only.
 - `inputs`: `invokerMissionSlug: debug-and-fix`, `operationsDocsDirectory` from lane identity, optional seeds from §1.
 - `next-step resolution`: Terminal **`developerApprovedReport: true`** → merge `outputs.downstreamHandoffSummary` into `issueSummary` (append or replace per developer choice in **`initiatingPrompt`**), add report path to handover → **auto-chain §3**. **`abandonMission: true`** → call MCP **`mission_control_propose_dispatch_resolution`** with status **`abandoned`**. Failure/partial → USER_CHECKPOINT gate below.
 

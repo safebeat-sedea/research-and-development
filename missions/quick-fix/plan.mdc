@@ -165,6 +165,7 @@ USER_CHECKPOINT — pick quick-fix intake mode and confirm scope before spawn.
 - **Intent:** Optional research before quick-fix intake; approved report synthesizes §3 **`quick-fix-plan`** bullets.
 - **Trigger:** Developer selects **`brainstorm-first`** at §2 step 1.
 - **Assigned skill:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](../plan-and-deliver/skills/brainstorm-research/SKILL.md)
+- **Checkpoint child UX:** Report approval USER_CHECKPOINT on **`brainstorm-research/SKILL.md`** § *Report approval gate*; this §2.5 **#external-wait** only.
 - **Inputs:** `invokerMissionSlug: quick-fix`, `operationsDocsDirectory` from lane identity, optional seeds from §1.
 - **Next-step resolution:**
   - Terminal **`developerApprovedReport: true`** → derive `changeList` bullets from report §5 Handoff summary, set `intakeMode: provide-list`, `complexityConfirmed` / `scopeConfirmed` after developer attestation in §3 spawn **`initiatingPrompt`** → **auto-chain §3** (no repeat §2 USER_CHECKPOINT).

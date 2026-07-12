@@ -420,6 +420,7 @@ Do **not** invent PRD content from a URL alone.
 - **Trigger:** Developer selects **`brainstorm-first`** at §2 step 0.
 - **Target agent role:** Brainstorm research agent
 - **Assigned skill:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](skills/brainstorm-research/SKILL.md)
+- **Checkpoint child UX:** Report approval USER_CHECKPOINT lives on the child skill — see **`brainstorm-research/SKILL.md`** § *Checkpoint turn UX* and § *Report approval gate*; this §2.5 **#external-wait** covers leader spawn-and-wait only.
 - **Inputs:** `invokerMissionSlug: plan-and-deliver`, `operationsDocsDirectory` from lane identity / spawn preamble, optional `researchTopic`, `researchPrompt`, `openingSeeds` from §1.
 - **Expected output:** Child terminal with `outputs.brainstormReportPath`, `outputs.developerApprovedReport`, `outputs.downstreamHandoffSummary`, or `outputs.abandonMission: true`.
 - **Next-step resolution:**
