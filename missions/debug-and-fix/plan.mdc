@@ -14,7 +14,7 @@ alwaysApply: false
 
 1. **Log-first diagnosis** — Bootstrap a debug worktree, prioritize log access and debug instrumentation before substantive code analysis.
 2. **Fix loop** — Propose fixes with test scenarios; apply on developer approval; run automated tests and guided manual verification; loop on failure until fixed or blocked.
-3. **Post-fix routing** — After a verified fix, the developer selects **exactly one** exit:
+3. **Post-fix routing** — After a verified fix (or abandon), the developer confirms the exit on the debug child lane (step 7); under Checkpoint trust the **Squad Leader** treats that confirmation as **auto-approval** and routes per **`exitRecommendation`** / **`abandonMission`** without repeating §4:
    - **Code promotion** — create a plan anchor (**`new-plan`** plus **`pr-plan`**) before spawning **`coding-session`** on the debug worktree, so deploy tests and additional written tests have a PR plan to update.
    - **Ad-Hoc PRD only** — spawn **`ad-hoc-prd`** to capture fix context without starting code promotion.
    - **Findings report only** — no planning, no **`coding-session`**; Squad Leader produces a **Debug session findings report** from child outputs.
@@ -30,7 +30,19 @@ alwaysApply: false
 
 **Dispatch display refresh (Squad Leader).** When dispatch scope is readable (opening command phrase or issue summary from the opening message), call MCP **`mission_control_update_dispatch_display`** with non-empty **`dispatchTitle`** (≤64 chars) and optional **`dispatchDescription`** / **`dispatchHoverDescription`** (≤512 chars). **Skip** when current dispatch chrome already matches. **Forbidden:** **`mission_control_update_lane_display`** to relabel **child** slots from the leader lane; hand-editing **`dispatch-tab.v1.json`**. See [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc).
 
-**Squad Leader `laneRules` (binding).**
+## Lane warm-up manifest (Squad Leader)
+
+Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea/docs/lane-manifest-contract.md) and **`missions/plan-and-deliver/skills/README.md`** § *Default warm-up*. Host merge: `effectiveWarmUp = dedupe(sedeaBootstrapRules → rdBootstrapRules → laneRules)`. Numbered Sedea rules load **on demand** via **`laneRules`** / child **`warmUpRules`** — not full Sedea 0–9 scan on every dispatch. **No `alwaysApply` frontmatter flip.**
+
+**Checkpoint trust (binding):** Auto-advance scripted protocol substeps; structured choice only at **USER_CHECKPOINT** markers in protocol steps below and **#external-wait** spawn-and-wait surfaces — not on every turn.
+
+### `bootstrapRules` — host-resolved (R&D layer)
+
+| Path | Purpose |
+|------|---------|
+| `.sedea/centers/research-and-development/rules/bootstrap.mdc` | Sole R&D `alwaysApply: true` bootstrap (≤10 KB); host merges when `centerSlug === research-and-development` |
+
+### `laneRules` — mission protocol (Squad Leader)
 
 | Path | Role |
 |------|------|
@@ -38,6 +50,37 @@ alwaysApply: false
 | `.sedea/centers/sedea/rules/4_mission.mdc` | Mission protocol, spawn/reload manifest |
 | `.sedea/centers/research-and-development/missions/debug-and-fix/plan.mdc` | **This** mission plan |
 | `.sedea/centers/research-and-development/docs/development-process.md` | Cadence and protocol branches |
+
+### `skillWarmUp` — child spawn overrides (binding)
+
+| Spawn step | Override |
+|------------|----------|
+| §2.5 **`brainstorm-research`** | Skill frontmatter defaults — include **`debug-and-fix/plan.mdc`** |
+| §3 **`debug-and-fix`** | Skill frontmatter defaults — include **this** `plan.mdc` |
+| §5 **`new-plan`** / **`pr-plan`** | Skill frontmatter defaults — **`development-process.md`** + debug handover |
+| §5b **`coding-session`** | Skill frontmatter defaults per **`coding-session/SKILL.md`** |
+| §5c **`ad-hoc-prd`** | Skill frontmatter defaults — replace `plan-and-deliver/plan.mdc` with **`debug-and-fix/plan.mdc`** when listed |
+
+Child spawns must satisfy **`missions/plan-and-deliver/skills/README.md`** spawn table for the target skill role.
+
+## Checkpoint turn UX (mission protocol)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps on the **Squad Leader** lane; emit structured choice only at **USER_CHECKPOINT** markers in protocol steps below, **#external-wait** spawn-and-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to this mission **`plan.mdc`**; child skills document their own markers.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+| Protocol § | Checkpoint behavior | Gate |
+|------------|---------------------|------|
+| **§1** Infer intent | Auto-advance when phrase matches | USER_CHECKPOINT — confirm mission intent on mismatch |
+| **§2** Collect issue context | **Gate** — first developer-pick on leader | USER_CHECKPOINT — pick intake mode or provide issue summary |
+| **§2.5** Brainstorm (optional) | **Waiting** after spawn; auto-chain §3 on approved report | **#external-wait** before turn end; USER_CHECKPOINT on failure/partial |
+| **§3** Debug and fix spawn | **Waiting** — child owns fix loop | **#external-wait** after spawn; confirmed exits auto-route (§5/§5c/§6/abandon); USER_CHECKPOINT only on partial/missing |
+| **§4** Post-fix exit selection | **Auto-advance** when §3 child confirmed any exit (`exitRecommendation` or abandon) | USER_CHECKPOINT — pick exactly one post-fix exit path when recommendation missing or developer override on leader |
+| **§5** PR plan anchor spawn | **Waiting** — child owns planning | **#external-wait** after spawn; USER_CHECKPOINT when blocked |
+| **§5b** Code promotion spawn | **Waiting** — child owns ship chain | **#external-wait** after spawn; resume per **`coding-session`** gates |
+| **§5c** Ad-Hoc PRD spawn | **Waiting** — child owns PRD approval | **#external-wait** after spawn |
+| **§6** Findings report | Auto-advance recap when inputs present | — |
+| **§7** Dispatch resolution | **Gate** — developer approves closure | USER_CHECKPOINT — approve dispatch resolution |
 
 ## Protocol
 
@@ -56,6 +99,39 @@ flowchart TD
   E -->|Findings report only| F
   F --> I
 ```
+
+### Spawn, wait, and parent resume
+
+This subsection is the **Squad Leader** contract for §§2.5, 3, 5, 5b, and 5c. Sedea host behavior is defined in **`.sedea/centers/sedea/rules/4_mission.mdc`** (spawn invocation, agent session closure). Child lanes use each skill's **`## Completion (spawned)`**; the Squad Leader consumes terminal results before continuing.
+
+**Host vs "wait."** Mission Control does **not** block the parent turn while a child runs. **Wait** means: emit **`mission_control_spawn_agent`**, announce that you are waiting for a child result, then **stop** further protocol work on the leader lane until Mission Control delivers a silent UserSend that begins with **`Mission Control: agent-result-response delivered.`** When that stop ends the assistant turn, open a **next-step resume** structured choice (**#external-wait**) naming resume paths before ending the turn per [`.sedea/centers/sedea/skills/README.md`](../../../sedea/skills/README.md) § *Concurrency contract* — do not prose-only announce wait. Follow the response-protocol footer in the delivered message before the next protocol step or another spawn.
+
+**§3 resume (Debug and Fix agent).** After each `mission_control_send_agent_result` for §3:
+
+**Binding — confirmed child exit is Squad Leader auto-approval.** When the debug child terminal includes a developer-confirmed exit (`exitRecommendation`, `abandonMission: true`, or MCP result `status: abandoned` / `aborted`), the Squad Leader **must not** re-open §4. Route immediately per the table below — same rule for code promotion, Ad-Hoc PRD, findings report, blocked, and abandon.
+
+| Check | Action |
+|-------|--------|
+| `outputs.abandonMission: true` **or** MCP result `status: abandoned` / `aborted` | **Auto-advance dispatch abandon** — call MCP **`mission_control_propose_dispatch_resolution`** with status **`abandoned`** (skip §4–§6; no repeat exit modal) |
+| `outputs.fixStatus: verified` + `outputs.exitRecommendation: code-promotion` | **Auto-advance §5** — post-fix exit auto-resolved as code promotion; spawn **`new-plan`** + **`pr-plan`** (**#external-wait**) |
+| `outputs.fixStatus: verified` + `outputs.exitRecommendation: ad-hoc-prd` | **Auto-advance §5c** — spawn **`ad-hoc-prd`** (**#external-wait**) |
+| `outputs.fixStatus: verified` + `outputs.exitRecommendation: findings-report-only` | **Auto-advance §6** findings report → auto-advance §7 |
+| `outputs.fixStatus: verified` + `outputs.exitRecommendation: blocked` | **Auto-advance §6** findings report → auto-advance §7 |
+| `outputs.fixStatus: verified` + missing or ambiguous `outputs.exitRecommendation` | USER_CHECKPOINT — **§4** post-fix exit selection on the leader lane |
+| `outputs.fixStatus: blocked` or `failed` (any or missing exit) | **Auto-advance §6** findings report — no repeat §3 spawn without developer pick at §7 |
+| `outputs.fixStatus: partial` | USER_CHECKPOINT — pick next step when debug child reports partial status |
+| Missing required `outputs` | USER_CHECKPOINT — collect missing fields or retry per **`debug-and-fix/SKILL.md`** **`## Completion (spawned)`** |
+
+**§5 resume (PR plan anchor agent).** After child terminal for §5:
+
+| Check | Action |
+|-------|--------|
+| Readable `outputs.targetPlanPath` + `outputs.readyForImplementation: true` | **Auto-advance §5b** spawn **`coding-session`** when code-promotion path active |
+| Unresolved plan target or approval gaps | USER_CHECKPOINT — revise planning anchor, retry, or switch exits |
+
+**§5b / §5c resume.** After child terminal, **auto-advance §7** when ship or PRD path completes; **#external-wait** resume options apply per target skill gates — do not duplicate ship-chain procedure on the leader lane.
+
+**Dispatch resolution:** Only the Squad Leader calls MCP **`mission_control_propose_dispatch_resolution`** — child lanes do not.
 
 ### 1. Infer intent from the opening command phrase
 
@@ -81,7 +157,7 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
 - `intent`: Gather symptom, scope, and reproduction hints before spawning the debug agent.
 - `inputs`: Opening user message remainder after `debug and fix`, Mission Control dispatch binding.
 - `expected output`: Structured handover: `issueSummary`, optional `reproductionSteps`, optional `logHints`, optional `repoPath`.
-- `next-step resolution`: Continue to step 3 when `issueSummary` is non-empty (auto-advance).
+- `next-step resolution`: Continue to step 3 when `issueSummary` is non-empty and intake confirmed (auto-advance). Empty summary or unconfirmed intake → USER_CHECKPOINT gate below.
 - `ordered actions`:
   0. **Intake mode (required first):** Open structured choice:
      - **`direct-intake`** — collect issue summary on the leader lane (steps 1–4)
@@ -105,9 +181,11 @@ USER_CHECKPOINT — pick intake mode or provide issue summary before spawning th
 - `trigger`: Developer selects **`brainstorm-first`** at §2 step 0.
 - `assigned skill`: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md`](../plan-and-deliver/skills/brainstorm-research/SKILL.md).
 - `inputs`: `invokerMissionSlug: debug-and-fix`, `operationsDocsDirectory` from lane identity, optional seeds from §1.
-- `next-step resolution`: Terminal **`developerApprovedReport: true`** → merge `outputs.downstreamHandoffSummary` into `issueSummary` (append or replace per developer choice in **`initiatingPrompt`**), add report path to handover → **auto-chain §3**. **`abandonMission: true`** → call MCP **`mission_control_propose_dispatch_resolution`** with status **`abandoned`**.
+- `next-step resolution`: Terminal **`developerApprovedReport: true`** → merge `outputs.downstreamHandoffSummary` into `issueSummary` (append or replace per developer choice in **`initiatingPrompt`**), add report path to handover → **auto-chain §3**. **`abandonMission: true`** → call MCP **`mission_control_propose_dispatch_resolution`** with status **`abandoned`**. Failure/partial → USER_CHECKPOINT gate below.
 
-**Procedure:** Emit spawn with **`warmUpRules`** including **`debug-and-fix/plan.mdc`**; **#external-wait**; on approve continue §3 without repeat §2 USER_CHECKPOINT.
+USER_CHECKPOINT — pick next step when brainstorm child reports failure or partial.
+
+**Procedure:** Emit spawn with **`warmUpRules`** including **`debug-and-fix/plan.mdc`**; announce that the **Squad Leader** is waiting for the child lane; open a **next-step resume** structured choice (**#external-wait**) before ending the turn; on approved report continue §3 without repeat §2 USER_CHECKPOINT.
 
 ### 3. Debug and fix (spawned skill)
 
@@ -122,8 +200,8 @@ USER_CHECKPOINT — pick intake mode or provide issue summary before spawning th
   - `inputs` — validated fields above.
   - `warmUpRules` — skill frontmatter defaults plus mission context paths when needed.
   - `initiatingPrompt` — protocol step, symptom, and any user decisions from step 2.
-- `expected output`: Child **`mission_control_send_agent_result`** with `outputs.fixStatus`, `outputs.worktreePath`, `outputs.worktreeName`, `outputs.hostingRoot`, `outputs.exitRecommendation` (`code-promotion` | `ad-hoc-prd` | `findings-report-only` | `blocked`), `outputs.fixSummary`, `outputs.testEvidence`.
-- `next-step resolution`: On `fixStatus: verified`, continue to step 4 (auto-advance). On `blocked` or `failed`, continue to step 6 (debug session findings report). On `partial`, USER_CHECKPOINT gate below.
+- `expected output`: Child **`mission_control_send_agent_result`** with `outputs.fixStatus`, `outputs.worktreePath`, `outputs.worktreeName`, `outputs.hostingRoot`, `outputs.exitRecommendation` (`code-promotion` | `ad-hoc-prd` | `findings-report-only` | `blocked`), optional `outputs.abandonMission`, `outputs.fixSummary`, `outputs.testEvidence`.
+- `next-step resolution`: Emit spawn → **#external-wait** before turn end; on child terminal apply **§3 resume** (confirmed exits are binding auto-approval: abandon → propose **`abandoned`**; `code-promotion` → §5; `ad-hoc-prd` → §5c; `findings-report-only` / `blocked` / `failed` → §6; USER_CHECKPOINT only when `partial` or verified with missing exit).
 - **Agent session closure**: Child emits one parseable **`mission_control_send_agent_result`** line per skill **`## Completion (spawned)`**. Squad Leader waits for host delivery before continuing (**#external-wait**).
 
 USER_CHECKPOINT — pick next step when debug child reports partial status.
@@ -132,23 +210,26 @@ USER_CHECKPOINT — pick next step when debug child reports partial status.
 ### 4. Post-fix exit selection
 
 - `type`: Branching logic.
-- `intent`: Developer picks **exactly one** post-fix path when `outputs.fixStatus` is `verified`.
+- `intent`: Resolve **exactly one** post-fix path when `outputs.fixStatus` is `verified` and no confirmed exit was already delivered. Under Checkpoint trust, when the §3 debug child already confirmed an exit at terminal (**`debug-and-fix/SKILL.md`** step 7) — including code promotion, Ad-Hoc PRD, findings report, blocked, or abandon — that confirmation is **Squad Leader auto-approval**; **skip** this gate and **auto-advance** per **§3 resume**.
 - `inputs`: Child `outputs.exitRecommendation`, `outputs.fixSummary`, `outputs.testEvidence`, `outputs.worktreePath`, `outputs.worktreeName`, `outputs.hostingRoot`.
 - `expected output`: Exit label `code-promotion`, `ad-hoc-prd`, or `findings-report-only`.
 - `next-step resolution`:
-  - `code-promotion` → step 5.
-  - `ad-hoc-prd` → step 5c.
-  - `findings-report-only` → step 6.
+  - Checkpoint happy path — `exitRecommendation: code-promotion` → **auto-advance step 5** (spawn **`new-plan`** + **`pr-plan`**).
+  - Checkpoint happy path — `exitRecommendation: ad-hoc-prd` → **auto-advance step 5c**.
+  - Checkpoint happy path — `exitRecommendation: findings-report-only` → **auto-advance step 6**.
+  - `code-promotion` (developer override) → step 5.
+  - `ad-hoc-prd` (developer override) → step 5c.
+  - `findings-report-only` (developer override) → step 6.
 - `branch predicates`:
   - Developer selects code promotion → step 5 (even when recommendation differs — developer override allowed with structured choice).
   - Developer selects Ad-Hoc PRD only → step 5c.
   - Developer selects findings report only → step 6.
-- `default/fallback behavior`: Present **`exitRecommendation`** as the suggested default in modal labels; require explicit pick — one path mandatory.
-- `ordered actions` (before post-fix exit modal):
+- `default/fallback behavior`: When **`exitRecommendation`** is present from §3 terminal, **skip** this gate and route per **§3 resume**. When missing or ambiguous, present **`exitRecommendation`** as the suggested default in modal labels; require explicit pick — one path mandatory.
+- `ordered actions` (before post-fix exit modal or before auto-advance spawn to §5/§5c/§6):
   1. Include **`### Worktree (copy-paste)`** in **`displayMarkdown`** using child **`outputs.worktreePath`**, **`outputs.worktreeName`**, and **`outputs.hostingRoot`** — same fenced shape as **`debug-and-fix/SKILL.md`** step **8** (absolute path on its own line inside a fenced code block).
   2. **Forbidden:** post-fix exit modal when child outputs include **`worktreePath`** but the copy-paste block is missing from **`displayMarkdown`**.
 
-USER_CHECKPOINT — pick exactly one post-fix exit path after a verified fix.
+USER_CHECKPOINT — pick exactly one post-fix exit path when `exitRecommendation` is missing, ambiguous, or the developer overrides the debug child's confirmed exit on the leader lane.
 
 ### 5. Create PR plan anchor (spawned planning handoff — code-promotion path only)
 
@@ -161,8 +242,8 @@ USER_CHECKPOINT — pick exactly one post-fix exit path after a verified fix.
 - `spawn run-request fields`: `inputs`, `warmUpRules` per target skill frontmatter, `laneRules` when required by the planning skill manifest, and `initiatingPrompt` with debug handover plus the approved post-fix exit.
 - `pr-plan standalone exception`: Debug fixes do not necessarily originate from an approved parent **`### PR list`**. This mission explicitly permits a standalone **`pr-plan`** population handoff after **`new-plan`** creates the target plan; the handoff must pass `targetPlanPath`, `targetPlanSlug`, and the debug handover seed. If **`pr-plan`** cannot populate without parent topology, stop and use structured choice to revise the plan anchor, create the missing parent planning context, or switch exits — do not spawn **`coding-session`** without a PR plan.
 - `expected output`: Child terminal or aggregate output with `outputs.targetPlanPath`, `outputs.targetPlanSlug`, `outputs.readyForImplementation: true`, and any `outputs.remainingTasks` from **`new-plan`** / **`pr-plan`**.
-- `next-step resolution`: Continue to step 5b only after a readable PR plan path/slug exists and the PR plan is approved as ready for implementation. If the planning child reports unresolved plan target, missing parent topology that blocks standalone population, or approval gaps, USER_CHECKPOINT gate below.
-- **Agent session closure** and **Dispatch resolution**: Same as step 3 — child terminal only; Squad Leader continues protocol.
+- `next-step resolution`: Continue to step 5b only after a readable PR plan path/slug exists and the PR plan is approved as ready for implementation (auto-advance when §5 resume passes). If the planning child reports unresolved plan target, missing parent topology that blocks standalone population, or approval gaps, USER_CHECKPOINT gate below.
+- **Agent session closure** and **Dispatch resolution**: Same as step 3 — emit spawn → **#external-wait** before turn end; child terminal only; Squad Leader continues protocol.
 
 USER_CHECKPOINT — revise planning anchor, retry, or switch exits when PR plan creation is blocked.
 
@@ -176,7 +257,7 @@ USER_CHECKPOINT — revise planning anchor, retry, or switch exits when PR plan 
 - `inputs`: `repoPath` / `outputs.hostingRoot`, existing `outputs.worktreePath` and `outputs.worktreeName` from debug child (worktree already created and modified), `developerApprovedImplementation: true`, `upstreamSkill: debug-and-fix`, required `targetPlanPath` and `targetPlanSlug` from step 5, plus `planningHandoffMode: "sections-1-4-complete"` and `planningHandoffApproved: true` when supplied by the **`pr-plan`** handoff.
 - `spawn run-request fields`: `inputs`, `laneRules` / `warmUpRules` per **`coding-session`** frontmatter, and `initiatingPrompt` — state that implementation is complete on the debug worktree and ship chain starts at cut-point / commit per **`coding-session`** authority.
 - `expected output`: Child terminal after ship chain milestones per **`coding-session`** **`## Completion (spawned)`** / inline ship skills.
-- `next-step resolution`: Continue to step 7 after child terminal or when developer selects an external-wait resume option per skill gates.
+- `next-step resolution`: Continue to step 7 after child terminal or when developer selects an external-wait resume option per skill gates (**#external-wait** after spawn).
 - **Note:** Ship steps (commit, deploy-walk, pre-pr-review, create-pr, pr-review, post-merge cleanup, plan-reconcile) are **owned by `coding-session`** — do not duplicate procedure here. **`pre-pr-review`** spawn runs on a detached reviewer lane that auto-advances Steps **1–8** under Checkpoint trust — see **`pre-pr-review/SKILL.md`** § *Developer input vs external-wait (Checkpoint)*.
 
 ### 5c. Create Ad-Hoc PRD (spawned skill — Ad-Hoc PRD path only)
@@ -189,8 +270,8 @@ USER_CHECKPOINT — revise planning anchor, retry, or switch exits when PR plan 
 - `inputs`: `createIntent: true`, `title` from fix summary, `details` from child `outputs.fixSummary` from Mission Control, optional `sourceSummary` referencing debug dispatch and test evidence, and **`operationsDocsDirectory`** from lane identity when supplied.
 - `spawn run-request fields`: `inputs`, `warmUpRules` per target skill frontmatter, `initiatingPrompt` with debug handover and the selected Ad-Hoc PRD-only exit.
 - `expected output`: Child terminal with `outputs.prdPath`, `outputs.prdRef`, `outputs.prdTitle`, `outputs.developerApprovedPrd` after PRD approval flow inside **`ad-hoc-prd`** skill — per **`ad-hoc-prd/SKILL.md`** **`## Completion (spawned)`**.
-- `next-step resolution`: Continue to step 7 after child terminal; do not spawn **`coding-session`** from this branch unless the developer later selects code promotion and step 5 creates a PR plan anchor.
-- **Agent session closure** and **Dispatch resolution**: Same as step 3 — child terminal only; Squad Leader continues protocol.
+- `next-step resolution`: Continue to step 7 after child terminal (**#external-wait** after spawn); do not spawn **`coding-session`** from this branch unless the developer later selects code promotion and step 5 creates a PR plan anchor.
+- **Agent session closure** and **Dispatch resolution**: Same as step 3 — emit spawn → **#external-wait** before turn end; child terminal only; Squad Leader continues protocol.
 
 ### 6. Debug session findings report
 
@@ -198,7 +279,7 @@ USER_CHECKPOINT — revise planning anchor, retry, or switch exits when PR plan 
 - `intent`: Summarize debug session outcomes when fix is **not** verified, **blocked**, or the developer chose **findings report only** at step 4.
 - `inputs`: All child terminal outputs from step 3 (`fixSummary`, `testEvidence`, `fixStatus`, worktree paths), and any user decisions from step 4 when applicable.
 - `expected output`: Structured findings recap in **`displayMarkdown`** — symptom, diagnosis, fix attempts, test evidence, **`### Worktree (copy-paste)`** with absolute **`worktreePath`** in a fenced code block (same shape as **`debug-and-fix/SKILL.md`** step **8**), and recommended follow-up. No downstream spawn.
-- `next-step resolution`: Continue to step 7.
+- `next-step resolution`: Auto-advance step 7 when recap complete.
 - `terminal vs resumable`: Resumable — dispatch remains active until step 7.
 
 ### 7. Dispatch resolution

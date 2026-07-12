@@ -141,10 +141,21 @@ When fix is verified:
 | Fix verified; product-context capture is useful before promotion decisions | `ad-hoc-prd` | Parent spawns **ad-hoc-prd** only (mission step 5c) — no **coding-session** until the developer later selects code promotion |
 | Fix verified; shipping deferred, noisy unrelated changes, or scope needs triage | `findings-report-only` | Parent produces **Debug session findings report** (mission step 6) — no downstream spawn |
 | Blocked before verification | `blocked` | Terminal with evidence; parent routes to findings report |
+| Developer abandons the debug session | _(set `abandonMission: true`; MCP `status: abandoned`)_ | Parent auto-proposes dispatch **`abandoned`** — no §4 exit modal |
 
 For `code-promotion`, include enough `fixSummary` and `testEvidence` detail for the parent to seed the standalone PR plan anchor. The parent must create or populate a PR plan before spawning **`coding-session`**; do not imply that the debug worktree alone is sufficient for ship-chain handoff.
 
-Present structured choice confirming recommendation; **Squad Leader** owns post-fix exit selection in mission **step 4** (developer may override).
+Present structured choice confirming recommendation **or abandon**. When the developer confirms, that terminal signal is binding **Squad Leader auto-approval** under Checkpoint trust — mission **§4** is skipped and the leader routes per mission **§3 resume** without a repeat exit modal:
+
+| Confirmed signal | Squad Leader auto-advance |
+|------------------|---------------------------|
+| `exitRecommendation: code-promotion` | **§5** spawn **`new-plan`** + **`pr-plan`** |
+| `exitRecommendation: ad-hoc-prd` | **§5c** spawn **`ad-hoc-prd`** |
+| `exitRecommendation: findings-report-only` | **§6** findings report |
+| `exitRecommendation: blocked` or `fixStatus: blocked` / `failed` | **§6** findings report |
+| `abandonMission: true` or MCP `status: abandoned` / `aborted` | Propose dispatch **`abandoned`** |
+
+Developer may still override on the leader lane at mission **§4** when the exit was missing or ambiguous.
 
 ### 8 — Worktree path recap (binding — before terminal result)
 
@@ -185,6 +196,7 @@ Every assistant turn closes with **AskQuestion** or **`mission_control_present_s
 | `bootstrapStatus` | `success` \| `failed` \| `pending` — from center setup JSON hints (default path) or inline retry |
 | `bootstrapMode` | Hosting overlay mode when reported by setup hints |
 | `exitRecommendation` | `code-promotion` \| `ad-hoc-prd` \| `findings-report-only` \| `blocked` |
+| `abandonMission` | `true` when the developer abandons the debug session (pair with MCP `status: abandoned`) |
 | `remainingTasks` | Open items for parent or developer |
 
 When `exitRecommendation: code-promotion`, `fixSummary` and `testEvidence` must be suitable for PR-plan seeding: name the verified change, affected areas, automated/manual test evidence, and any deploy-test considerations discovered during debugging. If that evidence is incomplete, prefer `findings-report-only` or include the missing evidence in `remainingTasks`.
