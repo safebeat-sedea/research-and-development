@@ -1,16 +1,15 @@
 ---
 description: >-
-  Dispatch scope and phase-tagged operations storage — Mission Control binding,
-  bundle directory, hybrid DB vs filesystem fallback. Supersedes legacy user-id
-  / joint as agent path-construction contracts.
+  Dispatch scope and DbOnly terminal operations storage — Mission Control
+  binding via dispatchId + operationsDocsDirectory; Hybrid / FsReadOnly retired.
 alwaysApply: false
 ---
 
 # Dispatch scope (supersedes operations user id)
 
-**On-demand rule.** Mission Control warm-up loads [`.sedea/centers/research-and-development/rules/bootstrap.mdc`](bootstrap.mdc) as the sole R&D `alwaysApply: true` bootstrap. Read **this file** when you need dispatch-scoped operations paths or phase-tagged storage contracts — not on every dispatch warm-up.
+**On-demand rule.** Mission Control warm-up loads [`.sedea/centers/research-and-development/rules/bootstrap.mdc`](bootstrap.mdc) as the sole R&D `alwaysApply: true` bootstrap. Read **this file** when you need dispatch-scoped operations paths or DbOnly storage contracts — not on every dispatch warm-up.
 
-Normative hosting layout: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § **Operations storage phases**, § **Dispatch bundles under `operations/`**, and § **Plans (dispatch-scoped discovery)**.
+Normative hosting layout: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § **Operations storage phases**, § **Dispatch persistence (DbOnly terminal)**, and § **Plans (dispatch-scoped discovery)**.
 
 ---
 
@@ -21,13 +20,13 @@ Every Mission Control agent lane on a dispatch is bound to **one dispatch scope*
 | Field | Source | Agent use |
 |-------|--------|-----------|
 | **`dispatchId`** | Warm-up / spawn preamble (**Active dispatch UUID**) | Stable dispatch identity; never infer from epoch folder name alone |
-| **Bundle directory** | Warm-up / spawn preamble (absolute path) | Read/write dispatch bundle artifacts **only** under this directory |
-| **Slot id** | Lane identity block | Open **only** `dispatch-lane.<slotId>.v1.json` for this lane unless spawn handover names another lane file in the **same** bundle |
+| **`operationsDocsDirectory`** | Warm-up / spawn preamble (absolute path) | Write operational docs **only** under this directory |
+| **Slot id** | Lane identity block | Lane identity for this agent; spawn handover via DB + MCP |
 
 **Forbidden:**
 
 - Constructing `.sedea/operations/.../` or `.sedea/operations/joint/...` paths for lane work
-- Cross-reading **`parent-child-registry.v1.json`**, **`dispatch-tab.v1.json`**, or ship-ledger from **other** dispatch bundle folders
+- Constructing or depending on `.sedea/operations/**/dispatch/**` paths for entity IO
 - **`ls -lt`** (or any mtime sort) across all dispatch folders under `.sedea/operations/`
 - Inferring dispatch scope from “newest” folder, parallel tabs, or PR index alone without **`targetPlanSlug`** + active **`dispatchId`**
 
@@ -35,18 +34,18 @@ Refresh host identity with MCP **`sedea_get_current_user`** when a skill require
 
 ---
 
-## Phase-tagged storage (hybrid migration)
+## Phase-tagged storage (DbOnly terminal)
 
-Operations persistence is migrating from filesystem bundles to workspace-bound RxDB/SQLite. Follow the **active phase** in Sedea rule **0** — do not mix legacy and new contracts on the same turn.
+Operations **dispatch** persistence is **DbOnly terminal** (Phase 6). Follow Sedea rule **0** — do not mix retired Hybrid / FsReadOnly contracts.
 
 | Phase | Agent contract |
 |-------|----------------|
-| **Phase 0 — governance** | Filesystem bundles; scope = **`dispatchId`** + **bundle directory** + explicit plan paths from spawn **`inputs`** |
-| **Hybrid** | DB-first for covered dispatch entities; filesystem fallback when entity not in workspace DB (host logs fallback — agents do not open raw DB URLs) |
-| **FsReadOnly** | DB-only writes for covered entities; filesystem bundle read-only hydrate for legacy dispatches — agents must not write bundle files |
-| **DB-only** | Dispatch CRUD via workspace DB; no epoch-folder discovery |
+| **DbOnly (terminal — only supported)** | Dispatch CRUD via workspace DB + MCP; no epoch-folder discovery; no filesystem dispatch bundle IO |
+| ~~Phase 0 / Hybrid / FsReadOnly~~ | **Retired** — not supported |
 
-During **Phase 0** and **hybrid**, the host may still resolve internal filesystem paths. That resolution is **host-internal** — agents must not document or rely on **user-id** path segments.
+**Flag-off unsupported:** `sedea.features.dispatch-storage-rxdb: false` (or equivalent) surfaces an explicit error — it does **not** restore filesystem bundles.
+
+Plans and docs under `.sedea/operations/.../plans/` and `docs/` remain filesystem for now (out of Phase 6 scope).
 
 ---
 
@@ -99,15 +98,15 @@ If a spawned skill requires dispatch scope fields that Mission Control did not i
 
 ---
 
-## On-disk layout (host-internal, Phase 0)
+## On-disk layout (host-internal — plans/docs only)
 
-During the filesystem era, Sedea binds operations storage to one **workspace-bound scope segment** under `.sedea/operations/` (host-internal constant shared with Mission Control and Sedea Hub). Agents must **not** construct or document user-id path segments — use **`dispatchId`**, **bundle directory**, and explicit plan paths from spawn **`inputs`**.
+Sedea binds operations **plans/docs** to one **workspace-bound scope segment** under `.sedea/operations/` (host-internal). Agents must **not** construct or document user-id path segments — use **`dispatchId`**, **`operationsDocsDirectory`**, and explicit plan paths from spawn **`inputs`**.
 
 | Subtree | Purpose |
 |---------|---------|
-| `dispatch/<epochMs>/` | One Mission Control dispatch bundle (stable id = `dispatchId` in `dispatch.yaml`) |
 | `plans/` | Flat plan union for this workspace scope |
-| `docs/` | Optional scope-level docs |
+| `docs/` | Scope-level operational docs |
+| `dispatch/<epochMs>/` | **Abandoned legacy** filesystem bundles — product must not depend on them |
 
 Legacy installs may still have `user`, `joint`, or per-user UUID scope folders — migrate with the customer script below.
 
@@ -135,6 +134,6 @@ node .sedea/centers/sedea/scripts/migrate-operations-bundle-layout.mjs
 
 The script: preflights `git worktree list`, merges legacy scope trees (`user`, `joint`, other UUID segments) into the workspace-bound scope, rewrites in-file path strings under `.sedea/operations/`, and prints a JSON summary. Re-run is idempotent.
 
-**After migration:** commit `.sedea/operations/` in the operations git repo if applicable; reopen dispatches via Mission Control using **`dispatchId`** + bundle directory binding (not path segment construction).
+**After migration:** commit `.sedea/operations/` in the operations git repo if applicable; reopen dispatches via Mission Control using **`dispatchId`** + MCP / DB binding (not path segment construction).
 
 ---
