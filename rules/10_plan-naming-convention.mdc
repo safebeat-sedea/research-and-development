@@ -19,7 +19,7 @@ Do not emit this word or any inflection of it (noun, verb, gerund, participle) i
 
 ## Always state what, how, **and benefit**
 
-Every plan title, PR title, and PR description must communicate the **benefit** alongside the what and how. If you can't articulate the benefit, the change isn't ready to ship.
+Every plan title, PR title, and PR description must communicate the **benefit** alongside the what and how. If you can't articulate the benefit, the change isn't ready to ship — **stop** and use **AskQuestion** / **`mission_control_present_structured_choice`** (defer / gather benefit / more-details); **forbidden:** prose-only *tell me the benefit when you know* idle.
 
 - **Plan / PR title**: lead with the outcome/benefit when practical.
 - **PR description**: explicitly answer three questions:
@@ -75,8 +75,33 @@ Worktree naming depends on the **hosting repo** that receives the code change, n
 
 Do **not** copy stacked **hosting repo** examples such as `feat/token-auth` or bare `improve/logger` onto a **separate hosting repo** — use `feat/01-token-auth` on the primary hosting repo when stacked on `main`. Do **not** use the forbidden busy-work prefix from any center naming rule.
 
-**Naming is not removal permission.** Choosing or documenting a worktree name does **not** authorize **`git worktree remove`**, **`git worktree prune`**, or **`sedea_remove_worktree_folder`** on that path. Removal requires **worktree ownership** preconditions — see [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Worktree removal ownership (binding)* and [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*.
+**Naming is not removal permission.** Choosing or documenting a worktree name does **not** authorize **`git worktree remove`**, **`git worktree prune`**, or **`sedea_remove_worktree_folder`** on that path. Removal requires **worktree ownership** preconditions — see [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) § *Worktree removal ownership (binding)* and [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc) § *Worktree ownership*. **If unsure** whether a path is yours to remove: **stop** and use structured choice — **do not remove**, and **do not** end with prose-only idle.
 
 ## When tempted to reach for the forbidden word
 
-Stop and ask: *what is actually better after this change?* That answer is the title.
+Stop and ask: *what is actually better after this change?* That answer is the title. Apply the rename in artifacts **before** create/push — do **not** ship the forbidden word hoping to fix it later.
+
+## Checkpoint step continuation (binding)
+
+This file is the **plan / PR / worktree naming and forbidden-word contract**, not a mission protocol with executable ship steps. Under **`trustLevel: checkpoint`**, turn-end modal UX for worktree-open, ship cut-points, and post-merge cleanup lives in invoker skills (`coding-session`, `create-pr`, `promote-center-submodule-pin`) and consent gates in rules **6** / **2** / **1** / sedea rule **7**. **Do not** add literal `USER_CHECKPOINT` markers here for happy-path benefit naming, prefix selection, or stacked-vs-separate pattern resolution when the plan or developer already named the outcome — that would fight skill auto-advance.
+
+| Surface | Designation | Owner |
+|---------|-------------|--------|
+| Apply benefit-named title / worktree prefix when benefit is clear | **auto-advance** | This § *Always state what, how, and benefit*; § *Forbidden word* |
+| Rewrite forbidden-word artifacts before create | **auto-advance** | This § *Forbidden word* — rename before propagating |
+| Choose primary-hosting stacked vs separate-repo naming when clear | **auto-advance** | This § *Worktree names (which repo?)* → sedea rule **7** / rule **20** |
+| Unclear hosting vs separate-repo naming pattern | **checkpoint** | This § *Worktree names* — structured choice once; no prose-only pattern pick |
+| Benefit cannot be articulated before ship | **checkpoint** | This § *Always state what, how, and benefit* — modal; forbid idle *tell me the benefit* |
+| Worktree remove / cleanup when ownership is unsure | **checkpoint** | Invoker cleanup / ship skill + rule **20** / sedea **0** — strengthened stop prose above; no markers in this file |
+| Stacked `NN` / path derivation on primary hosting repo | **auto-advance** | Sedea rule **7** (executable naming/path); this rule only forbids missing benefit / forbidden word |
+| Turn completion after proposing a plan/PR/worktree name in chat | **baseline-governs** (reference) | Rules **1**–**2**; pointer in Related below |
+
+**Forbidden in this file:** prescribing prose *tell me when* / *come back when* / *I'll wait* / *over to you* / *ask how to proceed* as the primary wait surface for benefit, naming-pattern, or ownership-unsure stops; duplicating rule-6 / sedea-7 AskQuestion option tables; `USER_CHECKPOINT` tokens for happy-path naming or forbidden-word rewrite.
+
+**Related:** Checkpoint step-table template — [`.sedea/centers/sedea/docs/pr-step-table-template.md`](.sedea/centers/sedea/docs/pr-step-table-template.md). Marker syntax — [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+## Related
+
+- Stacked worktree naming (primary hosting): [`.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc`](.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc)
+- Ship / worktree ownership: [20_efficient-pr-shipping.mdc](20_efficient-pr-shipping.mdc) § *Worktree naming* / § *Worktree removal ownership*
+- Turn completion / no idle handoff: [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc); [`.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc`](.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc)
