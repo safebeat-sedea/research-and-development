@@ -137,3 +137,23 @@ The script: preflights `git worktree list`, merges legacy scope trees (`user`, `
 **After migration:** commit `.sedea/operations/` in the operations git repo if applicable; reopen dispatches via Mission Control using **`dispatchId`** + MCP / DB binding (not path segment construction).
 
 ---
+
+## Checkpoint step continuation (binding)
+
+This file is the **dispatch-scope and DbOnly terminal operations-storage contract** (`dispatchId`, `operationsDocsDirectory`, docs write-root resolution, retired Hybrid / FsReadOnly) — not a mission protocol with executable ship steps. Under **`trustLevel: checkpoint`**, applying host-supplied scope and writing under a resolved docs root **auto-advances**; missing binding fields return **`partial`** with `outputs.missingFields` (no turn-end modal owned by this rule). **Do not** add literal `USER_CHECKPOINT` gate markers here — markers and option tables live on invoker skills and rule **2**.
+
+| Surface | Designation | Owner |
+|---------|-------------|--------|
+| Apply host-supplied `dispatchId` / `operationsDocsDirectory` / slot id | **auto-advance** | § *Agent dispatch scope (binding)* |
+| Docs write when Priority 1–2 root resolves | **auto-advance** | § *Docs write root resolution* |
+| Docs write when no root resolvable → `partial` + `missingFields` | **auto-advance** | § *Docs write root resolution* Priority 3 — stop write; invoker may open a pick |
+| Spawned skill missing dispatch scope fields → `partial` | **auto-advance** | § *Spawned skill outputs* — invoker / Squad Leader recovery |
+| `plan-state.mjs` / completeness cwd contract (reference) | **baseline-governs** (reference) | § *`plan-state.mjs` (canonical)* — execution owned by invoker |
+| Customer migration dry-run / execute documentation | **baseline-governs** (reference) | § *Customer migration* — operator runbook; not lane turn UX |
+| Forbidden path construction / mtime dispatch discovery | **baseline-governs** (reference) | § *Agent dispatch scope* Forbidden list — policy only |
+
+**Forbidden in this file:** prescribing prose *tell me when* / *come back when* / *I'll wait* / *over to you* / *reply with results* after a missing-scope or docs-root gap; prose-only exit that invents `dispatchId` or scans sibling dispatch folders; live `USER_CHECKPOINT` tokens on happy-path scope application.
+
+**Related:** Checkpoint step-table template — [`.sedea/centers/sedea/docs/pr-step-table-template.md`](.sedea/centers/sedea/docs/pr-step-table-template.md). Marker syntax — [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md). Turn completion — [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc).
+
+---
