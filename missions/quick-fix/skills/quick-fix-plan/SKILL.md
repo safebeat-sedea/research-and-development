@@ -9,16 +9,16 @@ designation:
 inputs:
   intakeMode:
     type: string
-    description: provide-list or description-of-fix from Squad Leader §2 intake.
+    description: description-of-fix from Squad Leader §2 intake (sole intake mode).
     required: true
   changeList:
     type: array
-    description: Non-empty confirmed bullet list of quick-fix items.
+    description: Non-empty confirmed synthesized bullet list of quick-fix items.
     required: true
   changeDescription:
     type: string
-    description: Required when intakeMode is description-of-fix; prose source for bullets.
-    required: false
+    description: Required free-form prose source for synthesized bullets.
+    required: true
   title:
     type: string
     description: Plan tree title from intake.
@@ -130,14 +130,14 @@ Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.s
 
 ### Missing inputs gate (binding)
 
-When **`changeList`**, **`complexityConfirmed`**, **`intakeMode`**, or (when `intakeMode` is `description-of-fix`) **`changeDescription`** are missing:
+When **`changeList`**, **`complexityConfirmed`**, **`intakeMode`**, or **`changeDescription`** are missing:
 
 USER_CHECKPOINT — provide missing quick-fix planning inputs on this lane.
 
 | Option id | Label |
 |-----------|--------|
 | `provide-change-list` | Supply change list |
-| `provide-description` | Supply fix description (prose path) |
+| `provide-description` | Supply fix description |
 | `defer` | Defer — return partial result to Squad Leader |
 | `more-details` | More details for option _ |
 
@@ -177,7 +177,7 @@ Inline **`pr-plan`** may still spawn **`coding-session`** per **`pr-plan`** §5d
 
 ## Steps
 
-1. **Validate spawn `inputs`** — non-empty **`changeList`**, **`complexityConfirmed: true`**, **`intakeMode`**; when **`description-of-fix`**, require **`changeDescription`**.
+1. **Validate spawn `inputs`** — non-empty **`changeList`**, **`complexityConfirmed: true`**, **`intakeMode: description-of-fix`**, and required **`changeDescription`**.
 
    - **Next-step resolution:** Auto-advance to step **2** when validation passes — no `USER_CHECKPOINT` on happy path. When required fields are missing, open [Missing inputs gate](#missing-inputs-gate-binding) or return `partial` with `outputs.missingFields` when this lane cannot collect inputs.
 

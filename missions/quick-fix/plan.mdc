@@ -1,14 +1,15 @@
 ---
 description: >-
-  Quick fix — bullet-list intake for small cosmetic UI/styling and simple functional
-  changes (complexity ≤6, developer responsibility); single PR plan via new-plan +
-  pr-plan, then coding-session ship chain. Reuses plan-and-deliver skills.
+  Quick fix — free-form fix-description intake for small cosmetic UI/styling and
+  simple functional changes (complexity ≤6, developer responsibility); single PR
+  plan via new-plan + pr-plan, then coding-session ship chain. Reuses
+  plan-and-deliver skills.
 alwaysApply: false
 ---
 
 # Mission plan
 
-**Execution model:** Squad Leader collects a developer-confirmed quick-fix bullet list, spawns a **Quick Fix Plan agent** that scaffolds a minimal parent plan and runs **`new-plan`** + **`pr-plan`** inline. **`pr-plan`** spawns **`coding-session`** (§5d). Ship execution stays on the detached **`coding-session`** lane; the Squad Leader tracks planning closure and ship progress, then proposes dispatch resolution.
+**Execution model:** Squad Leader collects a free-form fix description, synthesizes a confirmed **`changeList`**, and spawns a **Quick Fix Plan agent** that scaffolds a minimal parent plan and runs **`new-plan`** + **`pr-plan`** inline. **`pr-plan`** spawns **`coding-session`** (§5d). Ship execution stays on the detached **`coding-session`** lane; the Squad Leader tracks planning closure and ship progress, then proposes dispatch resolution.
 
 **Skill reuse:** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/) — **`quick-fix-plan`** (§3 spawn), **`new-plan`**, **`pr-plan`**, **`coding-session`**. Spawn contracts: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md).
 
@@ -19,7 +20,7 @@ alwaysApply: false
 | **Scope** | Small fixes — cosmetic UI/styling and **simple functional changes**; few lines per item |
 | **Complexity** | **≤6** — developer **must** only task this dispatch with low-complexity work |
 | **Developer responsibility** | Developer confirms each dispatch item is complexity **6 or under** before opening; agent validates at intake |
-| **Intake** | Short bullet list **or** free-form fix description (prose path synthesizes bullets for confirmation); items may be unrelated but each must qualify under scope and complexity |
+| **Intake** | Free-form fix description (prose synthesizes bullets for confirmation); items may be unrelated but each must qualify under scope and complexity |
 | **PR count** | **Exactly one** PR plan per dispatch (single indexed child) |
 | **Skipped** | Full **`author-prd`**, **`master-planner`** Master Plan, **`pr-breakdown`**, **`delivery-phases`**, **`phase-planner`** |
 | **Out of scope redirect** | Complexity **>6**, multi-PR decomposition, or work needing Master Plan → **`plan and deliver a single phase`** (**1–6** PRs, complexity **≤ 20**) or **`plan and deliver`** (detached dispatch) |
@@ -45,7 +46,7 @@ Detached **`coding-session`** lanes execute canonical plan-and-deliver repo-rule
 
 ## Objectives
 
-1. **Quick-fix intake** — Collect developer-confirmed scope via **`provide-list`** (bullet list) or **`description-of-fix`** (free-form prose synthesized into bullets for confirmation); each item is a small fix with complexity **≤6**.
+1. **Quick-fix intake** — Collect developer-confirmed scope via **`description-of-fix`** (free-form prose synthesized into bullets for confirmation); each item is a small fix with complexity **≤6**.
 
 2. **Single PR plan** — Produce one PR plan under `.sedea/operations/` via minimal parent scaffold, **`new-plan`** (indexed child), and **`pr-plan`** inline (§§1–4 populated).
 
@@ -62,7 +63,7 @@ flowchart TB
   classDef detached fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
 
   CMD(["quick fix"]):::leader
-  CMD --> INT["§2 Intake bullet list"]:::leader
+  CMD --> INT["§2 Intake fix description"]:::leader
   INT --> CP["§3 Spawn Quick Fix Plan agent"]:::child
   CP --> NP["§4 new-plan + pr-plan inline"]:::child
   NP --> CS["§5 pr-plan spawns coding-session"]:::detached
@@ -132,9 +133,9 @@ USER_CHECKPOINT — confirm mission intent when the opening command phrase does 
 ### 2. Collect quick fix intake
 
 - **Type:** Branching logic
-- **Intent:** Gather confirmed quick-fix scope on the Squad Leader lane before §3 spawn — via bullet list or free-form fix description.
-- **Inputs:** Opening remainder; Mission Control dispatch binding; `intakeMode` (`provide-list` | `description-of-fix`).
-- **Expected output:** `intakeMode`, `changeList` (non-empty confirmed bullet list), optional `changeDescription` (when prose path used), `complexityConfirmed: true` (each item ≤6), `scopeConfirmed: true`, optional `title`.
+- **Intent:** Gather confirmed quick-fix scope on the Squad Leader lane before §3 spawn — free-form fix description synthesized into bullets for confirmation.
+- **Inputs:** Opening remainder; Mission Control dispatch binding; `intakeMode` (`description-of-fix`).
+- **Expected output:** `intakeMode: description-of-fix`, `changeDescription` (required prose), `changeList` (non-empty confirmed synthesized bullet list), `complexityConfirmed: true` (each item ≤6), `scopeConfirmed: true`, optional `title`.
 - **Next-step resolution:** List confirmed in scope and complexity → §3 (auto-advance). Out-of-scope or complexity **>6** → USER_CHECKPOINT gate below.
 
 USER_CHECKPOINT — pick quick-fix intake mode and confirm scope before spawn.
@@ -142,21 +143,20 @@ USER_CHECKPOINT — pick quick-fix intake mode and confirm scope before spawn.
 **Procedure**
 
 1. **Intake mode (required first):** Open structured choice on the Squad Leader lane:
-   - **`provide-list`** — I'll paste my bullet list next — proceed to collect it
    - **`description-of-fix`** — free-form prose with all details of what to change and do (collect on follow-up turn, or same turn when opening remainder already contains the description)
    - **`brainstorm-first`** — optional research session → report → auto-chain §3 **`quick-fix-plan`** (§2.5)
    - **`redirect-scope`** — out of scope or complexity **>6** → **`plan and deliver a single phase`** or **`plan and deliver`** (detached)
    - **`pause`**
    - **More details for option _**
-   When the developer selects **`brainstorm-first`**, run §2.5 and **skip** steps 2–9 until brainstorm completes or abandons.
-2. **`provide-list` path:** Collect **bullet list** of changes — required; may pre-fill from opening remainder when bullets are already present.
-3. **`description-of-fix` path:** Collect **free-form prose** (`changeDescription`) — required; do not infer missing details from title alone. Propose a **synthesized bullet list** derived from the prose; present for developer review with structured choice before scope/complexity gates. When the developer chooses **revise intake** at that confirmation, return to step 1 — they may re-enter prose for re-synthesis, switch to **`provide-list`**, or edit the synthesized bullets inline before re-running steps 4–9.
-4. **Scope gate:** Confirm each item is a small fix — cosmetic UI/styling/copy **or** a **simple functional change** within this mission's line-count expectations. Reject items that need Master Plan decomposition, multiple PRs, or broad refactors.
-5. **Complexity gate:** Confirm developer attests each item is complexity **6 or under**. When any item likely exceeds **6**, stop and offer redirect (see **Mission constraints**).
-6. Collect optional **title** for the plan tree (default from first bullet, prose summary, or user phrase).
-7. Present summary (title, final bullet list, complexity attestation, intake mode used); open structured choice to proceed to Quick Fix Plan agent, **revise intake** (return to step 1 per step 3), redirect scope, or pause.
-8. When intake confirms a **title** that improves the dispatch title, re-run **Dispatch display refresh** (§ above) — **skip** when current dispatch chrome already matches.
-9. **Forbidden:** spawn before list is confirmed in scope and complexity (both paths).
+   When the developer selects **`brainstorm-first`**, run §2.5 and **skip** steps 2–8 until brainstorm completes or abandons.
+   **Forbidden:** offering a paste-bullet-list / **`provide-list`** intake option.
+2. **`description-of-fix` path:** Collect **free-form prose** (`changeDescription`) — required; do not infer missing details from title alone. Propose a **synthesized bullet list** derived from the prose; present for developer review with structured choice before scope/complexity gates. When the developer chooses **revise intake** at that confirmation, return to step 1 — they may re-enter prose for re-synthesis or edit the synthesized bullets inline before re-running steps 3–8.
+3. **Scope gate:** Confirm each item is a small fix — cosmetic UI/styling/copy **or** a **simple functional change** within this mission's line-count expectations. Reject items that need Master Plan decomposition, multiple PRs, or broad refactors.
+4. **Complexity gate:** Confirm developer attests each item is complexity **6 or under**. When any item likely exceeds **6**, stop and offer redirect (see **Mission constraints**).
+5. Collect optional **title** for the plan tree (default from first synthesized bullet, prose summary, or user phrase).
+6. Present summary (title, final bullet list, complexity attestation, intake mode used); open structured choice to proceed to Quick Fix Plan agent, **revise intake** (return to step 1 per step 2), redirect scope, or pause.
+7. When intake confirms a **title** that improves the dispatch title, re-run **Dispatch display refresh** (§ above) — **skip** when current dispatch chrome already matches.
+8. **Forbidden:** spawn before list is confirmed in scope and complexity.
 
 ### 2.5 Brainstorm research (optional — `brainstorm-first`)
 
@@ -168,7 +168,7 @@ USER_CHECKPOINT — pick quick-fix intake mode and confirm scope before spawn.
 - **Checkpoint child UX:** Report approval USER_CHECKPOINT on **`brainstorm-research/SKILL.md`** § *Report approval gate*; this §2.5 **#external-wait** only.
 - **Inputs:** `invokerMissionSlug: quick-fix`, `operationsDocsDirectory` from lane identity, optional seeds from §1.
 - **Next-step resolution:**
-  - Terminal **`developerApprovedReport: true`** → derive `changeList` bullets from report §5 Handoff summary, set `intakeMode: provide-list`, `complexityConfirmed` / `scopeConfirmed` after developer attestation in §3 spawn **`initiatingPrompt`** → **auto-chain §3** (no repeat §2 USER_CHECKPOINT).
+  - Terminal **`developerApprovedReport: true`** → derive `changeList` bullets and `changeDescription` from report §5 Handoff summary, set `intakeMode: description-of-fix`, `complexityConfirmed` / `scopeConfirmed` after developer attestation in §3 spawn **`initiatingPrompt`** → **auto-chain §3** (no repeat §2 USER_CHECKPOINT).
   - **`abandonMission: true`** → call MCP **`mission_control_propose_dispatch_resolution`** with status **`abandoned`**.
   - Otherwise → USER_CHECKPOINT gate below.
 
@@ -190,7 +190,7 @@ USER_CHECKPOINT — pick next step when brainstorm child reports failure or part
 - **skillPath (binding):** [`.sedea/centers/research-and-development/missions/quick-fix/skills/quick-fix-plan/SKILL.md`](.sedea/centers/research-and-development/missions/quick-fix/skills/quick-fix-plan/SKILL.md) — host **`mission_control_spawn_agent`** uses this single path per [spawn contracts README](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md) § *Universal spawn preflight*.
 - **Inline on child lane (not separate spawns):** [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/new-plan/SKILL.md), [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md`](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md) — executed per §4 inside the **`quick-fix-plan`** child lane.
 - **Required rule context:** Sedea baseline, **this `plan.mdc`**, **`development-process.md`**, [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc), plan-and-deliver **`skills/README.md`**.
-- **Inputs:** `intakeMode` (`provide-list` | `description-of-fix`), `changeList`, optional `changeDescription` (required when `intakeMode` is `description-of-fix`), `title` from Mission Control, `centerSlug: research-and-development`, `complexityConfirmed: true`.
+- **Inputs:** `intakeMode: description-of-fix`, `changeList`, `changeDescription` (required), `title` from Mission Control, `centerSlug: research-and-development`, `complexityConfirmed: true`.
 - **Expected output:** Child terminal with `outputs.parentPlanPath`, `outputs.parentPlanSlug`, `outputs.targetPlanPath`, `outputs.targetPlanSlug`, `outputs.readyForImplementation`, `outputs.implementationHandoffStatus`, `outputs.prPlanHandoffReady`, optional `outputs.spawnCorrelationId` / `outputs.codingSessionStatus` after inline **`pr-plan`** §5d — per **`quick-fix-plan/SKILL.md`** **`## Completion (spawned)`** and **`## Checkpoint turn UX (skill-local)`**.
 - **Next-step resolution:** Emit spawn → **#external-wait** before turn end; on child terminal success with PR plan path → §6 ack on leader (auto-advance). Failure/partial → USER_CHECKPOINT gate below.
 
@@ -200,13 +200,13 @@ USER_CHECKPOINT — pick next step when Quick Fix Plan child reports failure or 
 
 - **`skillPath`:** `.sedea/centers/research-and-development/missions/quick-fix/skills/quick-fix-plan/SKILL.md` (workspace-relative on emit).
 - **`name`** / **`description`** from intake **title** or first bullet — not generic placeholders.
-- **`initiatingPrompt`:** one narrative prompt string weaving the confirmed bullet list, scope/complexity confirmation, and full `changeDescription` when the prose intake path was used — not separate structured sub-fields.
+- **`initiatingPrompt`:** one narrative prompt string weaving the confirmed bullet list, scope/complexity confirmation, and full `changeDescription` — not separate structured sub-fields.
 - **`warmUpRules`:** include **`quick-fix/plan.mdc`** instead of **`plan-and-deliver/plan.mdc`**.
 
 **Procedure**
 
-1. Compile child **`inputs`** from §2: `intakeMode`, `changeList`, optional `changeDescription`, `title`, `centerSlug`, `complexityConfirmed`.
-2. Set **`initiatingPrompt`** with the confirmed bullet list, scope/complexity attestation, and full prose when the **`description-of-fix`** path was used.
+1. Compile child **`inputs`** from §2: `intakeMode: description-of-fix`, `changeList`, `changeDescription`, `title`, `centerSlug`, `complexityConfirmed`.
+2. Set **`initiatingPrompt`** with the confirmed bullet list, scope/complexity attestation, and full prose.
 3. Run [spawn contracts README](.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md) § *Universal spawn preflight*; set **`name`** from intake **title** or first bullet — not generic placeholders.
 4. Emit exactly one **`mission_control_spawn_agent`** for **`quick-fix-plan`** with dispatch-unique `slug` and preflight **`inputs`**.
 5. Open **next-step resume** structured choice (**#external-wait**) before ending the turn.
