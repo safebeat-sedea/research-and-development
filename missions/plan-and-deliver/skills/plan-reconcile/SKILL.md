@@ -98,13 +98,13 @@ Give developers a **consistent state snapshot** during inline reconcile so they 
 
 **Population rules:** Same as [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`](../coding-session/SKILL.md) § *Session orientation table (binding)* — use inline context; never invent paths or PR numbers.
 
-**Mandatory gates (this skill):** [Approve PR-tracked reconcile mutations gate](#approve-pr-tracked-reconcile-mutations-gate-binding) (**Non-Checkpoint / exception only** under Checkpoint — clean path auto-advances **`approve-reconcile-mutations`**); [Archive candidates gate](#archive-candidates-gate-binding) (**Non-Checkpoint / exception only** under Checkpoint — clean path auto-selects **own plan only**); [Follow-ups triage gate](#follow-ups-triage-gate-binding); [Post-ship workspace cleanup gate](#post-ship-workspace-cleanup-gate-binding); [Inline closure gate](#inline-closure-gate-binding).
+**Mandatory gates (this skill):** [Approve PR-tracked reconcile mutations gate](#approve-pr-tracked-reconcile-mutations-gate-binding) (**Non-Checkpoint / exception only** under Checkpoint — clean path auto-advances **`approve-reconcile-mutations`**); [Archive candidates gate](#archive-candidates-gate-binding) (**Non-Checkpoint / exception only** under Checkpoint — clean path auto-selects **own plan only**); [Follow-ups triage gate](#follow-ups-triage-gate-binding); [Post-ship workspace cleanup gate](#post-ship-workspace-cleanup-gate-binding); [Inline closure gate](#inline-closure-gate-binding) (**Non-Checkpoint / exception only** under Checkpoint — clean handback auto-advances **`confirm-inline-closure`**).
 
 ## Checkpoint turn UX (skill-local)
 
 Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`plan-reconcile`**; other ship-chain skills document their own markers.
 
-**Real-dispatch test loop (binding):** After merge, run one full inline **`plan-reconcile`** on a **`coding-session`** Checkpoint dispatch through [Approve PR-tracked reconcile mutations gate](#approve-pr-tracked-reconcile-mutations-gate-binding), [Archive candidates gate](#archive-candidates-gate-binding), and [Inline closure gate](#inline-closure-gate-binding) — collect a developer verdict before the parent phase advances **`hosting-repo-rules`** PR 7 — per **Ship-chain skills UX** § *Single-concern strategy*.
+**Real-dispatch test loop (binding — Non-Checkpoint / calibration):** After merge, run one full inline **`plan-reconcile`** on a **`coding-session`** dispatch **without** Checkpoint trust (or with deliberate exception flags) through the Non-Checkpoint / exception modals for [Approve PR-tracked reconcile mutations gate](#approve-pr-tracked-reconcile-mutations-gate-binding), [Archive candidates gate](#archive-candidates-gate-binding), and [Inline closure gate](#inline-closure-gate-binding) — collect a developer verdict before the parent phase advances **`hosting-repo-rules`** PR 7 — per **Ship-chain skills UX** § *Single-concern strategy*. **Under Checkpoint trust on a clean ship-chain path:** do **not** require a developer verdict for those three happy-path stops — auto-advance per the Checkpoint rows below (follow-ups triage still Gates when unchecked bullets remain).
 
 Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
 
@@ -118,7 +118,7 @@ Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.s
 | **4** — Archive selected plans | Auto-advance after selection (implicit or modal) | exception: non-zero **`archive`** exit |
 | **5** — Post-ship workspace cleanup | **Gate** when **`detect-stale-workspaces`** returns candidates | [Post-ship workspace cleanup gate](#post-ship-workspace-cleanup-gate-binding) |
 | **6** — End state summary | Auto-advance recap prose only | — |
-| **Inline closure** (inline on **`coding-session`**) | **Gate** — mandatory developer pick before **`## Completion (inline)`** handback | [Inline closure gate](#inline-closure-gate-binding) |
+| **Inline closure** (inline on **`coding-session`**) | **Auto-advance** — resolve **`confirm-inline-closure`** **same turn** on clean handback (target archived or documented skip; no hard failures; follow-ups triaged or empty) | **Gate** on Non-Checkpoint / exception only — [Inline closure gate](#inline-closure-gate-binding) |
 
 ### Approve PR-tracked reconcile mutations gate (binding)
 
@@ -285,7 +285,7 @@ Optional flags: **`--prune-worktrees`** is only allowed after the developer appr
 
 ### 1b. Approve PR-tracked reconcile mutations
 
-When step **1** dry-run reports mutation-worthy PR-tracked entries, open [Approve PR-tracked reconcile mutations gate](#approve-pr-tracked-reconcile-mutations-gate-binding) before running non-dry-run reconcile.
+When step **1** dry-run reports mutation-worthy PR-tracked entries, resolve [Approve PR-tracked reconcile mutations gate](#approve-pr-tracked-reconcile-mutations-gate-binding) before running non-dry-run reconcile — under Checkpoint trust **auto-advance** **`approve-reconcile-mutations`** **same turn** when clean criteria pass; otherwise open the Non-Checkpoint / exception modal.
 
 Only **`approve-reconcile-mutations`** authorizes:
 
@@ -336,7 +336,7 @@ Filters already applied (unchanged from upstream script semantics):
 
 ### 3. Present candidates + flagged plans
 
-When merged lists are non-empty, open [Archive candidates gate](#archive-candidates-gate-binding). One option per plan. Label format:
+When merged lists are non-empty, resolve [Archive candidates gate](#archive-candidates-gate-binding) — under Checkpoint trust **auto-advance** **own-plan-only** archive when clean criteria pass; otherwise open the Non-Checkpoint / exception multi-select. Label format for the modal:
 
 - Candidates: `` `<slug>` — todos N/N done, signal: <shipSignal.label>, parent: <parent> ``
 - Flagged: `` `<slug>` — FLAGGED (<reason>), parent: <parent> ``
@@ -509,13 +509,29 @@ Stop when the target plan is archived or explicitly not archive-eligible with no
 
 ### Inline closure gate (binding)
 
-When **`upstreamSkill`** is **`coding-session`**, close every inline pass with structured choice **before** emitting **`## Completion (inline)`** prose to the parent — even when archive mutations, follow-ups triage, and §5 cleanup are complete or skipped.
+When **`upstreamSkill`** is **`coding-session`**, close every inline pass with handback authorization **before** emitting **`## Completion (inline)`** prose to the parent — either Checkpoint auto-advance or structured choice (Non-Checkpoint / exception). **Forbidden:** emitting **`mission_control_send_agent_result`** from this skill — the parent **`coding-session`** lane owns MCP results.
 
-**When required:** After Flow steps **1–6** finish (or pause with a terminal outcome ready for handback). **Forbidden:** prose-only reconcile summary without this gate under Checkpoint trust. **Forbidden:** emitting **`mission_control_send_agent_result`** from this skill — the parent **`coding-session`** lane owns MCP results.
+**When required:** After Flow steps **1–6** finish (or pause with a terminal outcome ready for handback).
+
+#### Checkpoint — auto-advance `confirm-inline-closure` (binding)
+
+Under Checkpoint trust, **auto-advance** as if the developer picked **`confirm-inline-closure`** — **no** **`mission_control_present_structured_choice`** and **no** `USER_CHECKPOINT` on this happy path — when **all** hold:
+
+1. Flow steps **1–6** finished (or documented skip) with a terminal outcome ready for handback.
+2. Clean handback: target **`targetPlanSlug`** archived (or explicit skip/defer documented in recap); no hard script failures; follow-ups triaged or empty for the archive batch; §5 cleanup complete, skipped, or empty.
+3. Developer did **not** name **`review-reconcile-summary`**, **`continue-reconcile`**, or **`defer-closure`** in the **same** message.
+
+When clean: one-line recap (*Checkpoint — plan-reconcile handback to coding-session*) + **Act on this same turn** — emit **`## Completion (inline)`** with fields from [Inline result contract](#inline-result-contract) so the parent merges into **`coding-session`** `outputs`. **Forbidden:** opening *confirm plan-reconcile inline closure?* on the clean path; treating the leftover `USER_CHECKPOINT` under Non-Checkpoint as applying to this clean path.
+
+**Exception — gate required:** When any clean criterion fails, outcomes are partial/flagged/postponed, Checkpoint does not apply, or the developer named review/continue/defer in the **same** message, call **`mission_control_present_structured_choice`** per below.
+
+#### Non-Checkpoint and exception modal (binding)
+
+USER_CHECKPOINT — confirm plan-reconcile inline closure and hand results back to coding-session. defaultOptionId: confirm-inline-closure
+
+When Checkpoint auto-advance does **not** apply:
 
 Put reconcile counts, archived slugs, flagged/postponed leftovers, and §5 cleanup summary in **`displayMarkdown`**.
-
-USER_CHECKPOINT — confirm plan-reconcile inline closure and hand results back to coding-session.
 
 | Option id | Label (brief) | Act |
 |-----------|---------------|-----|
@@ -526,7 +542,7 @@ USER_CHECKPOINT — confirm plan-reconcile inline closure and hand results back 
 | `more-details` | More details for option _ | Elaborate; re-open this gate |
 
 - **`defaultOptionId: confirm-inline-closure`** when the pass reached a clean handback (target archived, no hard script failures, or explicit skip/defer documented in recap).
-- **Next-step resolution:** Auto-advance through steps **1**, **2**, **4**, and **6** recap on the happy path — no `USER_CHECKPOINT` until [Inline closure gate](#inline-closure-gate-binding).
+- **Next-step resolution:** Auto-advance through steps **1**, **2**, **4**, and **6** recap on the happy path — under Checkpoint, continue into **`confirm-inline-closure`** auto-advance when criteria pass; otherwise no `USER_CHECKPOINT` until this Non-Checkpoint / exception modal.
 
 **Standalone dispatch:** When [Standalone dispatch (stop immediately)](#standalone-dispatch-stop-immediately) applies, **skip** this gate — stop before mutations instead.
 
