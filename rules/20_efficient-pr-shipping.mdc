@@ -34,7 +34,7 @@ On every R&D ship lane (**`coding-session`**, **`plan-reconcile`** §5 fallback,
 - **`git worktree remove`** on **`HOSTING_ROOT`** or any path that is not **this pass’s** **`WORKTREE_ROOT`**.
 - Deleting worktree directories by hand while they remain Sedea workspace folders or while another party may still use them.
 
-**If unsure** whether a path is yours for **this pass**, **stop** and use structured choice — **do not remove**. **`post-reconcile-workspace-cleanup.mjs --apply`** may remove **only** paths returned for **this plan/session** by **`detect-stale-workspaces`** after the ownership gate above — never arbitrary paths from **`git worktree list`**.
+**If unsure** whether a path is yours for **this pass**, **stop** and use structured choice (`AskQuestion` / **`mission_control_present_structured_choice`**) — **do not remove**, and **do not** end with prose-only idle. Marker and option tables live on the **invoker** cleanup / ship skill — **not** as `USER_CHECKPOINT` tokens in this file. **`post-reconcile-workspace-cleanup.mjs --apply`** may remove **only** paths returned for **this plan/session** by **`detect-stale-workspaces`** after the ownership gate above — never arbitrary paths from **`git worktree list`**.
 
 ## Squad Leader on HOSTING_ROOT vs agent sessions in worktrees
 
@@ -566,3 +566,33 @@ Do not conflate **pre-PR review** with **PR-surface review**:
 | **Reviewer agent** | GitHub PR diff + description (Sedea or third-party) | After PR is open | [`pr-review/SKILL.md`](../missions/plan-and-deliver/skills/pr-review/SKILL.md) for comment triage; not a substitute for pre-PR |
 
 Full definitions: [`.sedea/centers/research-and-development/docs/development-process.md`](../docs/development-process.md) § *Agents and roles*.
+
+## Checkpoint step continuation (binding)
+
+This file is the **R&D ship-lane worktree / commit-push / PR-creation contract**, not a mission protocol with executable ship steps. Under **`trustLevel: checkpoint`**, turn-end modal UX for worktree-open, ship cut-points, pre-PR / create-PR / post-create-pr gates, and post-merge cleanup lives in invoker skills (`coding-session`, `create-pr`, `pre-pr-review`, `plan-reconcile`, `promote-center-submodule-pin`) and consent gates in sedea rules **6** / **2** / **1** / **7**. **Do not** add literal `USER_CHECKPOINT` markers here for happy-path HOSTING_ROOT resolution, worktree setup hints, ownership-clear remove paths, or policy redirects to **`coding-session`** — that would fight skill auto-advance.
+
+| Surface | Designation | Owner |
+|---------|-------------|--------|
+| Resolve `HOSTING_ROOT` / script cwd when `.sedea/` ancestors are clear | **auto-advance** | This § *Hosting repo cwd for scripts* |
+| Missing hosting root / cannot resolve `.sedea/` | **checkpoint** | This § *Resolve `HOSTING_ROOT`* step 5 — AskQuestion once; no prose-only path guess |
+| Center `worktree-setup.sh` + MCP attach / detach after prior consent | **auto-advance** | Invoker / sedea rules **0** / **6** / **7**; this § *Worktree setup in plans* |
+| Worktree remove / cleanup when Path A or Path B ownership is clear | **auto-advance** | This § *Worktree removal ownership*; invoker post-merge cleanup |
+| Worktree remove / cleanup when ownership is unsure | **checkpoint** | Invoker cleanup / ship skill — strengthened stop prose above; no markers in this file |
+| Review-before-commit / ship cut-point / pre-PR / create-PR gates | **baseline-governs** (reference) | **`coding-session/SKILL.md`** Checkpoint turn UX + sedea rule **6** — not duplicated here |
+| Wrong-lane `gh pr create` / create-PR URL handoff | **auto-advance** (policy stop) | This § *PR creation* — redirect to **`coding-session`** ship chain; no prose create-PR substitute |
+| Commit and push cadence after same-message / gate consent | **auto-advance** | This § *Commit and push cadence*; sedea rule **6** + skill gates authorize git |
+| Center submodule pin promotion after center merge | **auto-advance** | This § *Center submodule pin promotion*; inline **`promote-center-submodule-pin`** |
+| Turn completion after ship-policy guidance in chat | **baseline-governs** (reference) | Rules **1**–**2**; pointer in Related below |
+
+**Forbidden in this file:** prescribing prose *tell me when* / *come back when* / *I'll wait* / *over to you* / *ask how to proceed* as the primary wait surface for ownership-unsure stops, hosting-root picks, or ship-gate stands-in; duplicating **`coding-session`** / rule-6 AskQuestion option tables; `USER_CHECKPOINT` tokens for happy-path script cwd, worktree setup, or PR-creation policy redirects.
+
+**Related:** Checkpoint step-table template — [`.sedea/centers/sedea/docs/pr-step-table-template.md`](.sedea/centers/sedea/docs/pr-step-table-template.md). Marker syntax — [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+## Related
+
+- Worktree ownership / attach-detach: [`.sedea/centers/sedea/rules/0_hosting-repo.mdc`](.sedea/centers/sedea/rules/0_hosting-repo.mdc)
+- Commit/push gate: [`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`](.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc)
+- Stacked worktree naming: [`.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc`](.sedea/centers/sedea/rules/7_stacked-pr-worktree-naming.mdc)
+- Ship executor: [`coding-session/SKILL.md`](../missions/plan-and-deliver/skills/coding-session/SKILL.md)
+- Turn completion / no idle handoff: [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc); [`.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc`](.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc)
+- Plan naming cross-ref: [10_plan-naming-convention.mdc](10_plan-naming-convention.mdc)
