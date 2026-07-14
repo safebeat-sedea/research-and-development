@@ -44,7 +44,7 @@ inputs:
     required: false
   parentAgentRole:
     type: string
-    description: When new-plan-agent, report Completion (inline) to the invoker instead of AGENT_RESULT_RESPONSE_V1.
+    description: When new-plan-agent, report Completion (inline) to the invoker instead of mission_control_send_agent_result.
     required: false
   autoContinue:
     type: boolean
@@ -74,7 +74,7 @@ warmUpRules:
 
 # PR plan: §§ 1–4 from the parent plan
 
-**Normative execution (plan and deliver):** **Inline only** on the invoker lane — **`new-plan`** step 4 with **`parentAgentRole: "new-plan-agent"`**. Report **`## Completion (inline)`**; do **not** emit **`AGENT_RESULT_RESPONSE_V1`** for **`pr-plan`**. **Exception:** §5d may emit **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** on a **new** child lane. A standalone spawned **`pr-plan`** child is non-default. See **`../README.md`** § *Normative execution mode*.
+**Normative execution (plan and deliver):** **Inline only** on the invoker lane — **`new-plan`** step 4 with **`parentAgentRole: "new-plan-agent"`**. Report **`## Completion (inline)`**; do **not** emit **`mission_control_send_agent_result`** for **`pr-plan`**. **Exception:** §5d may emit **`mission_control_spawn_agent`** for **`coding-session`** on a **new** child lane. A standalone spawned **`pr-plan`** child is non-default. See **`../README.md`** § *Normative execution mode*.
 
 This skill drives the **per-PR planning move** under Sedea's New Feature Development Process: take a freshly-spawned PR plan stub (indexed child from the parent's **`### PR list`** under **`PR breakdown`**, typically right after the **`new-plan`** protocol branch) and populate §§ **1–4** of the **per-PR template** — Single concern, Background, Change scope, Reasoning. §§ **5–8** and the § 7 deploy scaffold stay **`_TBD_`** for **`coding-session`** and later turns unless the **developer** explicitly asks for a **fill** sketch here.
 
@@ -112,9 +112,90 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/pr-plan/SKILL.md` | This skill procedure |
 | `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md` | Spawn preflight, definitive `laneRules` |
 
+## Agent messaging (MCP)
+
+**MCP spawn/result/notify skill.** Parent→child spawn, plan-change notify, and child terminal result use MCP tools per **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Agent-to-agent spawn protocol*; operator checklists: **`../README.md`** § *MCP spawn preflight* and § *MCP notify preflight*.
+
+| Action | MCP tool |
+|--------|----------|
+| Parent spawn (when this skill emits a child lane) | **`mission_control_spawn_agent`** |
+| Parent plan-change notify (open **`coding-session`** child on this PR plan row) | **`mission_control_notify_child_lanes`** |
+| **This** spawned lane terminal (and terminal re-emits) | **`mission_control_send_agent_result`** |
+
+**Binding:**
+
+- Run **`../README.md`** § *MCP spawn preflight* (rows M1–M8) before every MCP spawn; **forbidden** host-resolved identity keys in MCP args (`correlationId`, `dispatchId`, `slotId`, … — see README § *Host-resolved identity*).
+- Run **`../README.md`** § *MCP notify preflight* (rows N1–N8) before every **`mission_control_notify_child_lanes`** call — cross-ref **`.sedea/centers/sedea/rules/4_mission.mdc`** § *MCP notify protocol*.
+- Inline skills on this mission stay **inline-only** — no spawn wire change unless the protocol step explicitly spawns a child lane.
+
+### Plan-change notify — emit-when (`mission_control_notify_child_lanes`)
+
+After a **material** edit to this target PR plan §§ **1–4** (or § **5–8** sketch chosen on this lane) that affects **ongoing work** on the open **`coding-session`** child for this row, notify that child with a **separate** MCP call (one slug per call, v1). Normative protocol: **`.sedea/centers/sedea/rules/4_mission.mdc`** § *MCP notify protocol*.
+
+| Emit when | Target child slugs (examples) | §5e alignment |
+|-----------|------------------------------|---------------|
+| Material §§1–4 / handoff sketch edit while **`coding-session`** is non-terminal for this **`targetPlanPath`** | Dispatch-unique **`coding-session-<targetPlanSlug>`** (or slug recorded in **`outputs.spawnCorrelationId`** / **`activeLanes`**) | Notify **does not replace** §5e child terminal merge — still aggregate **`mission_control_send_agent_result`**; notify is handoff only |
+
+**Material edit** includes: §1 single-concern scope change, §3 change-scope bullet adds/removes/rewrites, §4 reasoning that alters implementation constraints, and §5–8 sketch edits after **`prefill-sections`**.
+
+**Forbidden:** empty or speculative **`targetSlugs`**; notify terminal / ship-complete children; notify instead of §5d spawn for first-time handoff; using notify when no open **`coding-session`** child exists for this plan.
+
+### MCP notify preflight (`mission_control_notify_child_lanes`)
+
+| Step | Check |
+|------|--------|
+| N1 | Caller authority — **`pr-plan`** may notify the open **`coding-session`** child slug for **`inputs.targetPlanPath`** only |
+| N2 | Required args present: **`summary`**, **`changeType`**, **`affectedPlanPaths`** (non-empty), **`targetSlugs`** (exactly one slug) |
+| N3 | **Forbidden args absent** — no host-resolved identity keys, no **`notifyAllDescendants`** |
+| N4 | **`targetSlugs`** contains exactly **one** dispatch-unique **non-terminal** child slug per call |
+| N5 | **`affectedPlanPaths`** includes this target PR plan (and parent plan when parent row context changed) |
+| N6 | Multiple children → **separate MCP calls** (one slug per call, v1) — rare on this skill; default one **`coding-session`** child per PR plan |
+| N7 | Omit terminal lanes from **`targetSlugs`** before calling |
+| N8 | First implementation handoff → **`mission_control_spawn_agent`** §5d — never notify as a spawn workaround |
+
+### Plan-change notification receive (child lane)
+
+When Mission Control delivers **`Mission Control: plan-change-notification delivered.`** on a **standalone spawned **`pr-plan`** lane**, treat it as mid-population handoff — not skill terminal completion and not §5e child-result merge. **Inline under **`new-plan`****: the **invoker** lane owns notify receive per **`new-plan/SKILL.md`** / **`phase-planner/SKILL.md`** — do **not** duplicate receive handling on the inline populator turn.
+
+**Intake (binding):**
+
+1. Parse host envelope fields: **`summary`**, **`changeType`**, **`affectedPlanPaths`**, optional **`excerptPointers`**, **`requestedChildActions`**, **`initiatingContext`**.
+2. **`Read`** each **`affectedPlanPaths`** entry in full before acting.
+3. Compare to **`inputs.targetPlanPath`**, **`inputs.parentPlanPath`**, parent **`### PR list`** row **N**, and open **`coding-session`** child state — do **not** close the PR plan row solely because notify arrived.
+4. Keep **`outputs.continuationStatus: active`** while §5c is not yet offered, a **`coding-session`** child is open, or blocking **`remainingTasks`** remain.
+
+**Checkpoint vs external-wait (binding):** Notify delivery is **developer-input USER_CHECKPOINT** — **not** external-wait. Emit structured choice on the same turn after re-read; do **not** auto-advance to §5d spawn, §5e terminal merge, or **`mission_control_send_agent_result`** solely because notify arrived.
+
+USER_CHECKPOINT — parent plan-change notification received on pr-plan child lane.
+
+**Required options** (`modalTitle`: *PR plan — plan change notification*; list in this order):
+
+| Option id | Label |
+|-----------|--------|
+| `acknowledge-only` | Acknowledge — continue PR plan work with updated context |
+| `re-read-revise` | Re-read / revise affected PR or parent plan sections |
+| `plan-reconcile` | Run inline **`plan-reconcile`** when authorized |
+| `escalate-parent` | Escalate to **`phase-planner`**, **`master-planner`**, or Squad Leader |
+| `stop-work` | Stop PR plan work (cancellation or developer-directed) |
+| `more-details` | More details for option _ |
+
+**Option semantics (binding):**
+
+| Option | Act |
+|--------|-----|
+| **`acknowledge-only`** | Merge notify context into lane ledger; resume prior step — **no** terminal MCP result |
+| **`re-read-revise`** | Update target PR plan §§ or spawn **`inputs`** when paths intersect — keep row open |
+| **`plan-reconcile`** | Inline **`plan-reconcile`** per contract — merge ledger; **no** terminal result solely from notify |
+| **`escalate-parent`** | Bubble summary upstream — **forbidden** **`mission_control_refocus_parent_lane`** solely from notify |
+| **`stop-work`** | Pause PR plan population; **`partial`** only when genuinely blocked |
+
+**Forbidden on notify delivery (binding):** Terminal **`mission_control_send_agent_result`** solely due to notification; **`mission_control_refocus_parent_lane`** solely due to notification; skipping **`affectedPlanPaths`** re-read; treating notify as §5e child terminal merge.
+
+Normative protocol: **`.sedea/centers/sedea/rules/4_mission.mdc`** § *MCP notify protocol*; **`../README.md`** § *Child delivery checkpoint (receive)*.
+
 ## Handoff to `coding-session` (spawned child lane)
 
-**`pr-plan`** and **`coding-session`** are **sequential skills on different lanes**. After planning handoff approval, **`pr-plan`** emits **`AGENT_RUN_REQUEST_V1`** for **`coding-session`**; the child owns worktrees, workspace attach, and **implements** the PR plan on that lane (default **spawned implementation lane** — see **`coding-session`** § *Execution mode after worktree attach*). When **`pr-plan`** runs **inline under `new-plan`**, §5d still spawns **`coding-session`** from the **`new-plan`** lane — only the **`pr-plan`** populator lane is eliminated.
+**`pr-plan`** and **`coding-session`** are **sequential skills on different lanes**. After planning handoff approval, **`pr-plan`** emits **`mission_control_spawn_agent`** for **`coding-session`**; the child owns worktrees, workspace attach, and **implements** the PR plan on that lane (default **spawned implementation lane** — see **`coding-session`** § *Execution mode after worktree attach*). When **`pr-plan`** runs **inline under `new-plan`**, §5d still spawns **`coding-session`** from the **`new-plan`** lane — only the **`pr-plan`** populator lane is eliminated.
 
 | Concern | **`pr-plan`** (this skill) | **`coding-session`** |
 |---------|---------------------------|----------------------|
@@ -136,15 +217,53 @@ Per [`.sedea/centers/sedea/docs/lane-manifest-contract.md`](.sedea/centers/sedea
 
 The **developer** picks the next move per **30_planning-target-resolution** § *Sedea input channel*.
 
+## Checkpoint turn UX (skill-local)
+
+Under Checkpoint trust (`trustLevel: checkpoint`), auto-advance scripted happy-path steps; emit structured choice only at **USER_CHECKPOINT** markers in this section, implicit external-wait surfaces, or exception paths. **No cross-skill inheritance** — gate defaults here apply only to **`pr-plan`**; other planning skills document their own markers.
+
+**Real-dispatch test loop (binding):** After merge, run one full **`pr-plan`** spawn on a Checkpoint dispatch through §5c and collect a developer verdict before the parent phase advances the next **`pr-plan`** step PR — per **Planning protocol skills UX** § *Single-concern strategy*.
+
+Marker syntax: [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+### Developer input vs external-wait (Checkpoint)
+
+Under Checkpoint trust, **happy-path protocol steps auto-advance without a turn-end modal**. Call **`mission_control_present_structured_choice`** or **AskQuestion** only at **USER_CHECKPOINT** markers in this skill, **implicit external-wait** surfaces (host-delivered child results), or **exception** paths.
+
+**Developer-input** (continuation requires the **developer** to pick a modal option on **this lane**) is **not** external-wait. These are USER_CHECKPOINT surfaces — **must** close the turn with **`mission_control_present_structured_choice`** / **AskQuestion**, not prose *reply when ready*, *tell me when*, or recap-only idle:
+
+| Situation | Normative gate |
+|-----------|----------------|
+| §5c — start coding session / revise / defer | [§5c — Hand back](#5c--hand-back-recap--structured-choice) |
+| Step **5-open-items** — multiple readiness blockers before §5c | [Step 5-open-items — Open-item modal contract](#step-5-open-items--open-item-modal-contract) |
+| Missing target / ambiguous parent row (standalone spawned) | Step **1** exception — structured choice per **30_planning-target-resolution** |
+| Parent plan-change notify UserSend (standalone spawned lane) | [Plan-change notification receive (child lane)](#plan-change-notification-receive-child-lane) |
+
+**Implicit external-wait** (host may deliver **`mission_control_send_agent_result`** from spawned **`coding-session`** without a developer modal pick on **that** turn): §5d spawn in flight → §5e child summary. **Forbidden:** classifying §5c handoff approval as external-wait — layer 1 consent requires the §5c modal (unless **`skipPrPlanHandoffModal: true`** auto-chain).
+
+| Step | Checkpoint behavior | Gate |
+|------|---------------------|------|
+| **1** — Identify target / verify stub | Auto-advance on spawned handoff with locked `inputs` | exception: wrong template / missing target → structured choice |
+| **1a–1b** — Template + parent topology | Auto-advance on happy path | exception: blocked parent link |
+| **2** — Load development-process | Auto-advance | — |
+| **3** — Read parent / match PR row | Auto-advance when row match succeeds | exception: ambiguous row / no match |
+| **4** — Draft §§1–4 | Auto-advance through write and **4f** echo | **Gate** when Step **5-open-items** applies (multiple gaps) |
+| **5a–5b** — Readiness + planning completeness | Auto-advance when checks pass | — |
+| **§5c** — Implementation handoff | **Gate** when §§1–4 drafted and §5a passes — **first developer-pick gate in this calibration PR** | Start coding session (below) |
+| **§5d** — Spawn **`coding-session`** | Auto-advance act-after-select; **waiting** on child lane until §5e | external-wait — child terminal delivery; no prose-only *waiting for child* |
+| **§5e** — Child summary | Auto-advance merge; re-offer §5c on failure paths | exception: **`prShipComplete: true`** defer paths |
+| **Plan-change notification receive** | **Gate** — developer-input USER_CHECKPOINT after mandatory re-read | [Plan-change notification receive (child lane)](#plan-change-notification-receive-child-lane) — **not** external-wait |
+
+**Skip §5c (binding):** When **`skipPrPlanHandoffModal: true`** (inline **`pr-breakdown`** **`approve-list`** auto-chain), after §5a passes run **`## Completion (inline)`** with **`prPlanHandoffSkipped: true`** — **do not** open §5c on **this** inline turn. **Not** a regression for this calibration.
+
 ## Step 1 — Identify the target plan and verify it's a PR plan stub
 
 The skill operates on a **target** `.plan.md` resolved before this skill runs, per [`30_planning-target-resolution.mdc`](../../../../rules/30_planning-target-resolution.mdc) § *Resolution order*. Acknowledge the target slug in one line when this skill starts. Resolve targets from session, snapshot, or explicit path — **planning-target-resolution** is normative. Do **not** infer the target from the IDE’s focused-file list alone.
 
-When spawned by `new-plan` with `parentAgentRole: "new-plan-agent"`, run **inline** on the **`new-plan`** lane: report **`## Completion (inline)`** to the invoker — do **not** emit **`AGENT_RESULT_RESPONSE_V1`**. You may still emit **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** per §5d.
+When spawned by `new-plan` with `parentAgentRole: "new-plan-agent"`, run **inline** on the **`new-plan`** lane: report **`## Completion (inline)`** to the invoker — do **not** emit **`mission_control_send_agent_result`**. You may still emit **`mission_control_spawn_agent`** for **`coding-session`** per §5d.
 
 When spawned by `new-plan` without `parentAgentRole: "new-plan-agent"` (legacy standalone populator spawn), `targetPlanPath`, `targetPlanSlug`, `parentPlanPath`, `parentPlanSlug`, and `parentIndex` are already locked. Treat missing or conflicting values as a spawn-contract failure: stop with `failure` or `partial` and report the missing field. Do not fall back to IDE focus or free-form target discovery in spawned mode.
 
-If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot with **`AskQuestion`** or **`MC_PHASED_RESPONSE_V1`** in **one turn** per **30_planning-target-resolution** § *Sedea input channel* and **`../README.md`** § *Recap, structured choice, act* (`display.markdown` + `askQuestion`). **Obsolete:** recap-only turn without structured choice. Then continue.
+If there is no resolved target, **stop** and emit a fresh *Where we are now in the plan tree* snapshot with **`AskQuestion`** or **`mission_control_present_structured_choice`** in **one turn** per **30_planning-target-resolution** § *Sedea input channel* and **`../README.md`** § *Recap, structured choice, act* (`displayMarkdown` + `askQuestion`). **Obsolete:** recap-only turn without structured choice. Then continue.
 
 Acknowledge in one line: *"Target plan: `<slug>`."*
 
@@ -157,7 +276,7 @@ Read the target plan in full and apply:
 | Has `## Overview` + `## Phasing` + `## Out of scope` (**new-plan** stub) | Fresh stub, drafting needed | Step 1b → Step 2 → Step 3 → Step 4 (full body rewrite) |
 | Has `## 1. Single concern` … `## 4. Reasoning` with `_TBD_` under one or more of §§ 1–4 | Partially drafted | Step 1b → Step 2 → Step 3 → Step 4 (fill only still-`_TBD_` sections) |
 | Has §§ 1–4 all populated | Already drafted | Step 5 (handoff menu) |
-| Master Plan body (`## 4. Architectural design` + `## 6. Delivery phases \| PR breakdown`) | Wrong skill | **Stop:** use **`planner`**. |
+| Master Plan body (`## 4. Architectural design` + `## 6. Delivery phases \| PR breakdown`) | Wrong skill | **Stop:** use **`master-planner`**. |
 | Phase plan body (`## 1. Background` … `## 4. Changes` for mode #2) | Wrong skill | **Stop:** use **`phase-planner`**. |
 
 Acknowledge the body state in one line.
@@ -168,9 +287,9 @@ If the **new-plan** stub sections carry **non-stub user content**, merge it into
 
 Read the target plan's sidecar `<slug>.state.yaml` for `parent:`.
 
-- `parent: null` (or sidecar missing) → **stop:** PR plans require a parent under **`PR breakdown`**. Fix via **`plan-reconcile`** or by hand, or use **`planner`** if this file should be a Master Plan.
+- `parent: null` (or sidecar missing) → **stop:** PR plans require a parent under **`PR breakdown`**. Fix via **`plan-reconcile`** or by hand, or use **`master-planner`** if this file should be a Master Plan.
 - `parent:` does not resolve to an existing `.plan.md` under the same `.sedea/operations/.../plans/` tree → **stop:** fix sidecar before drafting.
-- Parent is a **roadmap topic** grouping plan → **stop:** children should be Master Plans, not PR plans; fix sidecar or use **`planner`**.
+- Parent is a **roadmap topic** grouping plan → **stop:** children should be Master Plans, not PR plans; fix sidecar or use **`master-planner`**.
 - Parent resolves; read parent's dual-title block (`## 6. …` Master, `## 5. …` Phase):
  - Heading **`PR breakdown`** → proceed.
  - Heading **`Delivery phases`** → **stop:** use **`phase-planner`** on this file (phase child), not **`pr-plan`**.
@@ -321,7 +440,7 @@ Full sentences (not the short-bullet rule).
 
 ### 4f — Echo to chat
 
-Echo §§ 1–4 with the same headers as the file. Surface flags (unmapped parent bullets, **`_TBD_`** in **Considered & rejected**, thin reasoning) as numbered open items in **`display.markdown`** when multiple gaps exist before §5c; apply **Step 5-open-items — Open-item modal contract**. When only one minor flag exists, echo it in recap and proceed to §5a.
+Echo §§ 1–4 with the same headers as the file. Surface flags (unmapped parent bullets, **`_TBD_`** in **Considered & rejected**, thin reasoning) as numbered open items in **`displayMarkdown`** when multiple gaps exist before §5c; apply **Step 5-open-items — Open-item modal contract**. When only one minor flag exists, echo it in recap and proceed to §5a.
 
 ### 4a-bis — Append canonical `deploy-test-plan-verified` todo
 
@@ -389,22 +508,24 @@ However:
 
 **Skip §5c on PR-breakdown auto-chain (binding):** When **`skipPrPlanHandoffModal: true`** (inline context from **`new-plan`** after **`pr-breakdown`** **`approve-list`** auto-expand of PR index **1**), after §5a passes run **`## Completion (inline)`** to the invoker with **`implementationHandoffStatus: not-offered`**, **`prPlanHandoffSkipped: true`**, and populated §§1–4 fields — **do not** open §5c on **this** inline **`pr-plan`** turn.
 
-**`skipPrPlanHandoffModal` skips §5c on the inline pr-plan turn only** — it does **not** forbid **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** from the invoker lane afterward.
+**`skipPrPlanHandoffModal` skips §5c on the inline pr-plan turn only** — it does **not** forbid **`mission_control_spawn_agent`** for **`coding-session`** from the invoker lane afterward.
 
 | Invoker (`parentAgentRole`) | Who owns §5d-equivalent spawn or §5c re-entry |
 |-----------------------------|-----------------------------------------------|
-| **`new-plan-agent`** on **`planner`** lane | **This Master Plan child lane** owns §5c and §5d — inline **`pr-plan`** §5d **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** emits from **the planner lane**, not the Squad Leader. **`planner`** Step **7b** may re-enter inline **`pr-plan`** §5c on the same **`targetPlanPath`**, or defer |
-| **`new-plan-agent`** on **`phase-planner`** lane (`phase-planner-agent` subtree) | **`phase-planner/SKILL.md`** Step **5f** — offer spawn or **`reenter-pr-plan-5c`** on **that** child lane; **forbidden** to default to detached **`coding-session`** or **`planner`** prose redirect. **Decomposition** (inline **`pr-breakdown`** on **this phase plan**): Step **5b-decompose** on **`phase-planner`**, not **`planner`** Step **7**. |
+| **`new-plan-agent`** on **`master-planner`** lane | **This Master Plan child lane** owns §5c and §5d — inline **`pr-plan`** §5d **`mission_control_spawn_agent`** for **`coding-session`** emits from **the master-master-planner lane**, not the Squad Leader. **`master-planner`** Step **7b** may re-enter inline **`pr-plan`** §5c on the same **`targetPlanPath`**, or defer |
+| **`new-plan-agent`** on **`phase-planner`** lane (`phase-planner-agent` subtree) | **`phase-planner/SKILL.md`** Step **5f** — offer spawn or **`reenter-pr-plan-5c`** on **that** child lane; **forbidden** to default to detached **`coding-session`** or **`master-planner`** prose redirect. **Decomposition** (inline **`pr-breakdown`** on **this phase plan**): Step **5b-decompose** on **`phase-planner`**, not **`master-planner`** Step **7**. |
 
 When inline under **`phase-planner`**, include **`invokerRole: phase-planner-agent`** (or equivalent) in inline completion so the parent runs Step **5f** (implementation) or Step **5b-decompose** / **5e** (decomposition merge) without inferring from README shorthand alone.
 
 **Forbidden after §§1–4 (binding — inline under `new-plan` or upstream on planner):**
 
 - Report **`## Completion (inline)`** to the invoker while **`implementationHandoffStatus`** is still **`not-offered`** (§5c not yet shown) **unless** **`skipPrPlanHandoffModal: true`**.
-- Bubble **`readyForImplementation: true`** upstream and return to **`planner`** Step **7b** master-plan menus without offering §5c on **this** lane first **unless** **`skipPrPlanHandoffModal: true`** (then include **`prPlanHandoffSkipped: true`** in inline completion).
+- Bubble **`readyForImplementation: true`** upstream and return to **`master-planner`** Step **7b** master-plan menus without offering §5c on **this** lane first **unless** **`skipPrPlanHandoffModal: true`** (then include **`prPlanHandoffSkipped: true`** in inline completion).
 - Skip §5c based on PRD **`operation: manage`** or a linked `@path` alone — PRD source does **not** change the **`pr-plan`** → **`coding-session`** handoff chain.
 
 Set **`implementationHandoffStatus: "offered"`** when §5c modal is emitted; **`deferred`** when the developer picks **`defer`**; **`spawned-coding-session`** after §5d.
+
+- **Next-step resolution:** Auto-advance to §5c structured choice after §5a readiness passes and §5b completeness note — no `USER_CHECKPOINT` on substeps **5a–5b** or step **4** draft writes.
 
 ### Step 5-open-items — Open-item modal contract
 
@@ -412,7 +533,7 @@ Apply the shared planning open-item contract from `../README.md` § *Planning op
 
 **When open items exist** — use **one modal with multiple `questions[]` entries**:
 
-- **`display.markdown`:** numbered list of open items. For each item, include the PR plan section or parent row affected, the gap or blocker, why it matters for readiness or handoff, and the agent's proposed resolution options.
+- **`displayMarkdown`:** numbered list of open items. For each item, include the PR plan section or parent row affected, the gap or blocker, why it matters for readiness or handoff, and the agent's proposed resolution options.
 - **`askQuestion.questions`:** one scoped question per open item (for example `accept-scope-bullet`, `map-parent-bullet`, `defer-considered-rejected`, `repair-parent-link`, `prefill-section-N`, `mark-non-blocking`, `more-details`). **Forbidden:** one combined question whose options mix per-item resolutions with terminal handoff choices.
 - **Final question:** always append the terminal **pr-plan** §5c handoff question last in the array (start coding session · revise section · pre-fill §§5–8 · defer · commit reminder · **More details for option _**). **Forbidden:** a resolve-only modal that omits §5c routing until every item is cleared — **except** when **`skipPrPlanHandoffModal: true`** (auto-chain only; inline completion without §5c).
 - **Many open items:** batch across turns when needed; each batch still ends with the §5c terminal question unless **`skipPrPlanHandoffModal`** applies.
@@ -425,18 +546,18 @@ Apply the shared planning open-item contract from `../README.md` § *Planning op
 
 Per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**, **`../README.md`** § *Planning open-item modal contract*, and **`../README.md`** § *Recap, structured choice, act (plan-and-deliver)*. Do **not** use “Turn A/B” labels in developer-facing chat.
 
-Invoke **AskQuestion** or **`MC_PHASED_RESPONSE_V1`** per **Step 5-open-items** — when readiness blockers or §4f flags remain, one scoped `questions[]` entry per open item, then the §5c terminal options table as the **final** `questions[]` entry.
+Invoke **AskQuestion** or **`mission_control_present_structured_choice`** per **Step 5-open-items** — when readiness blockers or §4f flags remain, one scoped `questions[]` entry per open item, then the §5c terminal options table as the **final** `questions[]` entry.
 
-**Preferred (one assistant message):** **AskQuestion tool** with brief recap, or **`MC_PHASED_RESPONSE_V1`** with:
+**Preferred (one assistant message):** **AskQuestion tool** with brief recap, or **`mission_control_present_structured_choice`** with:
 
-- `display.markdown` — link + one-line readiness summary (below)
+- `displayMarkdown` — link + one-line readiness summary (below)
 - `askQuestion` — modal (`modalTitle`: *PR plan — next move*; options from the table)
 
-**Legacy split (obsolete on Mission Control lanes):** Prefer **`MC_PHASED_RESPONSE_V1`** (recap in `display.markdown` + `askQuestion` same turn). If the tool is unavailable, still **must** close with structured choice — do not end with recap-only prose.
+**Legacy split (obsolete on Mission Control lanes):** Prefer **`mission_control_present_structured_choice`** (recap in `displayMarkdown` + `askQuestion` same turn). If the tool is unavailable, still **must** close with structured choice — do not end with recap-only prose.
 
 #### Recap (same turn as structured choice)
 
-When using the legacy split, do **not** include **`AGENT_RUN_REQUEST_V1`** or **`AGENT_RESULT_RESPONSE_V1`** in the recap message. Put recap content in **`display.markdown`** and **`askQuestion`** on the **same** turn per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**. **Obsolete:** recap-only message with **AskQuestion** deferred to a separate turn.
+When using the legacy split, do **not** include **`mission_control_spawn_agent`** or **`mission_control_send_agent_result`** in the recap message. Put recap content in **`displayMarkdown`** and **`askQuestion`** on the **same** turn per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**. **Obsolete:** recap-only message with **AskQuestion** deferred to a separate turn.
 
 1. A **`file://`** link to the target `.plan.md` under `.sedea/operations/.../plans/...`.
 2. One-line summary: *Drafted per-PR §§ 1–4; implementation readiness: `<ready|not ready>`.*
@@ -446,7 +567,9 @@ Do **not** echo the full §§ 1–4 body in chat unless the developer asked for 
 
 #### Structured choice — approval modal
 
-Invoke **AskQuestion**, **`MC_PHASED_RESPONSE_V1`** (`modalTitle`: *PR plan — next move*) per **Step 5-open-items**. When using without a phased envelope, sentinel + JSON only — no prose before the sentinel. When open items exist, item-scoped questions precede the terminal handoff options below as the **last** `questions[]` entry:
+Invoke **AskQuestion**, **`mission_control_present_structured_choice`** (`modalTitle`: *PR plan — next move*) per **Step 5-open-items**. Call MCP with `displayMarkdown` + `askQuestion` only — no prose-only gate ending. When open items exist, item-scoped questions precede the terminal handoff options below as the **last** `questions[]` entry:
+
+USER_CHECKPOINT — approve implementation handoff and start coding session (fill §§5–8 on child lane).
 
 Required options (brief `label`; put detail in `prompt` when needed):
 
@@ -459,6 +582,9 @@ Required options (brief `label`; put detail in `prompt` when needed):
 | `defer` | Defer |
 | `more-details` | More details for option _ |
 
+- When §5a readiness passes and **`skipPrPlanHandoffModal`** is not set → open this gate via **`mission_control_present_structured_choice`** (spawned lanes) or **AskQuestion** per **`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`**. Apply **Step 5-open-items** when open items exist — this handoff question stays last in `questions[]`.
+- When §5a fails → explain blockers in `remainingTasks`; do **not** open this gate until readiness passes or the developer picks revise/defer paths.
+- **`defaultOptionId: start-coding-session`** when §5a passes and no blocking open items remain.
 - **`start-coding-session`** — Run §5d when §5a passes; if not ready, explain blockers in `remainingTasks` and do **not** spawn.
 - **`revise-section`** — Developer names § *N* and feedback; one focused `StrReplace`; echo; re-offer §5c.
 - **`prefill-sections`** — Same as former option 2 (speculative § 5–8 sketch); re-offer §5c.
@@ -467,7 +593,7 @@ Required options (brief `label`; put detail in `prompt` when needed):
 
 **Stop** after §5c AskQuestion or after §5d spawn announcement — do not run **`coding-session`** procedures on this lane.
 
-**Inline under `new-plan`:** After §5c or §5d, report **`## Completion (inline)`** to the invoker — do **not** emit **`AGENT_RESULT_RESPONSE_V1`**. The **`new-plan`** lane merges ledger fields and aggregates **`coding-session`** child results per **`new-plan/SKILL.md`** step **5b**.
+**Inline under `new-plan`:** After §5c or §5d, report **`## Completion (inline)`** to the invoker — do **not** emit **`mission_control_send_agent_result`**. The **`new-plan`** lane merges ledger fields and aggregates **`coding-session`** child results per **`new-plan/SKILL.md`** step **5b**.
 
 ### 5d — Spawn `coding-session` (after `start-coding-session`)
 
@@ -485,57 +611,63 @@ Run only when the developer chose **`start-coding-session`** and §5a readiness 
  - `sections5to8Status: TBD-by-design — child owns substantive fill; do not treat as pr-plan failure`
  - `expectedPlanCompleteness: incomplete-until-coding-session-fills-5-8 — auto-authorize worktree when EXPECTED_SECTIONS_5_8_TBD; no second approval modal`
  - `planningHandoffApproved: true` when `readyForImplementation: true` (layer 1 consent from §5c **Start coding session**)
+ - Checkpoint trust: child lane follows **`coding-session/SKILL.md`** § *Checkpoint turn UX* — auto-advance happy path; **`USER_CHECKPOINT`** at worktree-open (when not auto-authorized), ship cut-point (exception), post-create-pr, pre-PR feedback, and pre-merge gates
 3. **Emit exactly one** child-spawn line (valid JSON on the same line; new UUID per spawn):
 
  - Cross-check **`../README.md`** § *Universal spawn preflight* (including display-metadata rows **8–10**).
  - `skillPath`: `.sedea/centers/research-and-development/missions/plan-and-deliver/skills/coding-session/SKILL.md`
- - `name`: topic-specific label from §1 single concern or **`targetPlanSlug`** — **not** generic "Coding session" alone when a sharper label fits (≤64 chars)
+ - `name`: `PR{parentIndex}-{semantic title}` when **`parentIndex`** is known — semantic title from §1 single concern or **`targetPlanSlug`**; otherwise `PR-{semantic title}` — **not** generic "Coding session" alone (≤64 chars; truncate semantic title if needed). Prefix per [rule **50**](../../../../rules/50_mission-control-display-metadata-discipline.mdc) § *Lane title prefix conventions*
  - `slug`: `coding-session-<targetPlanSlug>` (unique per dispatch)
  - `description`: one-line implementation scope (for example *Worktree and implementation for PR N …*)
  - `inputs`: `targetPlanPath`, `targetPlanSlug`, `readyForImplementation`, `planningHandoffApproved: true` (only when `readyForImplementation: true`), `planningHandoffMode: "sections-1-4-complete"` (required when `readyForImplementation: true`), `repoPath`, `ledgerParent`, `upstreamSkill: "pr-plan"`; include `parentPlanPath`, `parentPlanSlug`, `parentIndex` when known
  - Optional `warmUpRules`: merge **`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`** if not already loaded from skill frontmatter
 
-4. Emit **`AGENT_RUN_REQUEST_V1`**, announce waiting for the **`coding-session`** child result, and close the turn with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — no second spawn in the same turn; do not prose-only stop.
+4. Emit **`mission_control_spawn_agent`**, announce waiting for the **`coding-session`** child result, and close the turn with structured choice per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant** — no second spawn in the same turn; do not prose-only stop.
 5. Set `implementationHandoffStatus: "spawned-coding-session"` and record `spawnCorrelationId` matching the spawn request until the child terminal arrives.
 
 ### 5e — Aggregate `coding-session` child result
 
-When Mission Control delivers **`AGENT_RESULT_RESPONSE_V1`** for the spawn `correlationId`:
+When Mission Control delivers **`mission_control_send_agent_result`** for the spawn `correlationId`:
 
 1. Match by `correlationId` first, then `outputs.targetPlanPath` / `outputs.targetPlanSlug`.
 2. Summarize for the developer: child status, whether worktrees were created, `developerApprovedImplementation`, `planCompleteness`, and `remainingTasks`.
 3. Copy `outputs.activeLanes`, `outputs.openLedgerEntries`, and child `remainingTasks` into this lane's result when reporting upstream.
 4. When child **`outputs.prShipComplete`** is **`true`**: merge **`shipPhase`**, **`rowStatus`**, **`mainPullStatus`**, **`archivedSlugs`**, and echo **`parentPlanPath`**, **`parentPlanSlug`**, **`parentIndex`** into this lane's **`outputs`**; set **`outputs.implementationHandoffStatus: "coding-session-terminal"`**; set **`outputs.codingSessionStatus`** from child **`status`**.
 4a. When child **`outputs.parentPlanningFollowUpNotification`** is **`"sent"`** with non-empty **`parentPlanningFollowUps`**: copy into this lane's **`outputs`**; bubble upward on **re-emit updated** terminal (standalone) or **`## Completion (inline)`** (under **`new-plan`**) — **`coding-session`** does not schedule parent work; this lane does not expand PR lists.
-5. **Re-emit updated terminal:** On a **standalone** spawned lane, emit a fresh **`AGENT_RESULT_RESPONSE_V1`** (same **`correlationId`**) with merged **`outputs`** including **`prShipComplete`**, **`parentPlanningFollowUps`** when present, and parent index fields — so **`new-plan`** / **`pr-breakdown`** / **`planner`** receive updates without manual **Ship recap**. **Inline under `new-plan`:** report merged fields in **`## Completion (inline)`** prose instead; the **`new-plan`** lane propagates per **`new-plan/SKILL.md`** step **5b**.
+5. **Re-emit updated terminal:** On a **standalone** spawned lane, emit a fresh **`mission_control_send_agent_result`** (same **`correlationId`**) with merged **`outputs`** including **`prShipComplete`**, **`parentPlanningFollowUps`** when present, and parent index fields — so **`new-plan`** / **`pr-breakdown`** / **`master-planner`** receive updates without manual **Ship recap**. **Inline under `new-plan`:** report merged fields in **`## Completion (inline)`** prose instead; the **`new-plan`** lane propagates per **`new-plan/SKILL.md`** step **5b**.
 6. Do **not** treat child `developerApprovedImplementation: true` as permission to edit code on the **`pr-plan`** lane.
 7. Re-offer §5c **AskQuestion** when the developer may revise the plan or spawn again after a failed/partial child run — unless **`prShipComplete: true`** and the developer defers follow-up on this lane (upstream owns **`expand-eligible`**).
 
 ## Step 5a — Follow-up turns
 
-On revise requests, re-read the section, `StrReplace`, echo, re-offer the step 5c **AskQuestion** menu.
+On revise requests, re-read the section, `StrReplace`, echo, re-offer the step 5c **AskQuestion** menu. When **`implementationHandoffStatus: spawned-coding-session`** and the edit is **material** per [Plan-change notify — emit-when](#plan-change-notify--emit-when-mission_control_notify_child_lanes), call **`mission_control_notify_child_lanes`** for the open **`coding-session`** child **before** re-offering §5c — one slug per call; notify does **not** replace §5e terminal merge.
 
-On **fill** requests for § 5–8, draft the requested section with explicit *sketch* caveats; offer revise or accept; executor still owns final polish. After any fill, recompute implementation readiness and update the result contract.
+On **fill** requests for § 5–8, draft the requested section with explicit *sketch* caveats; offer revise or accept; executor still owns final polish. After any fill, recompute implementation readiness and update the result contract. When a **`coding-session`** child is open and the sketch is material, emit notify per emit-when table above.
 
 ## One primary choice per turn — surface observations
 
-Perform exactly what was chosen. List short **numbered observations** for gaps (parent list mismatch, thin **Considered & rejected**, heavy § 3, blocked parent link) in **`display.markdown`** and apply **Step 5-open-items — Open-item modal contract**: one scoped `questions[]` entry per observation, then the §5c terminal handoff question last. Prefer recap + modal in one message.
+Perform exactly what was chosen. List short **numbered observations** for gaps (parent list mismatch, thin **Considered & rejected**, heavy § 3, blocked parent link) in **`displayMarkdown`** and apply **Step 5-open-items — Open-item modal contract**: one scoped `questions[]` entry per observation, then the §5c terminal handoff question last. Prefer recap + modal in one message.
 
 ## Scope guard
 
 **Owns:** target PR plan **body** §§ 1–4; **4a-bis** append-only capstone todo; implementation readiness assessment; optional **fill** sketches for § 5–8 when explicitly chosen.
 
-**Out of scope:** parent **`### PR list`** edits; parent **`Plan:`** wiring (**`plan-reconcile`**); frontmatter `name` / `overview` / `isProject` (except **4a-bis** append); running **`coding-session`** procedures on this lane (worktrees, `git worktree`, MCP attach, implementation edits); Master / Phase templates (**`planner`**, **`phase-planner`**).
+**Out of scope:** parent **`### PR list`** edits; parent **`Plan:`** wiring (**`plan-reconcile`**); frontmatter `name` / `overview` / `isProject` (except **4a-bis** append); running **`coding-session`** procedures on this lane (worktrees, `git worktree`, MCP attach, implementation edits); Master / Phase templates (**`master-planner`**, **`phase-planner`**).
 
-**In scope for spawn:** one **`AGENT_RUN_REQUEST_V1`** for **`coding-session`** per §5d after **AskQuestion** **`start-coding-session`** with real absolute paths (standalone spawned lane **or** inline under **`new-plan`**).
+**In scope for spawn:** one **`mission_control_spawn_agent`** for **`coding-session`** per §5d after **AskQuestion** **`start-coding-session`** with real absolute paths (standalone spawned lane **or** inline under **`new-plan`**).
 
-Stop after the step 5c **AskQuestion** turn, after §5d spawn announcement, or after §5e child summary — per terminal stop rules below. When **`parentAgentRole`** is **`new-plan-agent`**, skip **`AGENT_RESULT_RESPONSE_V1`** and report **`## Completion (inline)`** instead.
+Stop after the step 5c **AskQuestion** turn, after §5d spawn announcement, or after §5e child summary — per terminal stop rules below. When **`parentAgentRole`** is **`new-plan-agent`**, skip **`mission_control_send_agent_result`** and report **`## Completion (inline)`** instead.
 
 ## Completion (spawned)
 
-### Host protocol line (required)
+### MCP result preflight (`mission_control_send_agent_result`)
 
-Emit **exactly one** line on its own: `AGENT_RESULT_RESPONSE_V1` immediately followed by a single JSON object on the **same** line. Required keys: `version` (1), `correlationId` (from the spawn request), `status`, `summary`, `outputs`, `errors` (use `[]` when none). Populate `outputs` from the list below. The emitted line must be **valid JSON** (no `{...}` placeholders in the actual output). Re-emit an **updated** line after user-requested follow-up on this lane (same `correlationId`). See **`.sedea/centers/sedea/skills/README.md`** § *Spawned terminal line*.
+| Step | Check |
+|------|--------|
+| R1 | Call **`mission_control_send_agent_result`** with **`status`**, **`summary`**, optional **`outputs`** / **`errors`** |
+| R2 | **Forbidden args absent** — no **`correlationId`**, **`dispatchId`**, **`slotId`**, or other host-resolved keys |
+| R3 | Populate **`outputs`** from the required field list below |
+| R4 | Re-emit updated MCP result after user-requested follow-up on this lane (same spawn session; host resolves **`correlationId`**) |
 
 Required `outputs` fields:
 
@@ -558,10 +690,10 @@ Required `outputs` fields:
  - `active` when parent link repair, fill sketches, **`coding-session`** child lane is open, or §5c menu not yet offered
  - `terminal` with `readyForImplementation: false` only when upstream or developer marks the PR plan deferred, abandoned, or out of scope
 
-Complete §5d spawn (when chosen) + wait announcement **before** the terminal line when spawning on a **standalone** spawned lane. Stop after the terminal line. Do not emit a second **`AGENT_RUN_REQUEST_V1`** in the same turn after the terminal line (see **`../README.md`** § *Terminal stop (normative)*). **Inline under `new-plan`:** do **not** emit the terminal line — use **`## Completion (inline)`** below.
+Complete §5d spawn (when chosen) + wait announcement **before** the MCP result call when spawning on a **standalone** spawned lane. Stop after the MCP result call. Do not emit a second **`mission_control_spawn_agent`** in the same turn after the MCP result call (see **`../README.md`** § *Terminal stop (normative)*). **Inline under `new-plan`:** do **not** emit the MCP result call — use **`## Completion (inline)`** below.
 
 ## Completion (inline)
 
-Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `AGENT_RUN_REQUEST_V1` for **`pr-plan`**, `AGENT_RESULT_RESPONSE_V1`, or `MC_DISPATCH_RESOLVED_V1`. Do **not** add a **Host protocol line** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*). **Exception:** §5d may still emit **`AGENT_RUN_REQUEST_V1`** for **`coding-session`**.
+Report the fields below in prose to the invoker on the **same lane**. Do **not** emit `mission_control_spawn_agent` for **`pr-plan`**, `mission_control_send_agent_result`, or `mission_control_propose_dispatch_resolution`. Do **not** add a **MCP result** under this section (see **`.sedea/centers/sedea/rules/4_mission.mdc`** § *Inline completion* and **`.sedea/centers/sedea/skills/README.md`** § *Completion (inline)*). **Exception:** §5d may still emit **`mission_control_spawn_agent`** for **`coding-session`**.
 
 **Primary path:** **`new-plan`** step 4 runs this skill **inline** (`parentAgentRole: "new-plan-agent"`). Use the same `outputs` semantics as **`## Completion (spawned)`** in prose only — the **`new-plan`** lane merges ledger fields and aggregates **`coding-session`** per **`new-plan/SKILL.md`** step **5b**. **Standalone** mission dispatch may still spawn this skill on a child lane; then use **`## Completion (spawned)`** instead.

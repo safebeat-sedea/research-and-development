@@ -108,26 +108,7 @@ function parseFlags(argv) {
 }
 
 function parseGlobalLeadingArgs(argv) {
-  const rest = [...argv];
-  let operationsUserId = null;
-  while (rest.length > 0) {
-    const a = rest[0];
-    if (a === '--operations-user-id') {
-      const v = rest[1];
-      if (!v || String(v).startsWith('--')) die('--operations-user-id requires a value');
-      operationsUserId = String(v);
-      rest.splice(0, 2);
-      continue;
-    }
-    if (a.startsWith('--operations-user-id=')) {
-      operationsUserId = a.slice('--operations-user-id='.length);
-      if (!operationsUserId) die('--operations-user-id= requires a value');
-      rest.splice(0, 1);
-      continue;
-    }
-    break;
-  }
-  return { operationsUserId, rest };
+  return { rest: [...argv] };
 }
 
 async function resolveMainRepoRoot(worktreePath) {
@@ -314,8 +295,8 @@ async function branchEligibleForDelete(mainRepoRoot, worktreeName, candidate, de
   };
 }
 
-async function detectCandidates(hostingRoot, operationsUserId, slug) {
-  const args = [PLAN_STATE, '--operations-user-id', operationsUserId, 'detect-stale-workspaces', '--json'];
+async function detectCandidates(hostingRoot, slug) {
+  const args = [PLAN_STATE, 'detect-stale-workspaces', '--json'];
   if (slug) args.push('--slug', slug);
   const r = await spawnNode(args);
   if (!r.ok) die(`detect-stale-workspaces failed: ${r.stderr || r.stdout}`);
@@ -328,14 +309,8 @@ async function detectCandidates(hostingRoot, operationsUserId, slug) {
   return parsed.candidates || [];
 }
 
-async function runPruneSessions(hostingRoot, operationsUserId, all) {
-  const args = [
-    PLAN_STATE,
-    '--operations-user-id',
-    operationsUserId,
-    'prune-sessions',
-    ...(all ? ['--all'] : []),
-  ];
+async function runPruneSessions(_hostingRoot, all) {
+  const args = [PLAN_STATE, 'prune-sessions', ...(all ? ['--all'] : [])];
   const r = await spawnNode(args);
   if (!r.ok) die(`prune-sessions failed: ${r.stderr || r.stdout}`);
   if (r.stdout.trim()) log(r.stdout.trim());
@@ -437,7 +412,7 @@ async function runPostMergeHostRebuild(hostingRoot, dryRun) {
   });
 }
 
-const USAGE = `Usage: post-reconcile-workspace-cleanup [--operations-user-id <id>] [--dry-run | --apply] [--slug <slug>] [--default-integration-line <name>]
+const USAGE = `Usage: post-reconcile-workspace-cleanup [--dry-run | --apply] [--slug <slug>] [--default-integration-line <name>]
 
   --dry-run   Print planned git actions (default). Does not mutate git or sidecars.
   --apply     Run git worktree remove, local worktree name ref cleanup (PR merged + remote head gone), hosting pull,
@@ -453,8 +428,7 @@ async function main() {
     process.stdout.write(USAGE);
     return;
   }
-  const { operationsUserId, rest } = parseGlobalLeadingArgs(raw);
-  if (!operationsUserId) die('--operations-user-id is required');
+  const { rest } = parseGlobalLeadingArgs(raw);
   const flags = parseFlags(rest);
   const dryRun = flags.apply !== true;
   const slug = typeof flags.slug === 'string' ? flags.slug : null;
@@ -468,7 +442,7 @@ async function main() {
   const hostingRoot = findSedeaRepoRoot(SCRIPT_DIR);
   if (!hostingRoot) die('could not find hosting repo root (.sedea/)');
 
-  const candidates = await detectCandidates(hostingRoot, operationsUserId, slug);
+  const candidates = await detectCandidates(hostingRoot, slug);
   const report = {
     dryRun,
     defaultIntegrationLine,
@@ -579,7 +553,7 @@ async function main() {
   }
 
   if (!dryRun) {
-    await runPruneSessions(hostingRoot, operationsUserId, true);
+    await runPruneSessions(hostingRoot, true);
   } else {
     report.actions.push({ action: 'prune-sessions', mode: '--all', dryRun: true });
   }

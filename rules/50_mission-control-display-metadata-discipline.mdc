@@ -27,7 +27,7 @@ Mission Control persists **dispatch-level** and **per-lane (slot)** display labe
 
 ## Spawn discipline (parents)
 
-When emitting **`AGENT_RUN_REQUEST_V1`** on **plan-and-deliver** or other R&D spawn paths:
+When calling MCP **`mission_control_spawn_agent`** on **plan-and-deliver** or other R&D spawn paths:
 
 1. Set **`name`** to a short, topic-specific label (not generic placeholders like "Child agent" alone).
 2. Include **`description`** (and optional spawn metadata the host maps to initial slot copy) so the Agents strip is readable before the child runs.
@@ -37,6 +37,34 @@ When emitting **`AGENT_RUN_REQUEST_V1`** on **plan-and-deliver** or other R&D sp
 Spawn-heavy **`SKILL.md`** files and **`plan.mdc`** § *Spawn run-request display metadata* extend this baseline.
 
 **Null-parent dispatch labels (cross-ref).** After PR 1–2 governance, **`plan and deliver`** defaults **`Parent: null`** — dispatch and lane titles must **not** imply a Hub roadmap topic or **`top_level_topic`** parent (for example “under topic X”). Use feature title, plan slug, or PR concern in **`name`** / **`dispatchTitle`**. Legacy Hub **`### Parent (Sedea Hub)`** openings may still appear until Mission Control host strip (Master Plan phase 2) — when present, echo the legacy parent in one acknowledgement line only; do **not** treat it as the long-term dispatch scope label. See **development-process.md** § *Root delivery plans vs legacy Hub parent intake* and rule **30** § *Root delivery plans only*.
+
+---
+
+## Lane title prefix conventions (binding)
+
+Every **`mission_control_spawn_agent`** **`name`** and child **`mission_control_update_lane_display`** **`title`** on R&D delivery lanes uses:
+
+```text
+{prefix}-{semantic title}
+```
+
+**Semantic title** — the topic-specific label spawners already derive (PRD title, feature planning title, phase scope, §1 single concern, PR slug). **Only** prepend the role prefix and a single hyphen — do not change how semantic titles are chosen.
+
+| Skill role | Prefix | `[N]` when indexed | Typical spawner |
+|------------|--------|--------------------|-----------------|
+| **`author-prd`**, **`ad-hoc-prd`** | `PRD` | — | Squad Leader |
+| **`master-planner`** | `MP` | — | Squad Leader |
+| **`phase-planner`** | `PH{N}` | One-based **Delivery phases** list index (`parentIndex`) | **`new-plan`**, decomposition tree |
+| **`coding-session`** | `PR{N}` | One-based **`### PR list`** index (`parentIndex`) | **`pr-plan`** §5d, planning child lanes |
+| **`pre-pr-review`** | `Pre-PR Review` | — | **`coding-session`** |
+
+**Examples:** `PRD-Checkout auth`, `MP-Notifications`, `PH2-Payments phase`, `PR1-Add webhook`, `Pre-PR Review-Order API`
+
+**Max length:** Rule **9** caps **`title`** at **64** characters — truncate the semantic title if needed; **never** shorten the role prefix.
+
+**Child refresh:** When spawn labels are stale, children refresh **own** slot via **`mission_control_update_lane_display`** using the same `{prefix}-{semantic title}` shape.
+
+Operator checklist: **`missions/plan-and-deliver/skills/README.md`** § *Lane title prefix (spawn `name`)*.
 
 ---
 
@@ -74,8 +102,30 @@ Full recovery steps: [`.sedea/centers/research-and-development/docs/mission-cont
 
 ---
 
+## Checkpoint step continuation (binding)
+
+This file is the **R&D Mission Control display-metadata spawn / refresh / Squad Leader chrome contract**, not a mission protocol with executable ship steps. Under **`trustLevel: checkpoint`**, turn-end modal UX for display-update failures and ownership ambiguity uses **AskQuestion** / **`mission_control_present_structured_choice`** per sedea rules **2** / **1** and rule **9**; happy-path spawn labels, prefix application, and own-slot refresh **auto-advance**. **Do not** add literal `USER_CHECKPOINT` markers here for happy-path spawn `name` / `description`, `{prefix}-{semantic title}` application, or own-slot MCP refresh when labels are clearly stale — that would fight skill auto-advance.
+
+| Surface | Designation | Owner |
+|---------|-------------|--------|
+| Spawn with topic-specific `name` + `description` when scope is clear | **auto-advance** | This § *Spawn discipline (parents)* |
+| Apply `{prefix}-{semantic title}` on spawn / child refresh when role + index clear | **auto-advance** | This § *Lane title prefix conventions* |
+| Child refreshes **own** stale slot via `mission_control_update_lane_display` | **auto-advance** | This § *Child lane — refresh own slot* |
+| Skip lane MCP when spawn labels already match skill scope | **auto-advance** | This § *Child lane — refresh own slot* step 3 |
+| Squad Leader updates dispatch chrome when dispatch scope is clear | **auto-advance** | This § *Squad Leader — dispatch chrome only* |
+| Stale tab recovery when MCP fails or wrong lane owns the update | **checkpoint** | This § *Stale tab title recovery* step 4 — structured choice once; **forbidden** prose-only rename asks |
+| Asking the developer to rename tabs in the UI as a substitute for MCP | **checkpoint** | This § *Child lane* / *Squad Leader* forbidden rows — modal or correct-owner MCP; never idle *rename the tab* handoff |
+| Turn completion after a display-metadata decision in chat | **baseline-governs** (reference) | Rules **1**–**2**; pointer in Related below |
+
+**Forbidden in this file:** prescribing prose *tell me when* / *come back when* / *I'll wait* / *over to you* / *ask how to proceed* / *rename the tab and tell me* as the primary wait surface for stale labels, MCP failure, or ownership-unsure stops; duplicating rule-9 / rule-2 AskQuestion option tables; `USER_CHECKPOINT` tokens for happy-path spawn labels, prefix application, or own-slot refresh.
+
+**Related:** Checkpoint step-table template — [`.sedea/centers/sedea/docs/pr-step-table-template.md`](.sedea/centers/sedea/docs/pr-step-table-template.md). Marker syntax — [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
+
+---
+
 ## Related rules
 
 - Platform authority: [`.sedea/centers/sedea/rules/9_display-metadata-authority.mdc`](.sedea/centers/sedea/rules/9_display-metadata-authority.mdc)
 - Spawn contracts: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`](../missions/plan-and-deliver/skills/README.md)
 - Efficient shipping / MCP attach: [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc)
+- Turn completion / no idle handoff: [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc); [`.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc`](.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc)

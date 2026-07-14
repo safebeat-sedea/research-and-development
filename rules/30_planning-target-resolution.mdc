@@ -4,7 +4,7 @@ description: >-
  (new-plan, phase-planner, pr-plan, delivery-phases, pr-breakdown, plan-reconcile). Resolution
  is from session and chat context — not from IDE focused-file list. Covers resolution order,
  snapshot emission, and "Where we are now in the plan tree" table format for planning moves
- (§ *Sedea input channel*; § *Planning vs ship cadence*). **`planner`** handoff uses the same contract (Step 7 — AskQuestion + AGENT_RUN_REQUEST_V1).
+ (§ *Sedea input channel*; § *Planning vs ship cadence*). **`master-planner`** handoff uses the same contract (Step 7 — AskQuestion + MCP **`mission_control_spawn_agent`**).
 alwaysApply: false
 ---
 
@@ -18,22 +18,22 @@ Planning protocol branches act on a specific `.plan.md` under the **`.sedea/oper
 
 When a turn **requires a user reply** before you continue (pick a planning branch, confirm a target plan, choose list index **N** for **`new-plan`**), collect that pick through **AskQuestion** per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc). **Supersedes** the former *AskQuestion or numbered bullet list* option in this rule. Mission Control **AskQuestion** also exposes **free-form text** on the modal — use it for extra instruction alongside an `option` pick; do not reopen choices in prose chat.
 
-**Snapshot table.** The *Next viable moves* column may use **numbered rows** so the developer can read the plan tree in one glance. Those numbers are **reference labels** for the snapshot — offer the same moves as **AskQuestion** `options` on **every** turn (§ above).
+**Snapshot table.** The *Next viable moves* column may use **numbered rows** so the developer can read the plan tree in one glance. Those numbers are **reference labels** for the snapshot — when a pick is required, offer the same moves as **AskQuestion** `options` (§ above).
 
-**Recap and structured choice.** When the snapshot is long, follow [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Context and structured choice** and **`../missions/plan-and-deliver/skills/README.md`** § *Recap, structured choice, act*: **required on every turn** — **AskQuestion tool** or **`MC_PHASED_RESPONSE_V1`** (`display.markdown` = snapshot; `askQuestion` = one `option` per move, brief `label`, branch + target in `prompt` when needed). **Forbidden:** recap-only turn without a modal. Split per rule **2** priority **3** only when impractical — then the **next** message must be phased sentinel-first.
+**Recap and structured choice.** When the snapshot is long **and a pick is required**, follow [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Context and structured choice** and **`../missions/plan-and-deliver/skills/README.md`** § *Recap, structured choice, act*: same turn — **AskQuestion tool** or **`mission_control_present_structured_choice`** (`displayMarkdown` = snapshot; `askQuestion` = one `option` per move, brief `label`, branch + target in `prompt` when needed). Under **`trustLevel: checkpoint`**, mid-flow unambiguous continuation (§ *Resolution order* bullet 4) **auto-advances** without a modal. Non-Checkpoint trust still uses every-turn structured choice per rule **2**. **Forbidden:** recap-only / snapshot-only turn when a pick is required. Split per rule **2** priority **3** only when impractical — then the **next** message must call **`mission_control_present_structured_choice`**.
 
 ## At a glance — planning vs ship (read first)
 
 | You are on… | Signal that fired | Safe next step | Do **not** |
 |-------------|-------------------|----------------|------------|
-| **`pr-plan`** on **planning child lane** (`planner`, **`phase-planner`**, Quick Fix Plan agent) | `readyForImplementation: true` | Offer **AskQuestion** **Start coding session** on **that lane** → inline **`pr-plan`** §5d spawns **`coding-session`** | Open worktree on **`pr-plan`** lane, redirect spawn to Squad Leader, or set §8 `phase` past `not-started` from planning outputs alone |
+| **`pr-plan`** on **planning child lane** (`master-planner`, **`phase-planner`**, Quick Fix Plan agent) | `readyForImplementation: true` | Offer **AskQuestion** **Start coding session** on **that lane** → inline **`pr-plan`** §5d spawns **`coding-session`** | Open worktree on **`pr-plan`** lane, redirect spawn to Squad Leader, or set §8 `phase` past `not-started` from planning outputs alone |
 | **`coding-session`** after **`pr-plan`** §5d spawn | `planningHandoffApproved: true` + exit 1 + `EXPECTED_SECTIONS_5_8_TBD` or exit 0 (`OK`) | **Auto-authorize** — open worktree and implement; fill §§5–8 on this lane (no second modal) | Treat `INCOMPLETE` as planning failure; re-ask planning approval |
 | **`coding-session`** (detached) | `plan-ws-completeness.mjs` exit 0 or override in worktree-open gate | Proceed with worktree + implementation | Assume planning handoff alone was enough |
 | **`coding-session`** (detached) | `developerApprovedImplementation: true` | Continue ship chain; re-emit terminal with §8 `outputs` for host sync | Assume §8 updated without terminal `outputs` |
 | **`coding-session`** after inline **`pr-review`** | PR comment triage finished on the coding lane | Re-emit **`coding-session`** terminal with `shipPhase: pr-review` | Assume host sync ran without re-emit |
 | Squad Leader **`plan and deliver`** dispatch | Host-sync message parsed | Refresh §8 rows; then resolution gates | Close dispatch **`resolved`** while rows `open`/`blocked` without host sync — **`plan.mdc`** §8 *§8 troubleshooting* |
 
-**Lane rule:** Planning skills (**`pr-plan`**, **`planner`**, decomposition tree) ≠ ship skills (**`coding-session`** → **`pre-pr-review`** → **`create-pr`** → …). **`pr-plan`** may spawn **`coding-session`** on a child lane (§5d); worktrees and implementation stay on the child.
+**Lane rule:** Planning skills (**`pr-plan`**, **`master-planner`**, decomposition tree) ≠ ship skills (**`coding-session`** → **`pre-pr-review`** → **`create-pr`** → …). **`pr-plan`** may spawn **`coding-session`** on a child lane (§5d); worktrees and implementation stay on the child.
 
 ## §8 ship ledger and inline `pr-review`
 
@@ -70,7 +70,7 @@ Three different signals appear in plan-and-deliver; advancing one does **not** a
 | **`plan-ws-completeness.mjs` exit 0** | Script on PR plan path | PR plan §§ 5–8 lack blocking `_TBD_` for worktree handoff | **`coding-session`** already running; PR open |
 | **`developerApprovedImplementation`** | **`coding-session`** after worktree-open gate | Layer-2 consent to implement on a worktree | Dispatch ship ledger auto-updated (leader §8 updates via host sync from child terminal) |
 
-**`pr-plan` → `coding-session`:** After **AskQuestion** **Start coding session**, **`pr-plan`** emits **`AGENT_RUN_REQUEST_V1`** with absolute `targetPlanPath`, `repoPath`, and `planningHandoffApproved: true` (§5d). The child runs **`plan-ws-completeness.mjs`** then **auto-authorizes** worktrees when §§1–4 are drafted (or the plan is complete) — no second worktree-open modal. Detached **`coding-session`** entry (phrase, snapshot, new session) still uses the worktree-open gate. Do not implement on the **`pr-plan`** lane because `readyForImplementation` is true.
+**`pr-plan` → `coding-session`:** After **AskQuestion** **Start coding session**, **`pr-plan`** calls MCP **`mission_control_spawn_agent`** with absolute `targetPlanPath`, `repoPath`, and `planningHandoffApproved: true` (§5d). The child runs **`plan-ws-completeness.mjs`** then **auto-authorizes** worktrees when §§1–4 are drafted (or the plan is complete) — no second worktree-open modal. Detached **`coding-session`** entry (phrase, snapshot, new session) still uses the worktree-open gate. Do not implement on the **`pr-plan`** lane because `readyForImplementation` is true.
 
 ### Agent checklist (planning vs ship — do not conflate)
 
@@ -80,7 +80,7 @@ Three different signals appear in plan-and-deliver; advancing one does **not** a
 | Open a worktree because **`pr-plan`** finished §§1–4 only | Run **`plan-ws-completeness.mjs`** on the **`coding-session`** lane — layer 1 + spawn handoff auto-authorizes when §§1–4 are drafted; detached entry still needs the worktree-open gate |
 | Set Squad Leader §8 `phase` to `worktree` / `implementing` from **`pr-plan`** outputs alone | Advance §8 only after host sync from **`coding-session`** terminal with `developerApprovedImplementation: true` |
 | Run **`git commit`** / **`git push`** while still on a planning skill lane | Ship cadence is **`coding-session`** (or rule **20** on an implementation lane) — see rule **20** § *AskQuestion vs git commit/push* |
-| Return to **`planner`** Step **7b** master-plan menus after inline **`pr-plan`** §§1–4 without §5c on the planner / **`new-plan`** lane | **Stop** — run **`pr-plan`** §5c (Start coding session / defer) on the active lane; §5d spawns **`coding-session`** when selected. Applies after Squad Leader §3 **`author-prd`** → §5 **`planner`** path the same as any other approved PRD |
+| Return to **`master-planner`** Step **7b** master-plan menus after inline **`pr-plan`** §§1–4 without §5c on the planner / **`new-plan`** lane | **Stop** — run **`pr-plan`** §5c (Start coding session / defer) on the active lane; §5d spawns **`coding-session`** when selected. Applies after Squad Leader §3 **`author-prd`** → §5 **`master-planner`** path the same as any other approved PRD |
 | Treat planning **AskQuestion** (*next phase*, *continue planning*) as ship or git consent | Planning picks use § *Standard flow*; commit/push need rule **20** + **`.sedea/centers/sedea/rules/6_git-commit-push-gate.mdc`** same-message words |
 | Treat rule **20** cadence **step 3** as “run full **`pr-review`** from Step 1” after every push | Cadence step **3** = **`pr-review` Step 5 — GitHub only** when Steps 1–4 already ran; otherwise **skip** cadence step 3 — § *Disambiguation — rule 20 cadence step 3 vs `pr-review` steps* and rule **20** § *Commit and push cadence* |
 
@@ -100,7 +100,7 @@ Squad Leader §8 ship rows advance **only** from Mission Control host sync on sh
 ## Standard flow
 
 1. Developer signals a planning-tree lane change — explicitly (*"where are we?"*, *"what's next?"*) or implicitly (*"back to plan"*, *"let's move on to …"*).
-2. Agent emits a **"Where we are now in the plan tree"** snapshot (§ *Snapshot format*) in the **same turn** as **`AskQuestion`** when a pick is required — use **`MC_PHASED_RESPONSE_V1`** (`display.markdown` for the snapshot, `askQuestion` for options) per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**. **Obsolete:** snapshot-only turn with no structured choice.
+2. Agent emits a **"Where we are now in the plan tree"** snapshot (§ *Snapshot format*) in the **same turn** as **`AskQuestion`** when a pick is required — call **`mission_control_present_structured_choice`** (`displayMarkdown` for the snapshot, `askQuestion` for options) per [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Turn completion invariant**. **Obsolete:** snapshot-only turn with no structured choice.
 3. When a pick is required before continuing, use **AskQuestion** (§ *Sedea input channel*) with one option per **protocol branch + target plan** (brief `label`; put branch and path in `prompt` when needed) — same turn as step 2 when both apply.
 4. Agent resolves the target from the **AskQuestion** response (selected `option` plus any modal free-form text per § *Resolution order* bullet 2), then invokes the relevant skill with the target pre-resolved.
 
@@ -114,7 +114,7 @@ Highest confidence first. Stop at the first match.
 2. **AskQuestion response.** The developer submitted **AskQuestion** (selected `option` `id` / `label` from the most recent planning pick, plus any **free-form text** Mission Control returns with that submission). Bind the target from that `option`; treat modal free-form text as scope or path hints when unambiguous.
 3. **Snapshot pinpoint.** The latest snapshot lists exactly one option matching the branch the user chose — use that target.
 4. **Mid-flow continuation.** Chat names the current lane unambiguously (e.g. child file just written; next skill is **phase-planner** on that path). Valid while snapshot freshness holds (§ *Snapshot freshness*).
-5. **Stop and emit fresh snapshot.** If still ambiguous, emit snapshot + **AskQuestion** in **one turn** (phased envelope when available) — do not end with snapshot-only prose.
+5. **Stop and emit fresh snapshot.** If still ambiguous, emit snapshot + **AskQuestion** in **one turn** (MCP structured choice when available) — do not end with snapshot-only prose.
 
 Do **not** use `<open_and_recently_viewed_files>` as the primary resolver for planning targets.
 
@@ -165,7 +165,7 @@ Normative contract: **development-process.md** § *Depth-first plan-tree travers
 
 Per PR plan path: §8 row `shipPhase: done` and `rowStatus: closed`, or explicit `deferred` / `abandoned` on the leader dispatch. Per phase row: every descendant PR plan under that phase's § 5 **`PR list`** meets that bar.
 
-**Spawn-chain alternative:** When **`coding-session`** is a spawned child, the parent planning lane may treat **`outputs.prShipComplete: true`** on a delivered **`AGENT_RESULT_RESPONSE_V1`** as ship-complete for depth-first eligibility — without requiring a separate Squad Leader **Ship recap** on the same turn. See **`missions/plan-and-deliver/skills/README.md`** § *Upstream ship-complete notification*.
+**Spawn-chain alternative:** When **`coding-session`** is a spawned child, the parent planning lane may treat **`outputs.prShipComplete: true`** on a delivered child **`mission_control_send_agent_result`** as ship-complete for depth-first eligibility — without requiring a separate Squad Leader **Ship recap** on the same turn. See **`missions/plan-and-deliver/skills/README.md`** § *Upstream ship-complete notification*.
 
 ### PR-plan completeness before coding-session
 
@@ -188,7 +188,7 @@ Snapshots should respect **coding-session** pre-worktree validation and the work
  ```bash
  cd "$HOSTING_ROOT"
  node .sedea/centers/research-and-development/missions/plan-and-deliver/scripts/plan-state.mjs \
- --operations-user-id <operationsUserId> resolve --cwd "$WORKTREE_ROOT"
+  resolve --cwd "$WORKTREE_ROOT"
  ```
 
  When not in a worktree, use the PR plan path explicitly in play. Do **not** set script paths from `ROOT="$(git rev-parse --show-toplevel)"` in a hosting repo worktree alone.
@@ -213,3 +213,21 @@ Emit a fresh snapshot when:
 Each planning skill (**new-plan**, **phase-planner**, **pr-plan**, **delivery-phases**, **pr-breakdown**) receives the target path as **pre-resolved structured input**. When loading a skill, the agent states the target up front (one line).
 
 Skills still run their own **template / stage verification** on disk. If a skill loads without a resolved target, **stop** and resolve via this rule before proceeding.
+
+## Checkpoint step continuation (binding)
+
+This file is the **planning-target resolution contract** (snapshot tables, depth-first gates, plan-path binding) — not a mission protocol with executable ship steps. Under **`trustLevel: checkpoint`**, developer-pick UX for ambiguous targets and lane-change snapshots still uses **AskQuestion** / **`mission_control_present_structured_choice`** per § *Sedea input channel*; mid-flow unambiguous hops **auto-advance**. **Do not** add literal `USER_CHECKPOINT` gate markers here for happy-path resolution or depth-first eligibility compute — markers and option tables live on invoker planning skills (`master-planner`, `phase-planner`, `pr-plan`, `new-plan`, …) and rule **2**.
+
+| Surface | Designation | Owner |
+|---------|-------------|--------|
+| Explicit path / AskQuestion option / mid-flow unambiguous continuation | **auto-advance** | § *Resolution order* bullets 1–4 |
+| Lane-change snapshot when a pick is required (same turn as modal) | **checkpoint** | § *Standard flow* steps 2–3; § *Sedea input channel* |
+| Still ambiguous after resolution order → fresh snapshot + AskQuestion | **checkpoint** | § *Resolution order* bullet 5 — **not** snapshot-only prose |
+| Depth-first expand eligibility compute / ship-complete read | **auto-advance** | § *Depth-first expansion eligibility* |
+| Detached incomplete PR plan ordered before coding-session in snapshot | **checkpoint** | § *PR-plan completeness before coding-session* — first option finishes plan (or override label) |
+| Planning readiness vs ship signal tables (reference only) | **baseline-governs** (reference) | § *Planning readiness vs ship* — no turn UX |
+| §8 host-sync / rule 20 cadence disambiguation (reference) | **baseline-governs** (reference) | §§ *§8 ship ledger*, *Disambiguation* — ship gates owned by **`coding-session`** / rule **20** |
+
+**Forbidden in this file:** prescribing prose *tell me when* / *come back when* / *I'll wait* / *over to you* / *reply with results* after an ambiguous target or lane-change snapshot; snapshot-only / recap-only ends when a pick is required; duplicating invoker AskQuestion option tables; live `USER_CHECKPOINT` tokens on happy-path resolution hops.
+
+**Related:** Checkpoint step-table template — [`.sedea/centers/sedea/docs/pr-step-table-template.md`](.sedea/centers/sedea/docs/pr-step-table-template.md). Marker syntax — [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md). Turn completion — [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc).

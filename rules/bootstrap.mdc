@@ -51,7 +51,33 @@ Definitive per-role **`laneRules`** minimums: [`.sedea/centers/research-and-deve
 
 ## Mission Control turn completion
 
-On **every** Mission Control assistant turn, close with **`AskQuestion`** or **`MC_PHASED_RESPONSE_V1`** — not prose-only exit. Spawned lanes without the AskQuestion tool **must** use **`MC_PHASED_RESPONSE_V1`** (sentinel-first when required). Full wire format: [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § *`MC_PHASED_RESPONSE_V1` wire format (binding)*.
+Turn-end structured choice is keyed by dispatch **`trustLevel`** — normative detail lives in [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc) § **Checkpoint trust level — binary host contract** and § **Turn completion invariant**:
+
+| Trust | Agent obligation (summary) |
+|-------|----------------------------|
+| **`checkpoint`** | Gate surfaces (`USER_CHECKPOINT`, external-wait, exceptions) **must** close with **`AskQuestion`** / **`mission_control_present_structured_choice`**. Happy-path protocol steps between gates **Act** without a turn-end modal — **never** prose-only idle when you cannot advance. |
+| **`tool_execution`** / **`user_in_full_control`** | Host every-turn structured-choice policy — close with **`AskQuestion`** / MCP structured choice; not prose-only exit. |
+
+Spawned lanes without the AskQuestion tool **must** call **`mission_control_present_structured_choice`** when a gate surface (or non-Checkpoint every-turn policy) requires structured choice. Full wire format: rule **2** § *`mission_control_present_structured_choice` MCP tool contract (binding)*. **Forbidden:** treating this bootstrap summary as license to skip Checkpoint gate modals, or as requiring a modal on every Checkpoint happy-path hop.
+
+---
+
+## Checkpoint step continuation (binding)
+
+This file is the **sole R&D alwaysApply warm-up bind** — plan-and-deliver routing summary, lane warm-up manifest contract, and on-demand links to numbered R&D rules. It is **not** a mission protocol with executable ship steps. Under **`trustLevel: checkpoint`**, step-continuation UX for worktrees, ship chain, and planning gates lives in invoker skills and numbered R&D rules **10**–**50** (plus Sedea rules via platform bootstrap). **Do not** add literal `USER_CHECKPOINT` markers here for happy-path warm-up, lane-manifest reads, or on-demand rule hops — that would fight skill auto-advance.
+
+| Surface | Designation | Owner |
+|---------|-------------|--------|
+| Warm-up apply (R&D bootstrap + laneRules + skillWarmUp) | **auto-advance** | Host merge; this file as R&D `bootstrapRules` |
+| Lane warm-up manifest / merge-order reads | **auto-advance** | This § *Lane warm-up manifest* |
+| On-demand numbered R&D rule loads (`10`–`50`) | **auto-advance** | Lane manifest / skill `Read` — no USER_CHECKPOINT in bootstrap |
+| Skill helper interface hop | **auto-advance** | This § *Skill helper interfaces* — execution owned by named skill |
+| Turn completion (trust-keyed) | **baseline-governs** (reference) | Sedea rule **2** (Checkpoint binary + non-Checkpoint every-turn); summary table above |
+| No idle handoff | **baseline-governs** (reference) | Sedea rules **1**–**2**; Forbidden catalog below |
+
+**Forbidden in this file:** prescribing prose *tell me when* / *come back when* / *I'll wait* / *over to you* / *ask how to proceed* as the primary wait surface; `USER_CHECKPOINT` tokens for happy-path warm-up or on-demand rule hops; duplicating rule-2 AskQuestion option tables or skill gate markers; requiring a modal on every Checkpoint happy-path hop; unkeyed every-turn AskQuestion summaries.
+
+**Related:** Checkpoint step-table template — [`.sedea/centers/sedea/docs/pr-step-table-template.md`](.sedea/centers/sedea/docs/pr-step-table-template.md). Marker syntax — [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md).
 
 ---
 
@@ -64,7 +90,7 @@ Load these **explicitly** when **`laneRules`**, **`skillWarmUp`**, spawn handove
 | **10** Plan naming | [`.sedea/centers/research-and-development/rules/10_plan-naming-convention.mdc`](10_plan-naming-convention.mdc) | Plan/PR/worktree naming, forbidden-word policy |
 | **20** PR shipping | [`.sedea/centers/research-and-development/rules/20_efficient-pr-shipping.mdc`](20_efficient-pr-shipping.mdc) | Worktrees, commit/push cadence, ship chain, PR creation gate |
 | **30** Planning targets | [`.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc`](30_planning-target-resolution.mdc) | Resolve `.plan.md` targets, snapshot tables, depth-first gates |
-| **31** Operations user id | [`.sedea/centers/research-and-development/rules/31_operations-user-id.mdc`](31_operations-user-id.mdc) | `operationsUserId`, plans union, `plan-state.mjs --operations-user-id` |
+| **31** Dispatch scope | [`.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc`](31_dispatch-scope.mdc) | `dispatchId`, `operationsDocsDirectory` / DbOnly, explicit plan paths |
 | **40** Maintain rules | [`.sedea/centers/research-and-development/rules/40_maintain-rules.mdc`](40_maintain-rules.mdc) | Hosting-repo **`.cursor/rules/*.mdc`** routing vs center rules |
 | **50** Display metadata | [`.sedea/centers/research-and-development/rules/50_mission-control-display-metadata-discipline.mdc`](50_mission-control-display-metadata-discipline.mdc) | Child lane display refresh, Squad Leader dispatch scope |
 
@@ -86,3 +112,4 @@ Cross-ref: [`.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc`](.sedea/cen
 - Plan-and-deliver spawn contracts: [`.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md`](../missions/plan-and-deliver/skills/README.md)
 - NFD cadence: [`.sedea/centers/research-and-development/docs/development-process.md`](../docs/development-process.md)
 - Sedea platform bootstrap: [`.sedea/centers/sedea/rules/bootstrap.mdc`](.sedea/centers/sedea/rules/bootstrap.mdc)
+- Turn completion / no idle handoff: [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc); [`.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc`](.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc)

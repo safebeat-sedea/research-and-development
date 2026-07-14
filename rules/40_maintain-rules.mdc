@@ -39,7 +39,7 @@ If you spend time reading multiple files or running searches to learn how someth
 
 If your change introduces or alters architecture, conventions, call patterns, or module boundaries, update the relevant rule (or create one) before finishing the task.
 
-Per-PR plans under the **`.sedea/operations/`** union (**`.sedea/operations/<operationsUserId>/plans/`** or **`.sedea/operations/joint/plans/`**) carry **`## 5. Repo rules impact`** — list which **`.cursor/rules/*.mdc`** files in the **hosting repo** need a delta for that PR; keep it in sync when you touch rules outside that flow.
+Per-PR plans under the **`.sedea/operations/`** union (**`.sedea/operations/.../plans/`** or **`.sedea/operations/joint/plans/`**) carry **`## 5. Repo rules impact`** — list which **`.cursor/rules/*.mdc`** files in the **hosting repo** need a delta for that PR; keep it in sync when you touch rules outside that flow.
 
 ### Plan-anchored PRs (before commit and push)
 
@@ -62,4 +62,22 @@ When a hosting-repo **`.cursor/rules/*.mdc`** file documents **git worktrees**, 
 
 ## Git and worktree docs in center rules and skills
 
-When **any** file under **`.sedea/centers/<centerSlug>/`** (center **`rules/`**, mission **`plan.mdc`**, **`SKILL.md`**, or center **`docs/`**) mentions **`git worktree add`**, **`git worktree remove`**, **`git worktree prune`**, **`sedea_add_worktree_folder`**, **`sedea_remove_worktree_folder`**, post-merge cleanup, or **`git worktree list`**, it **must** include a **Worktree removal ownership (binding)** block (or equivalent normative one-liner): **do not remove worktrees you do not own**; **`git worktree list` is read-only** unless rule **0** § *Worktree ownership* preconditions hold for **that** path. Link rule **0** § *Worktree ownership* and, for R&D ship lanes, rule **20** § *Worktree removal ownership (binding)*. **Forbidden:** instructing agents to “clean up” or prune every worktree on the repo.
+When **any** file under **`.sedea/centers/<centerSlug>/`** (center **`rules/`**, mission **`plan.mdc`**, **`SKILL.md`**, or center **`docs/`**) mentions **`git worktree add`**, **`git worktree remove`**, **`git worktree prune`**, **`sedea_add_worktree_folder`**, **`sedea_remove_worktree_folder`**, post-merge cleanup, or **`git worktree list`**, it **must** include a **Worktree removal ownership (binding)** block (or equivalent normative one-liner): **do not remove worktrees you do not own**; **`git worktree list` is read-only** unless rule **0** § *Worktree ownership* preconditions hold for **that** path. Link rule **0** § *Worktree ownership* and, for R&D ship lanes, rule **20** § *Worktree removal ownership (binding)*. **Forbidden:** instructing agents to “clean up” or prune every worktree on the repo. **If ownership is unsure:** **stop** and use structured choice — **do not remove**, and **do not** end with prose-only idle.
+
+## Checkpoint step continuation (binding)
+
+This file is the **hosting-repo `.cursor/rules` vs center-rules routing contract** — not a mission protocol with executable ship steps. Under **`trustLevel: checkpoint`**, turn-end modal UX for worktree-open, §5 reconciliation, ship cut-points, and post-merge cleanup lives in invoker skills (`coding-session`, `create-pr`, `promote-center-submodule-pin`, **`improve center rules`**) and consent gates in rules **6** / **2** / **1** / **20**. **Do not** add literal `USER_CHECKPOINT` markers here for happy-path routing-table reads, plan-anchored §5 action/verify classification, or explore-then-capture rule updates when the task already names the edit target — that would fight skill auto-advance.
+
+| Surface | Designation | Owner |
+|---------|-------------|--------|
+| Consult routing table when edit layer is clear | **auto-advance** | § *Where to edit which governance (routing)* |
+| Apply §5 **action** / **verify-only** / **`_None_`** bullets on plan-anchored PRs | **auto-advance** | § *Plan-anchored PRs* — hosting `.mdc` edits in same worktree |
+| Explore-then-capture / change-then-update hosting `.cursor/rules` when task requires it | **auto-advance** | §§ *When exploring the codebase*, *When making changes* |
+| Unclear whether change belongs in hosting `.cursor/rules` vs center rules vs sedea platform | **checkpoint** | § *Where to edit which governance* — structured choice once; no prose-only layer pick |
+| Worktree ownership unsure before remove/cleanup docs apply | **checkpoint** | §§ *Git and worktree docs…* + rule **20** / sedea **0** — stop + modal; no markers in this file |
+| Center / mission governance edits (`improve center rules` / `improve mission`) | **baseline-governs** (reference) | Center-maintenance / mission-maintenance missions — not this file’s edit loop |
+| Turn completion after proposing a `.cursor/rules` delta in chat | **baseline-governs** (reference) | Rules **1**–**2**; pointer in Related below |
+
+**Forbidden in this file:** prescribing prose *tell me when* / *come back when* / *I'll wait* / *over to you* / *ask how to proceed* as the primary wait surface for routing ambiguity or ownership-unsure stops; duplicating `coding-session` §5 reconciliation or rule-6 AskQuestion option tables; live `USER_CHECKPOINT` tokens on happy-path routing or §5 classification.
+
+**Related:** Checkpoint step-table template — [`.sedea/centers/sedea/docs/pr-step-table-template.md`](.sedea/centers/sedea/docs/pr-step-table-template.md). Marker syntax — [`.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md`](.sedea/centers/sedea/docs/user-checkpoint-marker-syntax.md). Turn completion — [`.sedea/centers/sedea/rules/2_ask-question-instructions.mdc`](.sedea/centers/sedea/rules/2_ask-question-instructions.mdc); [`.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc`](.sedea/centers/sedea/rules/1_agent-code-of-conduct.mdc).

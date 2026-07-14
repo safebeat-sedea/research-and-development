@@ -2,12 +2,18 @@
 /**
  * Compare center.yaml skillEntries to on-disk mission skill SKILL.md files and lint
  * warmUpRules / laneRules frontmatter against per-skill manifest tables (spawn
- * preflight row 11 — README § Definitive laneRules for author-prd, planner,
+ * preflight row 11 — README § Definitive laneRules for author-prd, master-planner,
  * coding-session).
  *
- * Also lints AGENT_RUN_REQUEST_V1 spawn examples on planner skills (R&D and Sedea
+ * Also lints mission_control_spawn_agent spawn examples on master-planner skills (R&D and Sedea
  * maintenance copies): when frontmatter declares inputs.parent.type: string, JSON
  * null for parent is forbidden — wire encoding must use "parent":"null".
+ *
+ * Lints plan-change notify governance (PR 4):
+ * - Parent emit: master-planner, phase-planner, pr-breakdown — emit-when + N1–N8 preflight rows
+ * - Child receive: coding-session, phase-planner, master-planner — receive checkpoint contract
+ * - coding-session must not document notify caller paths
+ * - skills/README.md — N1–N8 notify preflight + v1 child receive table
  *
  * Run from hosting repo root (directory containing .sedea/):
  *
@@ -27,6 +33,32 @@ const CENTER_YAML = path.join(CENTER_ROOT, 'center.yaml');
 const MISSIONS_ROOT = path.join(CENTER_ROOT, 'missions');
 const PLAN_AND_DELIVER_PREFIX = 'missions/plan-and-deliver/skills/';
 
+/** Parent planner skills — must document notify emit + N1–N8 preflight. */
+const NOTIFY_EMIT_SKILL_NAMES = ['master-planner', 'phase-planner', 'pr-breakdown'];
+
+/** Child skills — must document plan-change notification receive checkpoint. */
+const NOTIFY_RECEIVE_SKILL_NAMES = ['coding-session', 'phase-planner', 'master-planner'];
+
+const NOTIFY_EMIT_WHEN_HEADING =
+  '### Plan-change notify — emit-when (`mission_control_notify_child_lanes`)';
+const NOTIFY_PREFLIGHT_HEADING =
+  '### MCP notify preflight (`mission_control_notify_child_lanes`)';
+const NOTIFY_RECEIVE_HEADING = '### Plan-change notification receive (child lane)';
+
+const NOTIFY_PREFLIGHT_STEPS = ['N1', 'N2', 'N3', 'N4', 'N5', 'N6', 'N7', 'N8'];
+
+const NOTIFY_RECEIVE_OPTION_IDS = [
+  'acknowledge-only',
+  're-read-revise',
+  'plan-reconcile',
+  'escalate-parent',
+  'stop-work',
+  'more-details',
+];
+
+const SKILLS_README_REL =
+  'missions/plan-and-deliver/skills/README.md';
+
 const SKILL_WARMUP_HEADING = '### `skillWarmUp` — frontmatter `warmUpRules`';
 const LANE_RULES_HEADING = '### `laneRules` — frontmatter `laneRules`';
 /** Host spawn cap — `.sedea/centers/sedea/rules/4_mission.mdc` § Spawned execution */
@@ -39,10 +71,16 @@ const DEFINITIVE_LANE_RULES_BY_SKILL = {
     '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md',
     '.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc',
   ],
-  planner: [
+  'brainstorm-research': [
+    '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+    '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md',
+    '.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc',
+    '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md',
+  ],
+  'master-planner': [
     '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
     '.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc',
-    '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/planner/SKILL.md',
+    '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/master-planner/SKILL.md',
     '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md',
   ],
   'coding-session': [
@@ -446,11 +484,215 @@ async function listSedeaPlannerSkillFiles(hostingRoot) {
 function extractSpawnExampleLines(body) {
   const lines = [];
   for (const line of body.split('\n')) {
-    if (line.includes('AGENT_RUN_REQUEST_V1') && line.includes('"inputs"')) {
+    if (line.includes('mission_control_spawn_agent') && line.includes('"inputs"')) {
       lines.push(line.trim());
     }
   }
   return lines;
+}
+
+function skillRelPath(skillName) {
+  return `${PLAN_AND_DELIVER_PREFIX}${skillName}/SKILL.md`;
+}
+
+function assertContains(body, needle, repoRelativePath, label) {
+  if (body.includes(needle)) return undefined;
+  return `${repoRelativePath}: missing ${label} — expected substring: ${needle}`;
+}
+
+function assertNotifyPreflightRows(body, repoRelativePath) {
+  const section = extractSection(body, NOTIFY_PREFLIGHT_HEADING);
+  if (!section) {
+    return `${repoRelativePath}: missing section \`${NOTIFY_PREFLIGHT_HEADING}\``;
+  }
+  const missing = NOTIFY_PREFLIGHT_STEPS.filter((step) => !section.includes(`| ${step} |`));
+  if (missing.length) {
+    return `${repoRelativePath}: MCP notify preflight missing row(s): ${missing.join(', ')}`;
+  }
+  return undefined;
+}
+
+function assertReceiveOptionOrder(body, repoRelativePath) {
+  const section = extractSection(body, NOTIFY_RECEIVE_HEADING);
+  if (!section) return undefined;
+  const positions = NOTIFY_RECEIVE_OPTION_IDS.map((id) => {
+    const idx = section.indexOf(`| \`${id}\` |`);
+    return idx === -1 ? -1 : idx;
+  });
+  const missing = NOTIFY_RECEIVE_OPTION_IDS.filter((_, i) => positions[i] === -1);
+  if (missing.length) {
+    return `${repoRelativePath}: notify receive missing option id(s): ${missing.join(', ')}`;
+  }
+  for (let i = 1; i < positions.length; i += 1) {
+    if (positions[i] <= positions[i - 1]) {
+      return `${repoRelativePath}: notify receive option ids out of order — expected ${NOTIFY_RECEIVE_OPTION_IDS.join(' → ')}`;
+    }
+  }
+  return undefined;
+}
+
+async function validateNotifyEmitSkill(skillName) {
+  const rel = skillRelPath(skillName);
+  const abs = path.join(CENTER_ROOT, rel);
+  const raw = await fs.readFile(abs, 'utf8');
+  const errors = [];
+
+  const checks = [
+    assertContains(raw, NOTIFY_EMIT_WHEN_HEADING, rel, 'Plan-change notify emit-when heading'),
+    assertContains(raw, NOTIFY_PREFLIGHT_HEADING, rel, 'MCP notify preflight heading'),
+    assertContains(
+      raw,
+      '**`mission_control_notify_child_lanes`**',
+      rel,
+      'Agent messaging notify tool row',
+    ),
+    assertContains(
+      raw,
+      '§ *MCP notify preflight* (rows N1–N8)',
+      rel,
+      'README notify preflight cross-ref',
+    ),
+    assertContains(
+      raw,
+      '§ *MCP notify protocol*',
+      rel,
+      '4_mission.mdc notify protocol cross-ref',
+    ),
+    assertContains(raw, 'notifyAllDescendants', rel, 'forbidden notifyAllDescendants mention'),
+  ];
+  for (const err of checks) {
+    if (err) errors.push(err);
+  }
+
+  const preflightErr = assertNotifyPreflightRows(raw, rel);
+  if (preflightErr) errors.push(preflightErr);
+
+  return errors;
+}
+
+async function validateNotifyReceiveSkill(skillName) {
+  const rel = skillRelPath(skillName);
+  const abs = path.join(CENTER_ROOT, rel);
+  const raw = await fs.readFile(abs, 'utf8');
+  const errors = [];
+
+  const checks = [
+    assertContains(raw, NOTIFY_RECEIVE_HEADING, rel, 'Plan-change notification receive heading'),
+    assertContains(
+      raw,
+      'Mission Control: plan-change-notification delivered.',
+      rel,
+      'notify delivery preamble line',
+    ),
+    assertContains(raw, '**`affectedPlanPaths`**', rel, 'affectedPlanPaths envelope field'),
+    assertContains(raw, '**`Read`**', rel, 'mandatory Read of affected plans'),
+    assertContains(raw, 'USER_CHECKPOINT', rel, 'USER_CHECKPOINT gate marker'),
+    assertContains(
+      raw,
+      'developer-input USER_CHECKPOINT',
+      rel,
+      'developer-input vs external-wait binding',
+    ),
+    assertContains(
+      raw,
+      '**`mission_control_send_agent_result`** solely',
+      rel,
+      'forbid terminal result solely from notify',
+    ),
+    assertContains(
+      raw,
+      '§ *MCP notify protocol*',
+      rel,
+      '4_mission.mdc notify protocol cross-ref',
+    ),
+    assertContains(
+      raw,
+      '§ *Child delivery checkpoint (receive)*',
+      rel,
+      'README child receive cross-ref',
+    ),
+  ];
+  for (const err of checks) {
+    if (err) errors.push(err);
+  }
+
+  const orderErr = assertReceiveOptionOrder(raw, rel);
+  if (orderErr) errors.push(orderErr);
+
+  return errors;
+}
+
+async function validateCodingSessionNotifyCallerForbidden() {
+  const rel = skillRelPath('coding-session');
+  const abs = path.join(CENTER_ROOT, rel);
+  const raw = await fs.readFile(abs, 'utf8');
+  const errors = [];
+
+  if (raw.includes(NOTIFY_EMIT_WHEN_HEADING)) {
+    errors.push(`${rel}: coding-session must not document notify emit-when (receive-only lane)`);
+  }
+  if (raw.includes(NOTIFY_PREFLIGHT_HEADING)) {
+    errors.push(`${rel}: coding-session must not document MCP notify preflight (receive-only lane)`);
+  }
+  if (!raw.includes('**forbidden** **`mission_control_notify_child_lanes`**')) {
+    errors.push(
+      `${rel}: coding-session must forbid mission_control_notify_child_lanes as notify caller`,
+    );
+  }
+
+  return errors;
+}
+
+async function validateNotifyReadmeCoverage() {
+  const rel = SKILLS_README_REL;
+  const abs = path.join(CENTER_ROOT, rel);
+  const raw = await fs.readFile(abs, 'utf8');
+  const errors = [];
+
+  const notifySection = extractSection(raw, '### MCP notify preflight (`mission_control_notify_child_lanes`)');
+  if (!notifySection) {
+    errors.push(`${rel}: missing § MCP notify preflight (N1–N8)`);
+  } else {
+    const missing = NOTIFY_PREFLIGHT_STEPS.filter((step) => !notifySection.includes(`| ${step} |`));
+    if (missing.length) {
+      errors.push(`${rel}: MCP notify preflight missing row(s): ${missing.join(', ')}`);
+    }
+  }
+
+  const receiveAnchor = '**Child delivery checkpoint (receive) — binding:**';
+  const receiveStart = raw.indexOf(receiveAnchor);
+  if (receiveStart === -1) {
+    errors.push(`${rel}: missing § Child delivery checkpoint (receive)`);
+  } else {
+    const receiveEnd = raw.indexOf('### Lane title prefix', receiveStart);
+    const receiveSection =
+      receiveEnd === -1 ? raw.slice(receiveStart) : raw.slice(receiveStart, receiveEnd);
+    for (const skillName of NOTIFY_RECEIVE_SKILL_NAMES) {
+      const tableRowNeedle = '| **`' + skillName;
+      if (!receiveSection.includes(tableRowNeedle)) {
+        errors.push(`${rel}: child receive table missing skill \`${skillName}\``);
+      }
+    }
+  }
+
+  if (!raw.includes('sedea.features.plan-change-notification')) {
+    errors.push(`${rel}: missing plan-change-notification feature flag reference`);
+  }
+
+  return errors;
+}
+
+async function validateNotifyGovernance() {
+  const errors = [];
+  for (const skillName of NOTIFY_EMIT_SKILL_NAMES) {
+    errors.push(...(await validateNotifyEmitSkill(skillName)));
+  }
+  for (const skillName of NOTIFY_RECEIVE_SKILL_NAMES) {
+    errors.push(...(await validateNotifyReceiveSkill(skillName)));
+  }
+  errors.push(...(await validateCodingSessionNotifyCallerForbidden()));
+  errors.push(...(await validateNotifyReadmeCoverage()));
+  return errors;
 }
 
 async function validateNullableParentSpawnWire(hostingRoot, repoRelativePaths) {
@@ -483,8 +725,8 @@ async function validateNullableParentSpawnWire(hostingRoot, repoRelativePaths) {
     for (const line of spawnLines) {
       if (JSON_NULL_PARENT_IN_SPAWN_RE.test(line)) {
         errors.push(
-          `${rel}: AGENT_RUN_REQUEST_V1 spawn example uses JSON null for \`parent\` — ` +
-            `inputs.parent is type string; wire encoding must be \`"parent":"null"\` (see planner spawn contract)`,
+          `${rel}: mission_control_spawn_agent spawn example uses JSON null for \`parent\` — ` +
+            `inputs.parent is type string; wire encoding must be \`"parent":"null"\` (see master-planner spawn contract)`,
         );
       }
     }
@@ -522,7 +764,7 @@ async function main() {
 
   const sedeaPlannerSkills = await listSedeaPlannerSkillFiles(hostingRoot);
   const rdPlannerSkills = [...disk].filter((rel) =>
-    /\/skills\/planner\/SKILL\.md$/.test(rel),
+    /\/skills\/master-planner\/SKILL\.md$/.test(rel),
   );
   const spawnWirePaths = [...rdPlannerSkills, ...sedeaPlannerSkills];
   const spawnWireErrors = await validateNullableParentSpawnWire(
@@ -535,6 +777,13 @@ async function main() {
     process.exit(1);
   }
 
+  const notifyErrors = await validateNotifyGovernance();
+  if (notifyErrors.length) {
+    process.stderr.write('plan-change notify governance lint failed:\n');
+    for (const e of notifyErrors) process.stderr.write(`  ${e}\n`);
+    process.exit(1);
+  }
+
   const onlyYaml = [...listed].filter((p) => !disk.has(p)).sort();
   const onlyDisk = [...disk].filter((p) => !listed.has(p)).sort();
 
@@ -543,7 +792,8 @@ async function main() {
     process.stdout.write(
       `OK: center.yaml skillEntries (${listed.size}) matches disk (${disk.size}); ` +
         `frontmatter valid; warmUp/laneRules manifest parity passed on plan-and-deliver spawned skills; ` +
-        `nullable-parent spawn wire lint passed on ${spawnWirePaths.length} planner skill path(s); ` +
+        `nullable-parent spawn wire lint passed on ${spawnWirePaths.length} master-planner skill path(s); ` +
+        `notify emit/receive governance lint passed (${NOTIFY_EMIT_SKILL_NAMES.length} emit + ${NOTIFY_RECEIVE_SKILL_NAMES.length} receive skills); ` +
         `spawn byte budget smoke: ${overCap.length} skill(s) over ${WARM_UP_BYTE_CAP} bytes` +
         (enforceSpawnByteBudget ? ' (--enforce-spawn-byte-budget)' : '') +
         `\n`,

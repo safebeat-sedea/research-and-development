@@ -42,18 +42,27 @@ const ROLE_MANIFESTS = {
       '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
       '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/author-prd/SKILL.md',
       '.sedea/centers/research-and-development/missions/plan-and-deliver/plan.mdc',
-      '.sedea/centers/research-and-development/rules/31_operations-user-id.mdc',
+      '.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc',
     ],
     skillRelPath: 'missions/plan-and-deliver/skills/author-prd/SKILL.md',
   },
-  planner: {
+  'brainstorm-research': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/brainstorm-research/SKILL.md',
+      '.sedea/centers/research-and-development/rules/31_dispatch-scope.mdc',
+      '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md',
+    ],
+    skillRelPath: 'missions/plan-and-deliver/skills/brainstorm-research/SKILL.md',
+  },
+  'master-planner': {
     laneRules: [
       '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
       '.sedea/centers/research-and-development/rules/30_planning-target-resolution.mdc',
-      '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/planner/SKILL.md',
+      '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/master-planner/SKILL.md',
       '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md',
     ],
-    skillRelPath: 'missions/plan-and-deliver/skills/planner/SKILL.md',
+    skillRelPath: 'missions/plan-and-deliver/skills/master-planner/SKILL.md',
   },
   'coding-session': {
     laneRules: [
@@ -91,6 +100,60 @@ const ROLE_MANIFESTS = {
       '.sedea/centers/research-and-development/missions/plan-and-deliver/skills/README.md',
     ],
     skillRelPath: 'missions/plan-and-deliver/skills/worktree-bootstrap/SKILL.md',
+  },
+  'squad-leader-mission-maintenance': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/sedea/rules/4_mission.mdc',
+      '.sedea/centers/sedea/missions/mission-maintenance/plan.mdc',
+      '.sedea/centers/sedea/docs/mission-three-lane-cadence.md',
+    ],
+  },
+  'squad-leader-center-maintenance': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/sedea/rules/4_mission.mdc',
+      '.sedea/centers/sedea/missions/center-maintenance/plan.mdc',
+      '.sedea/centers/sedea/docs/mission-three-lane-cadence.md',
+    ],
+  },
+  'squad-leader-sedea-governed-repo-setup': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/sedea/rules/4_mission.mdc',
+      '.sedea/centers/sedea/missions/sedea-governed-repo-setup/plan.mdc',
+      '.sedea/centers/sedea/docs/mission-three-lane-cadence.md',
+    ],
+  },
+  'squad-leader-cursor-rules-improvement': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/sedea/rules/4_mission.mdc',
+      '.sedea/centers/sedea/missions/cursor-rules-improvement/plan.mdc',
+      '.sedea/centers/sedea/docs/mission-three-lane-cadence.md',
+    ],
+  },
+  'squad-leader-cursor-center-rules-alignment': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/sedea/rules/4_mission.mdc',
+      '.sedea/centers/sedea/missions/cursor-center-rules-alignment/plan.mdc',
+      '.sedea/centers/sedea/docs/mission-three-lane-cadence.md',
+    ],
+  },
+  'squad-leader-smart-center-upstream-sync': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/sedea/rules/4_mission.mdc',
+      '.sedea/centers/sedea/missions/smart-center-upstream-sync/plan.mdc',
+    ],
+  },
+  'squad-leader-mission-completeness-triage': {
+    laneRules: [
+      '.sedea/centers/sedea/rules/2_ask-question-instructions.mdc',
+      '.sedea/centers/sedea/rules/4_mission.mdc',
+      '.sedea/centers/sedea/missions/mission-completeness-triage/plan.mdc',
+    ],
   },
 };
 
